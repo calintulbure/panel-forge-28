@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({
         productCode,
@@ -58,32 +59,65 @@ Deno.serve(async (req) => {
     }
 
     const n8nData = await n8nResponse.json();
-    console.log('n8n response:', n8nData);
+    console.log('n8n response received:', { 
+      hasImageBase64: !!n8nData.imageBase64, 
+      productCode: n8nData.productCode,
+      mimeType: n8nData.mimeType 
+    });
 
-    // Update the product with the snapshot URL if returned
-    if (n8nData.snapshotUrl) {
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-
-      const updateField = site === 'ro' ? 'site_ro_snapshot_url' : 'site_hu_snapshot_url';
-      
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ [updateField]: n8nData.snapshotUrl })
-        .eq('erp_product_code', productCode);
-
-      if (updateError) {
-        console.error('Failed to update product:', updateError);
-      }
+    // Validate required fields in response
+    if (!n8nData.imageBase64) {
+      throw new Error('n8n response missing required field: imageBase64');
     }
+
+    if (!n8nData.productCode) {
+      throw new Error('n8n response missing required field: productCode');
+    }
+
+    // Validate mimeType if present
+    if (n8nData.mimeType && !n8nData.mimeType.startsWith('image/')) {
+      throw new Error(`Invalid mimeType: ${n8nData.mimeType}. Expected image/* type.`);
+    }
+
+    // Update the product with base64 data and SKU
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Prepare update fields based on site
+    const updateFields = site === 'ro' 
+      ? {
+          site_ro_snapshot_base64: n8nData.imageBase64,
+          yliro_sku: n8nData.productCode
+        }
+      : {
+          site_hu_snapshot_base64: n8nData.imageBase64,
+          ylihu_sku: n8nData.productCode
+        };
+
+    const { error: updateError } = await supabase
+      .from('products')
+      .update(updateFields)
+      .eq('erp_product_code', productCode);
+
+    if (updateError) {
+      console.error('Failed to update product:', updateError);
+      throw new Error(`Database update failed: ${updateError.message}`);
+    }
+
+    console.log(`Successfully updated ${site.toUpperCase()} fields:`, Object.keys(updateFields));
+
+    // Prepare response fields
+    const responseFields = site === 'ro'
+      ? { site_ro_snapshot_base64: true, yliro_sku: n8nData.productCode }
+      : { site_hu_snapshot_base64: true, ylihu_sku: n8nData.productCode };
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        snapshotUrl: n8nData.snapshotUrl,
-        message: `Snapshot capture triggered for ${site.toUpperCase()} site` 
+        site,
+        updatedFields: responseFields
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
