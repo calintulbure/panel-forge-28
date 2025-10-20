@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 
 interface PublishCellProps {
   productCode: string;
-  snapshotUrl: string | null;
+  snapshotBase64: string | null;
   siteUrl: string | null;
   sku: string | null;
   site: "ro" | "hu";
   onUpdate: () => void;
 }
 
-export function PublishCell({ productCode, snapshotUrl, siteUrl, sku, site, onUpdate }: PublishCellProps) {
+export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, onUpdate }: PublishCellProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -188,9 +188,9 @@ export function PublishCell({ productCode, snapshotUrl, siteUrl, sku, site, onUp
         >
           {isRefreshing ? (
             <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-          ) : snapshotUrl ? (
+          ) : snapshotBase64 ? (
             <>
-              <img src={snapshotUrl} alt={`${site.toUpperCase()} snapshot`} className="w-full h-full object-cover" />
+              <img src={`data:image/jpeg;base64,${snapshotBase64}`} alt={`${site.toUpperCase()} snapshot`} className="w-full h-full object-cover" />
               {siteUrl && (
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                   <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />

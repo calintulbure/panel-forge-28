@@ -22,10 +22,12 @@ interface Product {
   stare_stoc: string | null;
   site_ro_url: string | null;
   site_ro_snapshot_url: string | null;
+  site_ro_snapshot_base64: string | null;
   yliro_sku: string | null;
   yliro_descriere: string | null;
   site_hu_url: string | null;
   site_hu_snapshot_url: string | null;
+  site_hu_snapshot_base64: string | null;
   ylihu_sku: string | null;
   ylihu_descriere: string | null;
   validated: boolean | null;
@@ -212,7 +214,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
 
               <div>
                 <Label>Snapshot Preview</Label>
-                {product.site_ro_snapshot_url ? (
+                {product.site_ro_snapshot_base64 ? (
                   <div className="mt-2">
                     <a
                       href={roUrl || product.site_ro_url || "#"}
@@ -221,7 +223,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       className="block"
                     >
                       <img
-                        src={product.site_ro_snapshot_url}
+                        src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
                         alt="RO Site Snapshot"
                         className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
                       />
@@ -303,7 +305,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
 
               <div>
                 <Label>Snapshot Preview</Label>
-                {product.site_hu_snapshot_url ? (
+                {product.site_hu_snapshot_base64 ? (
                   <div className="mt-2">
                     <a
                       href={huUrl || product.site_hu_url || "#"}
@@ -312,7 +314,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       className="block"
                     >
                       <img
-                        src={product.site_hu_snapshot_url}
+                        src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
                         alt="HU Site Snapshot"
                         className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
                       />

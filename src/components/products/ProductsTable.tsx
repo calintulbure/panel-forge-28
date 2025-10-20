@@ -36,10 +36,12 @@ interface Product {
   stare_stoc: string | null;
   site_ro_url: string | null;
   site_ro_snapshot_url: string | null;
+  site_ro_snapshot_base64: string | null;
   yliro_sku: string | null;
   yliro_descriere: string | null;
   site_hu_url: string | null;
   site_hu_snapshot_url: string | null;
+  site_hu_snapshot_base64: string | null;
   ylihu_sku: string | null;
   ylihu_descriere: string | null;
   validated: boolean | null;
@@ -158,7 +160,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <PublishCell
                       productCode={product.erp_product_code}
-                      snapshotUrl={product.site_ro_snapshot_url}
+                      snapshotBase64={product.site_ro_snapshot_base64}
                       siteUrl={product.site_ro_url}
                       sku={product.yliro_sku}
                       site="ro"
@@ -168,7 +170,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <PublishCell
                       productCode={product.erp_product_code}
-                      snapshotUrl={product.site_hu_snapshot_url}
+                      snapshotBase64={product.site_hu_snapshot_base64}
                       siteUrl={product.site_hu_url}
                       sku={product.ylihu_sku}
                       site="hu"
