@@ -14,14 +14,7 @@ interface PublishCellProps {
   onUpdate: () => void;
 }
 
-export function PublishCell({
-  productCode,
-  snapshotUrl,
-  siteUrl,
-  sku,
-  site,
-  onUpdate,
-}: PublishCellProps) {
+export function PublishCell({ productCode, snapshotUrl, siteUrl, sku, site, onUpdate }: PublishCellProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -31,7 +24,7 @@ export function PublishCell({
 
   const handleRefresh = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!siteUrl) {
       toast({
         title: "No URL",
@@ -42,7 +35,7 @@ export function PublishCell({
     }
 
     setIsRefreshing(true);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke("trigger-snapshot", {
         body: { productCode, siteUrl, site },
@@ -69,62 +62,65 @@ export function PublishCell({
     }
   };
 
-  const processUrl = useCallback(async (url: string) => {
-    // Debounce
-    const now = Date.now();
-    if (now - lastDropTime.current < 500) {
-      return;
-    }
-    lastDropTime.current = now;
-
-    try {
-      const urlObj = new URL(url);
-      const expectedDomain = `yli.${site}`;
-      
-      if (!urlObj.hostname.endsWith(expectedDomain)) {
-        toast({
-          title: "Invalid URL",
-          description: `Please drop a ${expectedDomain} link`,
-          variant: "destructive",
-        });
+  const processUrl = useCallback(
+    async (url: string) => {
+      // Debounce
+      const now = Date.now();
+      if (now - lastDropTime.current < 500) {
         return;
       }
+      lastDropTime.current = now;
 
-      setIsRefreshing(true);
-      
-      // Update the site URL in the database
-      const updateField = site === "ro" ? "site_ro_url" : "site_hu_url";
-      const { error: updateError } = await supabase
-        .from("products")
-        .update({ [updateField]: url })
-        .eq("erp_product_code", productCode);
+      try {
+        const urlObj = new URL(url);
+        const expectedDomain = `yli.${site}`;
 
-      if (updateError) throw updateError;
+        if (!urlObj.hostname.endsWith(expectedDomain)) {
+          toast({
+            title: "Invalid URL",
+            description: `Please drop a ${expectedDomain} link`,
+            variant: "destructive",
+          });
+          return;
+        }
 
-      // Trigger snapshot capture
-      const { error: snapshotError } = await supabase.functions.invoke("trigger-snapshot", {
-        body: { productCode, siteUrl: url, site },
-      });
+        setIsRefreshing(true);
 
-      if (snapshotError) throw snapshotError;
+        // Update the site URL in the database
+        const updateField = site === "ro" ? "site_ro_url" : "site_hu_url";
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ [updateField]: url })
+          .eq("erp_product_code", productCode);
 
-      toast({
-        title: "URL updated",
-        description: `${site.toUpperCase()} URL saved and snapshot capture triggered`,
-      });
+        if (updateError) throw updateError;
 
-      setTimeout(onUpdate, 2000);
-    } catch (error) {
-      console.error("URL processing error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to process URL",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [productCode, site, onUpdate, toast]);
+        // Trigger snapshot capture
+        const { error: snapshotError } = await supabase.functions.invoke("trigger-snapshot", {
+          body: { productCode, siteUrl: url, site },
+        });
+
+        if (snapshotError) throw snapshotError;
+
+        toast({
+          title: "URL updated",
+          description: `${site.toUpperCase()} URL saved and snapshot capture triggered`,
+        });
+
+        setTimeout(onUpdate, 2000);
+      } catch (error) {
+        console.error("URL processing error:", error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to process URL",
+          variant: "destructive",
+        });
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [productCode, site, onUpdate, toast],
+  );
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -167,8 +163,8 @@ export function PublishCell({
   return (
     <div
       className={cn(
-        "relative min-h-[140px] p-2 rounded border transition-colors",
-        isDragOver && "border-primary bg-primary/5"
+        "relative min-h-[120px] p-2 rounded border transition-colors",
+        isDragOver && "border-primary bg-primary/5",
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -185,8 +181,8 @@ export function PublishCell({
         {/* Snapshot thumbnail */}
         <div
           className={cn(
-            "relative w-[120px] h-[120px] rounded border bg-muted flex items-center justify-center overflow-hidden group",
-            siteUrl && "cursor-pointer hover:opacity-80 transition-opacity"
+            "relative w-[80px] h-[80px] rounded border bg-muted flex items-center justify-center overflow-hidden group",
+            siteUrl && "cursor-pointer hover:opacity-80 transition-opacity",
           )}
           onClick={handleImageClick}
         >
@@ -194,11 +190,7 @@ export function PublishCell({
             <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
           ) : snapshotUrl ? (
             <>
-              <img
-                src={snapshotUrl}
-                alt={`${site.toUpperCase()} snapshot`}
-                className="w-full h-full object-cover"
-              />
+              <img src={snapshotUrl} alt={`${site.toUpperCase()} snapshot`} className="w-full h-full object-cover" />
               {siteUrl && (
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                   <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -206,11 +198,9 @@ export function PublishCell({
               )}
             </>
           ) : (
-            <span className="text-xs text-muted-foreground text-center px-2">
-              No snapshot
-            </span>
+            <span className="text-xs text-muted-foreground text-center px-2">No snapshot</span>
           )}
-          
+
           {/* Refresh button overlay */}
           {siteUrl && (
             <Button
@@ -226,9 +216,7 @@ export function PublishCell({
         </div>
 
         {/* SKU display */}
-        <div className="text-xs font-mono text-center text-muted-foreground">
-          {sku || "-"}
-        </div>
+        <div className="text-xs font-mono text-center text-muted-foreground">{sku || "-"}</div>
 
         {/* URL input for keyboard users */}
         {showUrlInput && (
@@ -247,9 +235,7 @@ export function PublishCell({
         {/* Drag hint */}
         {isDragOver && (
           <div className="absolute inset-0 flex items-center justify-center bg-primary/10 rounded pointer-events-none">
-            <span className="text-xs font-medium text-primary">
-              Drop yli.{site} link here
-            </span>
+            <span className="text-xs font-medium text-primary">Drop yli.{site} link here</span>
           </div>
         )}
       </div>
