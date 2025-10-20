@@ -23,8 +23,8 @@ interface ProductFiltersProps {
   setOfferStatus: (value: string) => void;
   stockStatus: string;
   setStockStatus: (value: string) => void;
-  onlyValidated: boolean;
-  setOnlyValidated: (value: boolean) => void;
+  validationFilter: string;
+  setValidationFilter: (value: string) => void;
   categories: {
     categ1: string[];
     categ2: string[];
@@ -47,32 +47,33 @@ export function ProductFilters({
   setOfferStatus,
   stockStatus,
   setStockStatus,
-  onlyValidated,
-  setOnlyValidated,
+  validationFilter,
+  setValidationFilter,
   categories,
 }: ProductFiltersProps) {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <div className="space-y-2">
-            <Label htmlFor="search">Search</Label>
+      <CardContent className="pt-4 pb-4">
+        <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="space-y-1">
+            <Label htmlFor="search" className="text-xs">Search</Label>
             <Input
               id="search"
               placeholder="ERP code or description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="h-9"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category1">Category 1</Label>
+          <div className="space-y-1">
+            <Label htmlFor="category1" className="text-xs">Category 1</Label>
             <Select value={category1} onValueChange={setCategory1}>
-              <SelectTrigger id="category1">
-                <SelectValue placeholder="All categories" />
+              <SelectTrigger id="category1" className="h-9">
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 {categories.categ1.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
@@ -82,14 +83,14 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category2">Category 2</Label>
+          <div className="space-y-1">
+            <Label htmlFor="category2" className="text-xs">Category 2</Label>
             <Select value={category2} onValueChange={setCategory2}>
-              <SelectTrigger id="category2">
-                <SelectValue placeholder="All categories" />
+              <SelectTrigger id="category2" className="h-9">
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 {categories.categ2.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
@@ -99,14 +100,14 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category3">Category 3</Label>
+          <div className="space-y-1">
+            <Label htmlFor="category3" className="text-xs">Category 3</Label>
             <Select value={category3} onValueChange={setCategory3}>
-              <SelectTrigger id="category3">
-                <SelectValue placeholder="All categories" />
+              <SelectTrigger id="category3" className="h-9">
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 {categories.categ3.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
@@ -116,14 +117,14 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="offerStatus">Offer Status</Label>
+          <div className="space-y-1">
+            <Label htmlFor="offerStatus" className="text-xs">Offer Status</Label>
             <Select value={offerStatus} onValueChange={setOfferStatus}>
-              <SelectTrigger id="offerStatus">
-                <SelectValue placeholder="All statuses" />
+              <SelectTrigger id="offerStatus" className="h-9">
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 {categories.offerStatuses.map((status) => (
                   <SelectItem key={status} value={status}>
                     {status}
@@ -133,14 +134,14 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="stockStatus">Stock Status</Label>
+          <div className="space-y-1">
+            <Label htmlFor="stockStatus" className="text-xs">Stock Status</Label>
             <Select value={stockStatus} onValueChange={setStockStatus}>
-              <SelectTrigger id="stockStatus">
-                <SelectValue placeholder="All statuses" />
+              <SelectTrigger id="stockStatus" className="h-9">
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 {categories.stockStatuses.map((status) => (
                   <SelectItem key={status} value={status}>
                     {status}
@@ -150,15 +151,18 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="flex items-center space-x-2 self-end pb-1">
-            <Switch
-              id="validated"
-              checked={onlyValidated}
-              onCheckedChange={setOnlyValidated}
-            />
-            <Label htmlFor="validated" className="cursor-pointer">
-              Only validated
-            </Label>
+          <div className="space-y-1">
+            <Label htmlFor="validationFilter" className="text-xs">Validation</Label>
+            <Select value={validationFilter} onValueChange={setValidationFilter}>
+              <SelectTrigger id="validationFilter" className="h-9">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="validated">Validated only</SelectItem>
+                <SelectItem value="not_validated">Not validated only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardContent>

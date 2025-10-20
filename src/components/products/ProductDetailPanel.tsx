@@ -7,13 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, Save, Check, Lock, ExternalLink } from "lucide-react";
+import { RefreshCw, Save, Check, Lock, ExternalLink, CheckCircle2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Product {
-  article_id: number;
-  erp_product_code: string | null;
+  erp_product_code: string;
+  article_id: number | null;
   erp_product_description: string | null;
   categ1: string | null;
   categ2: string | null;
@@ -36,9 +36,10 @@ interface ProductDetailPanelProps {
   open: boolean;
   onClose: () => void;
   onUpdate: () => void;
+  isAdmin: boolean;
 }
 
-export function ProductDetailPanel({ product, open, onClose, onUpdate }: ProductDetailPanelProps) {
+export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }: ProductDetailPanelProps) {
   const [roUrl, setRoUrl] = useState(product.site_ro_url || "");
   const [huUrl, setHuUrl] = useState(product.site_hu_url || "");
   const [validated, setValidated] = useState(product.validated || false);
@@ -50,7 +51,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate }: Product
       const { error } = await supabase
         .from("products")
         .update({ [field]: value })
-        .eq("article_id", product.article_id);
+        .eq("erp_product_code", product.erp_product_code);
 
       if (error) throw error;
       toast.success("URL saved successfully");
@@ -69,7 +70,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate }: Product
       const { error } = await supabase
         .from("products")
         .update({ validated: !validated })
-        .eq("article_id", product.article_id);
+        .eq("erp_product_code", product.erp_product_code);
 
       if (error) throw error;
       setValidated(!validated);
@@ -336,23 +337,25 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate }: Product
           <Separator />
 
           {/* VALIDATION */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Validation</h3>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Switch
-                  id="validate"
-                  checked={validated}
-                  onCheckedChange={handleValidate}
-                  disabled={loading}
-                />
-                <Label htmlFor="validate" className="cursor-pointer">
-                  Product Validated
-                </Label>
+          {isAdmin && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Validation</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="validate"
+                    checked={validated}
+                    onCheckedChange={handleValidate}
+                    disabled={loading}
+                  />
+                  <Label htmlFor="validate" className="cursor-pointer">
+                    Product Validated
+                  </Label>
+                </div>
+                {validated && <Check className="h-5 w-5 text-success" />}
               </div>
-              {validated && <Check className="h-5 w-5 text-success" />}
             </div>
-          </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

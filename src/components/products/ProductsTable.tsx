@@ -9,12 +9,24 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, Trash2 } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Product {
-  article_id: number;
-  erp_product_code: string | null;
+  erp_product_code: string;
+  article_id: number | null;
   erp_product_description: string | null;
   categ1: string | null;
   categ2: string | null;
@@ -35,10 +47,44 @@ interface Product {
 interface ProductsTableProps {
   products: Product[];
   onRefresh: () => void;
+  isAdmin: boolean;
 }
 
-export function ProductsTable({ products, onRefresh }: ProductsTableProps) {
+export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTableProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    if (!productToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("erp_product_code", productToDelete.erp_product_code);
+
+      if (error) throw error;
+
+      toast({
+        title: "Product deleted",
+        description: "Product has been successfully deleted",
+      });
+
+      onRefresh();
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast({
+        title: "Error deleting product",
+        description: error instanceof Error ? error.message : "Failed to delete product",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    }
+  };
 
   const getStockBadgeVariant = (status: string | null) => {
     if (!status) return "secondary";
@@ -71,6 +117,7 @@ export function ProductsTable({ products, onRefresh }: ProductsTableProps) {
               <TableHead>RO SKU</TableHead>
               <TableHead>HU SKU</TableHead>
               <TableHead className="text-center">Validated</TableHead>
+              {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -83,40 +130,58 @@ export function ProductsTable({ products, onRefresh }: ProductsTableProps) {
             ) : (
               products.map((product) => (
                 <TableRow
-                  key={product.article_id}
+                  key={product.erp_product_code}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedProduct(product)}
                 >
-                  <TableCell className="font-medium">{product.article_id}</TableCell>
-                  <TableCell>{product.erp_product_code || "-"}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">
+                  <TableCell className="font-medium" onClick={() => setSelectedProduct(product)}>
+                    {product.article_id || "-"}
+                  </TableCell>
+                  <TableCell onClick={() => setSelectedProduct(product)}>
+                    {product.erp_product_code}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate" onClick={() => setSelectedProduct(product)}>
                     {product.erp_product_description || "-"}
                   </TableCell>
-                  <TableCell>{product.categ1 || "-"}</TableCell>
-                  <TableCell>{product.categ2 || "-"}</TableCell>
-                  <TableCell>
+                  <TableCell onClick={() => setSelectedProduct(product)}>{product.categ1 || "-"}</TableCell>
+                  <TableCell onClick={() => setSelectedProduct(product)}>{product.categ2 || "-"}</TableCell>
+                  <TableCell onClick={() => setSelectedProduct(product)}>
                     <Badge variant={getStockBadgeVariant(product.stare_stoc)}>
                       {product.stare_stoc || "Unknown"}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={() => setSelectedProduct(product)}>
                     <Badge variant={getOfferBadgeVariant(product.stare_oferta)}>
                       {product.stare_oferta || "Unknown"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="font-mono text-xs" onClick={() => setSelectedProduct(product)}>
                     {product.yliro_sku || "-"}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="font-mono text-xs" onClick={() => setSelectedProduct(product)}>
                     {product.ylihu_sku || "-"}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center" onClick={() => setSelectedProduct(product)}>
                     {product.validated ? (
                       <Check className="h-4 w-4 text-success mx-auto" />
                     ) : (
                       <X className="h-4 w-4 text-muted-foreground mx-auto" />
                     )}
                   </TableCell>
+                  {isAdmin && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProductToDelete(product);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -130,8 +195,25 @@ export function ProductsTable({ products, onRefresh }: ProductsTableProps) {
           open={!!selectedProduct}
           onClose={() => setSelectedProduct(null)}
           onUpdate={onRefresh}
+          isAdmin={isAdmin}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the product "{productToDelete?.erp_product_code}".
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

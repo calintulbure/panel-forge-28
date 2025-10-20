@@ -3,16 +3,24 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductsTable } from "@/components/products/ProductsTable";
 import { ProductFilters } from "@/components/products/ProductFilters";
-import { Loader2 } from "lucide-react";
+import { ProductImport } from "@/components/products/ProductImport";
+import { ProductAddForm } from "@/components/products/ProductAddForm";
+import { Button } from "@/components/ui/button";
+import { Loader2, Plus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function Products() {
+  const { userRole } = useAuth();
+  const isAdmin = userRole === "admin";
   const [search, setSearch] = useState("");
   const [category1, setCategory1] = useState("all");
   const [category2, setCategory2] = useState("all");
   const [category3, setCategory3] = useState("all");
   const [offerStatus, setOfferStatus] = useState("all");
   const [stockStatus, setStockStatus] = useState("all");
-  const [onlyValidated, setOnlyValidated] = useState(false);
+  const [validationFilter, setValidationFilter] = useState("all");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -20,7 +28,7 @@ export default function Products() {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .order("article_id", { ascending: true });
+        .order("erp_product_code", { ascending: true });
 
       if (error) throw error;
       return data;
@@ -76,7 +84,10 @@ export default function Products() {
       const matchesStockStatus = stockStatus === "all" || product.stare_stoc === stockStatus;
 
       // Validation filter
-      const matchesValidation = !onlyValidated || product.validated === true;
+      const matchesValidation = 
+        validationFilter === "all" ||
+        (validationFilter === "validated" && product.validated === true) ||
+        (validationFilter === "not_validated" && product.validated !== true);
 
       return (
         matchesSearch &&
@@ -88,7 +99,7 @@ export default function Products() {
         matchesValidation
       );
     });
-  }, [products, search, category1, category2, category3, offerStatus, stockStatus, onlyValidated]);
+  }, [products, search, category1, category2, category3, offerStatus, stockStatus, validationFilter]);
 
   if (isLoading) {
     return (
@@ -120,8 +131,8 @@ export default function Products() {
         setOfferStatus={setOfferStatus}
         stockStatus={stockStatus}
         setStockStatus={setStockStatus}
-        onlyValidated={onlyValidated}
-        setOnlyValidated={setOnlyValidated}
+        validationFilter={validationFilter}
+        setValidationFilter={setValidationFilter}
         categories={categories}
       />
 
@@ -129,9 +140,28 @@ export default function Products() {
         <p className="text-sm text-muted-foreground">
           Showing {filteredProducts.length} of {products?.length || 0} products
         </p>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <ProductImport onImportComplete={refetch} />
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add New Product</DialogTitle>
+                </DialogHeader>
+                <ProductAddForm onSuccess={() => { setAddDialogOpen(false); refetch(); }} />
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
-      <ProductsTable products={filteredProducts} onRefresh={refetch} />
+      <ProductsTable products={filteredProducts} onRefresh={refetch} isAdmin={isAdmin} />
     </div>
   );
 }

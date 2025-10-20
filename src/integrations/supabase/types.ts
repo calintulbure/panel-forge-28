@@ -21,7 +21,7 @@ export type Database = {
           categ2: string | null
           categ3: string | null
           created_at: string | null
-          erp_product_code: string | null
+          erp_product_code: string
           erp_product_description: string | null
           site_hu_snapshot_url: string | null
           site_hu_url: string | null
@@ -37,12 +37,12 @@ export type Database = {
           yliro_sku: string | null
         }
         Insert: {
-          article_id: number
+          article_id?: number
           categ1?: string | null
           categ2?: string | null
           categ3?: string | null
           created_at?: string | null
-          erp_product_code?: string | null
+          erp_product_code: string
           erp_product_description?: string | null
           site_hu_snapshot_url?: string | null
           site_hu_url?: string | null
@@ -63,7 +63,7 @@ export type Database = {
           categ2?: string | null
           categ3?: string | null
           created_at?: string | null
-          erp_product_code?: string | null
+          erp_product_code?: string
           erp_product_description?: string | null
           site_hu_snapshot_url?: string | null
           site_hu_url?: string | null
