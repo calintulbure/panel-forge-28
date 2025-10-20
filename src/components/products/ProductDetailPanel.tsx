@@ -1,0 +1,360 @@
+import { useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { RefreshCw, Save, Check, Lock, ExternalLink } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface Product {
+  article_id: number;
+  erp_product_code: string | null;
+  erp_product_description: string | null;
+  categ1: string | null;
+  categ2: string | null;
+  categ3: string | null;
+  stare_oferta: string | null;
+  stare_stoc: string | null;
+  site_ro_url: string | null;
+  site_ro_snapshot_url: string | null;
+  yliro_sku: string | null;
+  yliro_descriere: string | null;
+  site_hu_url: string | null;
+  site_hu_snapshot_url: string | null;
+  ylihu_sku: string | null;
+  ylihu_descriere: string | null;
+  validated: boolean | null;
+}
+
+interface ProductDetailPanelProps {
+  product: Product;
+  open: boolean;
+  onClose: () => void;
+  onUpdate: () => void;
+}
+
+export function ProductDetailPanel({ product, open, onClose, onUpdate }: ProductDetailPanelProps) {
+  const [roUrl, setRoUrl] = useState(product.site_ro_url || "");
+  const [huUrl, setHuUrl] = useState(product.site_hu_url || "");
+  const [validated, setValidated] = useState(product.validated || false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSaveUrl = async (field: "site_ro_url" | "site_hu_url", value: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ [field]: value })
+        .eq("article_id", product.article_id);
+
+      if (error) throw error;
+      toast.success("URL saved successfully");
+      onUpdate();
+    } catch (error) {
+      toast.error("Failed to save URL");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleValidate = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ validated: !validated })
+        .eq("article_id", product.article_id);
+
+      if (error) throw error;
+      setValidated(!validated);
+      toast.success(validated ? "Product unvalidated" : "Product validated successfully");
+      onUpdate();
+    } catch (error) {
+      toast.error("Failed to update validation status");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshSnapshot = async (site: "ro" | "hu") => {
+    setLoading(true);
+    toast.info("Snapshot refresh is not yet configured. Connect your n8n webhook endpoint.");
+    setLoading(false);
+    
+    // TODO: Implement n8n webhook call
+    // const url = site === "ro" ? roUrl : huUrl;
+    // const response = await fetch('https://your-n8n-url/capture-' + site, {
+    //   method: 'POST',
+    //   body: JSON.stringify({ article_id: product.article_id, [`site_${site}_url`]: url })
+    // });
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Product Details - #{product.article_id}</SheetTitle>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-6">
+          {/* ERP INFO */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">ERP Information</h3>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-muted-foreground">Article ID</Label>
+                <p className="font-medium">{product.article_id}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">ERP Code</Label>
+                <p className="font-medium">{product.erp_product_code || "-"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Description</Label>
+                <p className="font-medium">{product.erp_product_description || "-"}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Category 1</Label>
+                  <p className="font-medium text-sm">{product.categ1 || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Category 2</Label>
+                  <p className="font-medium text-sm">{product.categ2 || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Category 3</Label>
+                  <p className="font-medium text-sm">{product.categ3 || "-"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Stock Status</Label>
+                  <Badge variant="secondary" className="mt-1">
+                    {product.stare_stoc || "Unknown"}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Offer Status</Label>
+                  <Badge variant="secondary" className="mt-1">
+                    {product.stare_oferta || "Unknown"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* PUBLISHING RO */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Publishing - Romania (yli.ro)</h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="ro-url">Site RO URL</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="ro-url"
+                    value={roUrl}
+                    onChange={(e) => setRoUrl(e.target.value)}
+                    placeholder="https://yli.ro/..."
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => handleSaveUrl("site_ro_url", roUrl)}
+                    disabled={loading}
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <TooltipProvider>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Label>RO SKU</Label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>This field is managed automatically by system workflows</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="font-mono text-sm mt-1">{product.yliro_sku || "Not generated"}</p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Label>RO Description</Label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>This field is managed automatically by system workflows</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-sm mt-1">{product.yliro_descriere || "Not generated"}</p>
+                </div>
+              </TooltipProvider>
+
+              <div>
+                <Label>Snapshot Preview</Label>
+                {product.site_ro_snapshot_url ? (
+                  <div className="mt-2">
+                    <a
+                      href={roUrl || product.site_ro_url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img
+                        src={product.site_ro_snapshot_url}
+                        alt="RO Site Snapshot"
+                        className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                      />
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-1">No snapshot available</p>
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => handleRefreshSnapshot("ro")}
+                disabled={loading || !roUrl}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh RO Snapshot
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* PUBLISHING HU */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Publishing - Hungary (yli.hu)</h3>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="hu-url">Site HU URL</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="hu-url"
+                    value={huUrl}
+                    onChange={(e) => setHuUrl(e.target.value)}
+                    placeholder="https://yli.hu/..."
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() => handleSaveUrl("site_hu_url", huUrl)}
+                    disabled={loading}
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <TooltipProvider>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Label>HU SKU</Label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>This field is managed automatically by system workflows</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="font-mono text-sm mt-1">{product.ylihu_sku || "Not generated"}</p>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Label>HU Description</Label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Lock className="h-3 w-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>This field is managed automatically by system workflows</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-sm mt-1">{product.ylihu_descriere || "Not generated"}</p>
+                </div>
+              </TooltipProvider>
+
+              <div>
+                <Label>Snapshot Preview</Label>
+                {product.site_hu_snapshot_url ? (
+                  <div className="mt-2">
+                    <a
+                      href={huUrl || product.site_hu_url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img
+                        src={product.site_hu_snapshot_url}
+                        alt="HU Site Snapshot"
+                        className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                      />
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mt-1">No snapshot available</p>
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => handleRefreshSnapshot("hu")}
+                disabled={loading || !huUrl}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh HU Snapshot
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* VALIDATION */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3">Validation</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="validate"
+                  checked={validated}
+                  onCheckedChange={handleValidate}
+                  disabled={loading}
+                />
+                <Label htmlFor="validate" className="cursor-pointer">
+                  Product Validated
+                </Label>
+              </div>
+              {validated && <Check className="h-5 w-5 text-success" />}
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
