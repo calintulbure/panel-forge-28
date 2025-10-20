@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, X, Trash2 } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
+import { PublishCell } from "./PublishCell";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -114,8 +115,8 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
               <TableHead>Category 2</TableHead>
               <TableHead>Stock Status</TableHead>
               <TableHead>Offer Status</TableHead>
-              <TableHead>RO SKU</TableHead>
-              <TableHead>HU SKU</TableHead>
+              <TableHead className="text-center">RO Publish</TableHead>
+              <TableHead className="text-center">HU Publish</TableHead>
               <TableHead className="text-center">Validated</TableHead>
               {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
@@ -123,7 +124,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? 11 : 10} className="h-24 text-center">
                   No products found.
                 </TableCell>
               </TableRow>
@@ -154,11 +155,25 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                       {product.stare_oferta || "Unknown"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs" onClick={() => setSelectedProduct(product)}>
-                    {product.yliro_sku || "-"}
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <PublishCell
+                      productCode={product.erp_product_code}
+                      snapshotUrl={product.site_ro_snapshot_url}
+                      siteUrl={product.site_ro_url}
+                      sku={product.yliro_sku}
+                      site="ro"
+                      onUpdate={onRefresh}
+                    />
                   </TableCell>
-                  <TableCell className="font-mono text-xs" onClick={() => setSelectedProduct(product)}>
-                    {product.ylihu_sku || "-"}
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <PublishCell
+                      productCode={product.erp_product_code}
+                      snapshotUrl={product.site_hu_snapshot_url}
+                      siteUrl={product.site_hu_url}
+                      sku={product.ylihu_sku}
+                      site="hu"
+                      onUpdate={onRefresh}
+                    />
                   </TableCell>
                   <TableCell className="text-center" onClick={() => setSelectedProduct(product)}>
                     {product.validated ? (
