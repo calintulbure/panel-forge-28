@@ -70,13 +70,18 @@ Deno.serve(async (req) => {
       throw new Error('n8n response missing required field: imageBase64');
     }
 
-    if (!n8nData.productCode) {
-      throw new Error('n8n response missing required field: productCode');
+    // Check if productCode is an unevaluated n8n expression
+    if (!n8nData.productCode || n8nData.productCode.startsWith('={{')) {
+      throw new Error('n8n response has invalid productCode. Check n8n workflow configuration - expressions may not be evaluating correctly.');
     }
 
-    // Validate mimeType if present
-    if (n8nData.mimeType && !n8nData.mimeType.startsWith('image/')) {
-      throw new Error(`Invalid mimeType: ${n8nData.mimeType}. Expected image/* type.`);
+    // Validate and normalize mimeType
+    let validMimeType = n8nData.mimeType;
+    
+    // Check if mimeType is an unevaluated n8n expression or invalid
+    if (!validMimeType || validMimeType.startsWith('={{') || !validMimeType.startsWith('image/')) {
+      console.warn(`Invalid mimeType received: ${validMimeType}. Defaulting to image/jpeg. Check n8n workflow configuration.`);
+      validMimeType = 'image/jpeg';
     }
 
     // Update the product with base64 data and SKU
