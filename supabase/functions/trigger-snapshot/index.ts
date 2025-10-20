@@ -24,12 +24,20 @@ Deno.serve(async (req) => {
     console.log(`Triggering snapshot capture for ${site.toUpperCase()} site:`, { productCode, siteUrl });
 
     // Get the appropriate webhook URL
-    const webhookUrl = site === 'ro' 
-      ? Deno.env.get('N8N_WEBHOOK_URL_RO') 
+    const secretName = site === 'ro' ? 'N8N_WEBHOOK_URL_RO' : 'N8N_WEBHOOK_URL_HU';
+    const webhookUrl = site === 'ro'
+      ? Deno.env.get('N8N_WEBHOOK_URL_RO')
       : Deno.env.get('N8N_WEBHOOK_URL_HU');
 
     if (!webhookUrl) {
-      throw new Error(`N8N webhook URL not configured for ${site.toUpperCase()} site`);
+      throw new Error(`n8n webhook URL not configured for ${site.toUpperCase()} site. Please set the ${secretName} secret to the full https URL.`);
+    }
+
+    // Validate that the configured value is a full URL
+    try {
+      new URL(webhookUrl);
+    } catch {
+      throw new Error(`Invalid n8n webhook URL configured in ${secretName}. Please set a full https URL (e.g. https://your-n8n-host/webhook/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX).`);
     }
 
     // Call n8n webhook
