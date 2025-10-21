@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const TABLE = "products";
 const PK = "erp_product_code";
-const CHUNK_SIZE = 500;
+const CHUNK_SIZE = 1000;
 const VERSION = "manage-products@2025-10-21-v2";
 
 type Row = Record<string, unknown>;
@@ -38,7 +38,7 @@ serve(async (req) => {
 
   try {
     const { operation, data } = await req.json();
-    
+
     console.log(`Received: { operation: "${operation}", count: ${toArray(data).length} }`);
 
     if (!["insert", "update", "upsert"].includes(operation)) {
@@ -50,10 +50,7 @@ serve(async (req) => {
       return json({ error: "data must be an object or non-empty array" }, 400);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const results: Row[] = [];
     let processed = 0;
@@ -63,9 +60,9 @@ serve(async (req) => {
     for (const c of chunk(rows, CHUNK_SIZE)) {
       const { data: inserted, error } = await supabase
         .from(TABLE)
-        .upsert(c, { 
+        .upsert(c, {
           onConflict: PK,
-          ignoreDuplicates: false
+          ignoreDuplicates: false,
         })
         .select();
 
@@ -84,10 +81,10 @@ serve(async (req) => {
       success: errors === 0,
       version: VERSION,
       operation,
-      summary: { 
-        requested: rows.length, 
-        processed, 
-        errors 
+      summary: {
+        requested: rows.length,
+        processed,
+        errors,
       },
       data: results,
     });
