@@ -1,8 +1,5 @@
-// supabase/functions/manage-products/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const VERSION = "manage-products@2025-10-21-15"; // bump this every deploy
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,9 +10,9 @@ type Row = Record<string, unknown>;
 
 const TABLE = "products";
 const PK = "erp_product_code"; // primary key
-const UK = "articol_id"; // unique, MUST NEVER change once set
+const UK = "articol_id"; // unique; must never change
 const CHUNK_SIZE = 500;
-const VERSION = "manage-products@upsert-never-change-articol_id-2025-10-21";
+const VERSION = "manage-products@restart-safe-2025-10-21";
 
 function toArray<T>(v: T | T[] | null | undefined): T[] {
   if (!v) return [];
@@ -42,10 +39,8 @@ serve(async (req) => {
     const { operation, data } = await req.json();
     const rows = toArray<Row>(data);
 
-    // Accept "upsert" (preferred), but keep backward compat with "insert"/"update"
-    const op = String(operation || "upsert").toLowerCase();
-    if (!["upsert", "insert", "update"].includes(op)) {
-      return badRequest({ error: 'Invalid operation. Use "upsert" (recommended), or "insert"/"update".' });
+    if (!["insert", "update"].includes(operation)) {
+      return badRequest({ error: 'Invalid operation. Must be "insert" or "update"' });
     }
     if (rows.length === 0) {
       return badRequest({ error: "data must be an object or non-empty array" });
@@ -53,11 +48,11 @@ serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Gather keys present in this request
+    // Collect keys present in this request
     const incomingPKs = Array.from(new Set(rows.map((r) => r[PK]).filter((v) => v != null))) as (string | number)[];
     const incomingUKs = Array.from(new Set(rows.map((r) => r[UK]).filter((v) => v != null))) as (string | number)[];
 
-    // What already exists in DB (seed the “seen” sets)
+    // Seed "seen" sets from DB so we know which keys already exist BEFORE writing
     const [pkRes, ukRes] = await Promise.all([
       incomingPKs.length
         ? supabase.from(TABLE).select(PK).in(PK, incomingPKs)
@@ -73,12 +68,11 @@ serve(async (req) => {
       });
     }
 
-    // Track keys that exist in DB OR have been accepted earlier in this same request
     const seenPK = new Set((pkRes.data ?? []).map((r: any) => r[PK]));
     const seenUK = new Set((ukRes.data ?? []).map((r: any) => r[UK]));
 
-    const rowsToInsert: Row[] = [];
     const rowsToUpdate: Row[] = [];
+    const rowsToInsert: Row[] = [];
     const skipped: { row: Row; reason: string }[] = [];
 
     for (const r of rows) {
@@ -87,29 +81,35 @@ serve(async (req) => {
       const hasPK = pk != null;
       const hasUK = uk != null;
 
-      // If PK already exists (in DB or accepted earlier this request) → UPDATE
+      // If PK already exists (in DB or accepted earlier in this request), update (never send articol_id)
       if (hasPK && seenPK.has(pk as any)) {
-        const copy: Row = { ...r };
-        // NEVER allow articol_id to change on update
+        const copy = { ...r };
         delete copy[UK];
         rowsToUpdate.push(copy);
         continue;
       }
 
-      // If caller explicitly used "update" but row has no PK, skip it
-      if (op === "update" && !hasPK) {
-        skipped.push({ row: r, reason: `Missing ${PK} on update` });
+      if (operation === "update") {
+        // For updates without PK, skip
+        if (!hasPK) {
+          skipped.push({ row: r, reason: `Missing ${PK} on update` });
+          continue;
+        }
+        const copy = { ...r };
+        delete copy[UK]; // never change articol_id
+        rowsToUpdate.push(copy);
+        seenPK.add(pk as any);
         continue;
       }
 
-      // Otherwise this is a candidate INSERT / UPSERT-INSERT
-      // articol_id must be unused (in DB or earlier this request)
+      // operation === "insert"
+      // articol_id cannot collide (in DB or earlier in this request)
       if (hasUK && seenUK.has(uk as any)) {
         skipped.push({ row: r, reason: `${UK} already used` });
         continue;
       }
 
-      // Accept as new row; mark keys as seen to protect following batches in the same request
+      // Accept as new insert
       if (hasPK) seenPK.add(pk as any);
       if (hasUK) seenUK.add(uk as any);
       rowsToInsert.push(r);
@@ -119,43 +119,39 @@ serve(async (req) => {
     let inserted = 0;
     let updated = 0;
 
-    // INSERTS (keep articol_id as provided)
-    if (rowsToInsert.length) {
-      for (const c of chunk(rowsToInsert, CHUNK_SIZE)) {
-        // Upsert on PK with ignoreDuplicates true makes restarts safe
-        const { data: ins, error } = await supabase
-          .from(TABLE)
-          .upsert(c, { onConflict: PK, ignoreDuplicates: true, count: "exact" })
-          .select();
-        if (error) {
-          console.error("Insert batch error:", error);
-          return serverError({ error: "Failed to insert batch", details: error.message, version: VERSION });
-        }
-        results.push(...(ins ?? []));
-        inserted += ins?.length ?? 0;
+    // INSERTS (keep articol_id)
+    for (const c of chunk(rowsToInsert, CHUNK_SIZE)) {
+      const { data: ins, error } = await supabase
+        .from(TABLE)
+        // upsert on PK with ignoreDuplicates true → safe if job restarts
+        .upsert(c, { onConflict: PK, ignoreDuplicates: true, count: "exact" })
+        .select();
+      if (error) {
+        console.error("Insert batch error:", error);
+        return serverError({ error: "Failed to insert batch", details: error.message, version: VERSION });
       }
+      results.push(...(ins ?? []));
+      inserted += ins?.length ?? 0;
     }
 
-    // UPDATES (NEVER send articol_id)
-    if (rowsToUpdate.length) {
-      for (const c of chunk(rowsToUpdate, CHUNK_SIZE)) {
-        const { data: upd, error } = await supabase
-          .from(TABLE)
-          .upsert(c, { onConflict: PK, ignoreDuplicates: false, count: "exact" })
-          .select();
-        if (error) {
-          console.error("Update batch error:", error);
-          return serverError({ error: "Failed to update batch", details: error.message, version: VERSION });
-        }
-        results.push(...(upd ?? []));
-        updated += upd?.length ?? 0;
+    // UPDATES (articol_id removed)
+    for (const c of chunk(rowsToUpdate, CHUNK_SIZE)) {
+      const { data: upd, error } = await supabase
+        .from(TABLE)
+        .upsert(c, { onConflict: PK, ignoreDuplicates: false, count: "exact" })
+        .select();
+      if (error) {
+        console.error("Update batch error:", error);
+        return serverError({ error: "Failed to update batch", details: error.message, version: VERSION });
       }
+      results.push(...(upd ?? []));
+      updated += upd?.length ?? 0;
     }
 
     return json({
       success: true,
       version: VERSION,
-      operation: op,
+      operation,
       summary: { requested: rows.length, inserted, updated, skipped: skipped.length },
       skipped,
       data: results,
@@ -163,6 +159,6 @@ serve(async (req) => {
   } catch (err) {
     console.error("Edge function error:", err);
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return serverError({ error: "Internal server error", details: msg, version: VERSION });
+    return serverError({ error: "Internal server error", details: msg });
   }
 });
