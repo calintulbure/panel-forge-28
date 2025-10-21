@@ -29,14 +29,31 @@ export default function Products() {
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*", { count: 'exact' })
-        .order("erp_product_code", { ascending: true })
-        .limit(100000);
+      // Fetch all products by paginating through them
+      let allProducts: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      return data;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .order("erp_product_code", { ascending: true })
+          .range(from, from + batchSize - 1);
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allProducts = [...allProducts, ...data];
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allProducts;
     },
   });
 
