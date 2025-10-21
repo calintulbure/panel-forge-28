@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,13 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
   const [huUrl, setHuUrl] = useState(product.site_hu_url || "");
   const [validated, setValidated] = useState(product.validated || false);
   const [loading, setLoading] = useState(false);
+
+  // Sync state when product changes to avoid stale data
+  useEffect(() => {
+    setRoUrl(product.site_ro_url || "");
+    setHuUrl(product.site_hu_url || "");
+    setValidated(product.validated || false);
+  }, [product]);
 
   const handleRefreshSnapshot = async (site: "ro" | "hu") => {
     const url = site === "ro" ? roUrl : huUrl;
