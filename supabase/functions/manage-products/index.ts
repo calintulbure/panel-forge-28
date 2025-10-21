@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const TABLE = "products";
 const PK = "erp_product_code";
-const CHUNK_SIZE = 500;
+const CHUNK_SIZE = 250;
 const VERSION = "manage-products@2025-10-21-v2";
 
 type Row = Record<string, unknown>;
