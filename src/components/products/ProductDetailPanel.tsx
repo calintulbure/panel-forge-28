@@ -223,6 +223,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       className="block"
                     >
                       <img
+                        key={product.site_ro_snapshot_base64.substring(0, 50)}
                         src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
                         alt="RO Site Snapshot"
                         className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
@@ -314,6 +315,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       className="block"
                     >
                       <img
+                        key={product.site_hu_snapshot_base64.substring(0, 50)}
                         src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
                         alt="HU Site Snapshot"
                         className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"

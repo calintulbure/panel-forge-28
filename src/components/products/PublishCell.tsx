@@ -190,7 +190,12 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
             <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
           ) : snapshotBase64 ? (
             <>
-              <img src={`data:image/jpeg;base64,${snapshotBase64}`} alt={`${site.toUpperCase()} snapshot`} className="w-full h-full object-cover" />
+              <img 
+                key={snapshotBase64.substring(0, 50)} 
+                src={`data:image/jpeg;base64,${snapshotBase64}`} 
+                alt={`${site.toUpperCase()} snapshot`} 
+                className="w-full h-full object-cover" 
+              />
               {siteUrl && (
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                   <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
