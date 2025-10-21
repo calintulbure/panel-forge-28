@@ -20,10 +20,19 @@ serve(async (req) => {
     const site = siteIn ?? (host.includes("yli.ro") ? "ro" : host.includes("yli.hu") ? "hu" : null);
     if (!site) return json({ success: false, error: "Cannot infer site" }, 400);
 
+    // Determine if running in production or dev mode
+    const RUN_MODE = Deno.env.get("RUN_MODE") ?? "DEVELOPMENT";
+    const isProduction = RUN_MODE === "PRODUCTION";
+    
     // Call your n8n webhook
     const webhookUrl = site === "ro"
-      ? Deno.env.get("N8N_WEBHOOK_URL_RO")
-      : Deno.env.get("N8N_WEBHOOK_URL_HU");
+      ? isProduction
+        ? Deno.env.get("N8N_WEBHOOK_URL_RO_PRODUCTION")
+        : Deno.env.get("N8N_WEBHOOK_URL_RO")
+      : isProduction;
+        ? Deno.env.get("N8N_WEBHOOK_URL_HU_PRODUCTION")
+        : Deno.env.get("N8N_WEBHOOK_URL_HU")
+   
 
     const n8nRes = await fetch(webhookUrl!, {
       method: "POST",
