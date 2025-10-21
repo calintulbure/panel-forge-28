@@ -110,10 +110,10 @@ export default function Products() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Product Catalog</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Product Catalog</h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">
           Manage and publish products to yli.ro and yli.hu
         </p>
       </div>
@@ -136,16 +136,16 @@ export default function Products() {
         categories={categories}
       />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Showing {filteredProducts.length} of {products?.length || 0} products
         </p>
         {isAdmin && (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <ProductImport onImportComplete={refetch} />
             <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" className="h-11 md:h-9 w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Product
                 </Button>

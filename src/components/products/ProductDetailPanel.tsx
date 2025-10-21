@@ -101,7 +101,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-4 sm:p-6">
         <SheetHeader>
           <SheetTitle>Product Details - #{product.articol_id}</SheetTitle>
         </SheetHeader>
@@ -123,7 +123,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                 <Label className="text-muted-foreground">Description</Label>
                 <p className="font-medium">{product.erp_product_description || "-"}</p>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Category 1</Label>
                   <p className="font-medium text-sm">{product.categ1 || "-"}</p>
@@ -137,7 +137,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                   <p className="font-medium text-sm">{product.categ3 || "-"}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Stock Status</Label>
                   <Badge variant="secondary" className="mt-1">
@@ -168,12 +168,14 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                     value={roUrl}
                     onChange={(e) => setRoUrl(e.target.value)}
                     placeholder="https://yli.ro/..."
+                    className="h-11 md:h-10"
                   />
                   <Button
                     variant="secondary"
                     size="icon"
                     onClick={() => handleSaveUrl("site_ro_url", roUrl)}
                     disabled={loading}
+                    className="h-11 w-11 md:h-10 md:w-10"
                   >
                     <Save className="h-4 w-4" />
                   </Button>
@@ -239,6 +241,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                 variant="outline"
                 onClick={() => handleRefreshSnapshot("ro")}
                 disabled={loading || !roUrl}
+                className="h-11 md:h-10 w-full sm:w-auto"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh RO Snapshot
@@ -260,12 +263,14 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                     value={huUrl}
                     onChange={(e) => setHuUrl(e.target.value)}
                     placeholder="https://yli.hu/..."
+                    className="h-11 md:h-10"
                   />
                   <Button
                     variant="secondary"
                     size="icon"
                     onClick={() => handleSaveUrl("site_hu_url", huUrl)}
                     disabled={loading}
+                    className="h-11 w-11 md:h-10 md:w-10"
                   >
                     <Save className="h-4 w-4" />
                   </Button>
@@ -331,6 +336,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                 variant="outline"
                 onClick={() => handleRefreshSnapshot("hu")}
                 disabled={loading || !huUrl}
+                className="h-11 md:h-10 w-full sm:w-auto"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh HU Snapshot

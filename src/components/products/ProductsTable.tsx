@@ -133,7 +133,8 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
 
   return (
     <>
-      <div className="rounded-md border">
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -241,6 +242,123 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {products.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            No products found.
+          </div>
+        ) : (
+          products.map((product) => (
+            <div
+              key={product.erp_product_code}
+              className="border rounded-lg p-4 space-y-3 bg-card"
+              onClick={() => setSelectedProduct(product)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm truncate">{product.erp_product_code}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">
+                    {product.erp_product_description || "-"}
+                  </div>
+                  {product.articol_id && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      ID: {product.articol_id}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => handleValidationToggle(product, e)}
+                    className="h-11 w-11"
+                  >
+                    {product.validated ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProductToDelete(product);
+                        setDeleteDialogOpen(true);
+                      }}
+                      className="h-11 w-11"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <div className="text-muted-foreground">Cat 1</div>
+                  <div className="font-medium truncate">{product.categ1 || "-"}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Cat 2</div>
+                  <div className="font-medium truncate">{product.categ2 || "-"}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Cat 3</div>
+                  <div className="font-medium truncate">{product.categ3 || "-"}</div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <Badge variant={getStockBadgeVariant(product.stare_stoc)} className="text-xs">
+                  {product.stare_stoc || "Unknown"}
+                </Badge>
+                <Badge variant={getOfferBadgeVariant(product.stare_oferta)} className="text-xs">
+                  {product.stare_oferta || "Unknown"}
+                </Badge>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                <div className="flex-1">
+                  <div className="text-xs text-muted-foreground mb-1">RO</div>
+                  <PublishCell
+                    productCode={product.erp_product_code}
+                    snapshotBase64={product.site_ro_snapshot_base64}
+                    siteUrl={product.site_ro_url}
+                    sku={product.yliro_sku}
+                    site="ro"
+                    onUpdate={onRefresh}
+                  />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs text-muted-foreground mb-1">HU</div>
+                  <PublishCell
+                    productCode={product.erp_product_code}
+                    snapshotBase64={product.site_hu_snapshot_base64}
+                    siteUrl={product.site_hu_url}
+                    sku={product.ylihu_sku}
+                    site="hu"
+                    onUpdate={onRefresh}
+                  />
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-11"
+                onClick={() => setSelectedProduct(product)}
+              >
+                View Details
+              </Button>
+            </div>
+          ))
+        )}
       </div>
 
       {selectedProduct && (
