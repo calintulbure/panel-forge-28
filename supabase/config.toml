@@ -1,1 +1,4 @@
 project_id = "vmijvdxllubdudppeemr"
+
+[functions.manage-products]
+verify_jwt = false
