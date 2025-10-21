@@ -27,7 +27,7 @@ export function ProductImport({ onImportComplete }: ProductImportProps) {
 
       const products = jsonData.map((row: any) => ({
         erp_product_code: row.erp_product_code || row.ERP_Code,
-        article_id: row.article_id || row.Article_ID,
+        articol_id: row.articol_id || row.Article_ID,
         erp_product_description: row.erp_product_description || row.Description,
         categ1: row.categ1 || row.Category1,
         categ2: row.categ2 || row.Category2,
@@ -40,7 +40,7 @@ export function ProductImport({ onImportComplete }: ProductImportProps) {
       const { error } = await supabase
         .from("products")
         .upsert(products, { 
-          onConflict: "erp_product_code,article_id",
+          onConflict: "erp_product_code,articol_id",
           ignoreDuplicates: true 
         });
 

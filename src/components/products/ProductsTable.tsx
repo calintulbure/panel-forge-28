@@ -27,7 +27,7 @@ import {
 
 interface Product {
   erp_product_code: string;
-  article_id: number | null;
+  articol_id: number | null;
   erp_product_description: string | null;
   categ1: string | null;
   categ2: string | null;
@@ -137,7 +137,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                   className="cursor-pointer hover:bg-muted/50"
                 >
                   <TableCell className="font-medium" onClick={() => setSelectedProduct(product)}>
-                    {product.article_id || "-"}
+                    {product.articol_id || "-"}
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     {product.erp_product_code}

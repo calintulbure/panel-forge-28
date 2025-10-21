@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       products: {
         Row: {
-          article_id: number
+          articol_id: number
           categ1: string | null
           categ2: string | null
           categ3: string | null
@@ -41,7 +41,7 @@ export type Database = {
           yliro_sku: string | null
         }
         Insert: {
-          article_id?: number
+          articol_id?: number
           categ1?: string | null
           categ2?: string | null
           categ3?: string | null
@@ -66,7 +66,7 @@ export type Database = {
           yliro_sku?: string | null
         }
         Update: {
-          article_id?: number
+          articol_id?: number
           categ1?: string | null
           categ2?: string | null
           categ3?: string | null

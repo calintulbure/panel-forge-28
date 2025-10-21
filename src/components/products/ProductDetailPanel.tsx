@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface Product {
   erp_product_code: string;
-  article_id: number | null;
+  articol_id: number | null;
   erp_product_description: string | null;
   categ1: string | null;
   categ2: string | null;
@@ -95,7 +95,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
     // const url = site === "ro" ? roUrl : huUrl;
     // const response = await fetch('https://your-n8n-url/capture-' + site, {
     //   method: 'POST',
-    //   body: JSON.stringify({ article_id: product.article_id, [`site_${site}_url`]: url })
+    //   body: JSON.stringify({ articol_id: product.articol_id, [`site_${site}_url`]: url })
     // });
   };
 
@@ -103,7 +103,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Product Details - #{product.article_id}</SheetTitle>
+          <SheetTitle>Product Details - #{product.articol_id}</SheetTitle>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
@@ -113,7 +113,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
             <div className="space-y-3">
               <div>
                 <Label className="text-muted-foreground">Article ID</Label>
-                <p className="font-medium">{product.article_id}</p>
+                <p className="font-medium">{product.articol_id}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">ERP Code</Label>

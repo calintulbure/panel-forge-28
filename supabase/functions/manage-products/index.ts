@@ -8,7 +8,7 @@ const corsHeaders = {
 
 type Row = Record<string, unknown>;
 const TABLE = "products";
-const CONFLICT_KEYS = "erp_product_code,article_id"; // composite unique constraint
+const CONFLICT_KEYS = "erp_product_code,articol_id"; // composite unique constraint
 const CHUNK_SIZE = 500;
 
 function toArray<T>(v: T | T[] | null | undefined): T[] {
@@ -78,12 +78,12 @@ serve(async (req) => {
       // Validate required keys on all rows
       const missingKey = rows.findIndex((r) => 
         !("erp_product_code" in r) || r["erp_product_code"] == null ||
-        !("article_id" in r) || r["article_id"] == null
+        !("articol_id" in r) || r["articol_id"] == null
       );
       if (missingKey !== -1) {
         return badRequest({
-          error: `All rows for update must include "erp_product_code" and "article_id"`,
-          example: { erp_product_code: "ABC123", article_id: 1, field_to_update: "value" },
+          error: `All rows for update must include "erp_product_code" and "articol_id"`,
+          example: { erp_product_code: "ABC123", articol_id: 1, field_to_update: "value" },
           offendingIndex: missingKey,
         });
       }

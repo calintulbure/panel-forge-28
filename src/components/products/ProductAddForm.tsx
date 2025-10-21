@@ -15,7 +15,7 @@ export function ProductAddForm({ onSuccess }: ProductAddFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     erp_product_code: "",
-    article_id: "",
+    articol_id: "",
     erp_product_description: "",
     categ1: "",
     categ2: "",
@@ -39,8 +39,8 @@ export function ProductAddForm({ onSuccess }: ProductAddFormProps) {
         stare_stoc: formData.stare_stoc || null,
       };
 
-      if (formData.article_id) {
-        productData.article_id = parseInt(formData.article_id);
+      if (formData.articol_id) {
+        productData.articol_id = parseInt(formData.articol_id);
       }
 
       const { error } = await supabase.from("products").insert(productData);
@@ -79,12 +79,12 @@ export function ProductAddForm({ onSuccess }: ProductAddFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="article_id">Article ID</Label>
+          <Label htmlFor="articol_id">Article ID</Label>
           <Input
-            id="article_id"
+            id="articol_id"
             type="number"
-            value={formData.article_id}
-            onChange={(e) => setFormData({ ...formData, article_id: e.target.value })}
+            value={formData.articol_id}
+            onChange={(e) => setFormData({ ...formData, articol_id: e.target.value })}
           />
         </div>
       </div>
