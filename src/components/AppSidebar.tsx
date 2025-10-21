@@ -1,4 +1,4 @@
-import { Package, LogOut } from "lucide-react";
+import { Package, LogOut, Users } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -16,14 +16,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-const navItems = [
-  { title: "Product Catalog", url: "/", icon: Package },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { user, signOut, userRole } = useAuth();
+
+  const navItems = [
+    { title: "Product Catalog", url: "/", icon: Package },
+    ...(userRole === 'admin' ? [{ title: "User Management", url: "/users", icon: Users }] : []),
+  ];
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
     isActive

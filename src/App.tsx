@@ -10,6 +10,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import Products from "./pages/Products";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import PendingApproval from "./pages/PendingApproval";
+import UserManagement from "./pages/UserManagement";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +24,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/pending-approval" element={<PendingApproval />} />
             <Route
               path="/"
               element={
@@ -35,6 +38,26 @@ const App = () => (
                         </header>
                         <main className="flex-1">
                           <Products />
+                        </main>
+                      </div>
+                    </div>
+                  </SidebarProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <SidebarProvider defaultOpen={false}>
+                    <div className="flex min-h-screen w-full">
+                      <AppSidebar />
+                      <div className="flex-1 flex flex-col">
+                        <header className="h-14 md:h-14 border-b flex items-center px-3 md:px-4 bg-background sticky top-0 z-10">
+                          <SidebarTrigger className="h-11 w-11 md:h-10 md:w-10" />
+                        </header>
+                        <main className="flex-1">
+                          <UserManagement />
                         </main>
                       </div>
                     </div>

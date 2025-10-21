@@ -54,7 +54,9 @@ export default function Auth() {
           toast.error(error.message || "Failed to sign up");
         }
       } else {
-        toast.success("Account created successfully! You can now sign in.");
+        toast.success("Account created successfully! Please wait for admin approval before signing in.");
+        setEmail("");
+        setPassword("");
       }
     } catch (error) {
       toast.error("An unexpected error occurred");

@@ -11,6 +11,8 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   userRole: string | null;
+  isApproved: boolean;
+  isPending: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,26 +22,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isApproved, setIsApproved] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch user role
+  // Fetch user role and approval status
   const fetchUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, approved")
         .eq("user_id", userId)
         .single();
 
       if (error) {
         console.error("Error fetching user role:", error);
         setUserRole(null);
+        setIsApproved(false);
+        setIsPending(false);
       } else {
         setUserRole(data?.role || null);
+        setIsApproved(data?.approved || false);
+        setIsPending(!data?.approved);
       }
     } catch (error) {
       console.error("Error fetching user role:", error);
       setUserRole(null);
+      setIsApproved(false);
+      setIsPending(false);
     }
   };
 
@@ -57,6 +67,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }, 0);
         } else {
           setUserRole(null);
+          setIsApproved(false);
+          setIsPending(false);
         }
       }
     );
@@ -106,12 +118,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     await supabase.auth.signOut();
     setUserRole(null);
+    setIsApproved(false);
+    setIsPending(false);
     navigate("/auth");
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, signIn, signUp, signOut, userRole }}
+      value={{ user, session, loading, signIn, signUp, signOut, userRole, isApproved, isPending }}
     >
       {children}
     </AuthContext.Provider>
