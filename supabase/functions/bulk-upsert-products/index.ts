@@ -26,7 +26,8 @@ serve(async (req) => {
     };
     return json(resp);
   } catch (err) {
-    return json({ success: false, affected: 0, error: err.message }, 500);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    return json({ success: false, affected: 0, error: errorMessage }, 500);
   }
 });
 

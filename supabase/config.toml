@@ -2,3 +2,9 @@ project_id = "vmijvdxllubdudppeemr"
 
 [functions.manage-products]
 verify_jwt = false
+
+[functions.bulk-upsert-products]
+verify_jwt = false
+
+[functions.trigger-snapshot-new]
+verify_jwt = false
