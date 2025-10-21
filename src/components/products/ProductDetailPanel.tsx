@@ -7,9 +7,19 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, Save, Check, Lock, ExternalLink, CheckCircle2 } from "lucide-react";
+import { RefreshCw, Save, Check, Lock, ExternalLink, CheckCircle2, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Product {
   erp_product_code: string;
@@ -46,16 +56,14 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
   const [huUrl, setHuUrl] = useState(product.site_hu_url || "");
   const [validated, setValidated] = useState(product.validated || false);
   const [loading, setLoading] = useState(false);
-  const [showRoPreview, setShowRoPreview] = useState(false);
-  const [showHuPreview, setShowHuPreview] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearSite, setClearSite] = useState<"ro" | "hu" | null>(null);
 
-  // Sync state when product changes to avoid stale data and reset previews
+  // Sync state when product changes to avoid stale data
   useEffect(() => {
     setRoUrl(product.site_ro_url || "");
     setHuUrl(product.site_hu_url || "");
     setValidated(product.validated || false);
-    setShowRoPreview(false);
-    setShowHuPreview(false);
   }, [product]);
 
   const handleRefreshSnapshot = async (site: "ro" | "hu") => {
@@ -129,6 +137,53 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearUrls = async () => {
+    if (!clearSite) return;
+    
+    setLoading(true);
+    try {
+      const updateData = clearSite === "ro" ? {
+        site_ro_url: null,
+        site_ro_snapshot_url: null,
+        site_ro_snapshot_base64: null,
+        yliro_sku: null,
+        yliro_descriere: null,
+        validated: false
+      } : {
+        site_hu_url: null,
+        site_hu_snapshot_url: null,
+        site_hu_snapshot_base64: null,
+        ylihu_sku: null,
+        ylihu_descriere: null,
+        validated: false
+      };
+
+      const { error } = await supabase
+        .from("products")
+        .update(updateData)
+        .eq("erp_product_code", product.erp_product_code);
+
+      if (error) throw error;
+      
+      if (clearSite === "ro") {
+        setRoUrl("");
+      } else {
+        setHuUrl("");
+      }
+      setValidated(false);
+      
+      toast.success(`${clearSite.toUpperCase()} product data cleared successfully`);
+      onUpdate();
+    } catch (error) {
+      toast.error(`Failed to clear ${clearSite?.toUpperCase()} data`);
+      console.error(error);
+    } finally {
+      setLoading(false);
+      setClearDialogOpen(false);
+      setClearSite(null);
     }
   };
 
@@ -250,48 +305,51 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
               <div>
                 <Label>Snapshot Preview</Label>
                 {product.site_ro_snapshot_base64 ? (
-                  showRoPreview ? (
-                    <div className="mt-2">
-                      <a
-                        href={roUrl || product.site_ro_url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block"
-                      >
-                        <img
-                          key={product.site_ro_snapshot_base64.substring(0, 50)}
-                          src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
-                          alt="RO Site Snapshot"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                        />
-                      </a>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => setShowRoPreview(true)}
+                  <div className="mt-2">
+                    <a
+                      href={roUrl || product.site_ro_url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
                     >
-                      Load RO Snapshot
-                    </Button>
-                  )
+                      <img
+                        key={product.site_ro_snapshot_base64.substring(0, 50)}
+                        src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
+                        alt="RO Site Snapshot"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full max-w-[300px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                      />
+                    </a>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground mt-1">No snapshot available</p>
                 )}
               </div>
 
-              <Button
-                variant="outline"
-                onClick={() => handleRefreshSnapshot("ro")}
-                disabled={loading || !roUrl}
-                className="h-11 md:h-10 w-full sm:w-auto"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh RO Snapshot
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => handleRefreshSnapshot("ro")}
+                  disabled={loading || !roUrl}
+                  className="h-11 md:h-10 flex-1 sm:flex-none"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Snapshot
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setClearSite("ro");
+                    setClearDialogOpen(true);
+                  }}
+                  disabled={loading || !roUrl}
+                  className="h-11 md:h-10 flex-1 sm:flex-none"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear RO Data
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -358,48 +416,51 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
               <div>
                 <Label>Snapshot Preview</Label>
                 {product.site_hu_snapshot_base64 ? (
-                  showHuPreview ? (
-                    <div className="mt-2">
-                      <a
-                        href={huUrl || product.site_hu_url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block"
-                      >
-                        <img
-                          key={product.site_hu_snapshot_base64.substring(0, 50)}
-                          src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
-                          alt="HU Site Snapshot"
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                        />
-                      </a>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => setShowHuPreview(true)}
+                  <div className="mt-2">
+                    <a
+                      href={huUrl || product.site_hu_url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
                     >
-                      Load HU Snapshot
-                    </Button>
-                  )
+                      <img
+                        key={product.site_hu_snapshot_base64.substring(0, 50)}
+                        src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
+                        alt="HU Site Snapshot"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full max-w-[300px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                      />
+                    </a>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground mt-1">No snapshot available</p>
                 )}
               </div>
 
-              <Button
-                variant="outline"
-                onClick={() => handleRefreshSnapshot("hu")}
-                disabled={loading || !huUrl}
-                className="h-11 md:h-10 w-full sm:w-auto"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh HU Snapshot
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => handleRefreshSnapshot("hu")}
+                  disabled={loading || !huUrl}
+                  className="h-11 md:h-10 flex-1 sm:flex-none"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Snapshot
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setClearSite("hu");
+                    setClearDialogOpen(true);
+                  }}
+                  disabled={loading || !huUrl}
+                  className="h-11 md:h-10 flex-1 sm:flex-none"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear HU Data
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -427,6 +488,22 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
           )}
         </div>
       </SheetContent>
+
+      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear {clearSite?.toUpperCase()} Product Data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear the {clearSite?.toUpperCase()} website URL, snapshot, SKU, and description.
+              The product will also be marked as not validated. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearUrls}>Clear Data</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

@@ -139,10 +139,8 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
           <TableHeader>
             <TableRow>
               <TableHead className="w-[100px]">Article ID</TableHead>
-              <TableHead>Product Info</TableHead>
-              <TableHead className="w-[120px]">Category 1</TableHead>
-              <TableHead className="w-[120px]">Category 2</TableHead>
-              <TableHead className="w-[120px]">Category 3</TableHead>
+              <TableHead className="w-[180px]">Product Info</TableHead>
+              <TableHead className="w-[180px]">Categories</TableHead>
               <TableHead>Stock Status</TableHead>
               <TableHead>Offer Status</TableHead>
               <TableHead className="text-center">RO Publish</TableHead>
@@ -154,7 +152,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 11 : 10} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? 9 : 8} className="h-24 text-center">
                   No products found.
                 </TableCell>
               </TableRow>
@@ -162,7 +160,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
               products.map((product) => (
                 <TableRow
                   key={product.erp_product_code}
-                  className="cursor-pointer hover:bg-muted/50"
+                  className="cursor-pointer hover:bg-muted/50 group"
                 >
                   <TableCell className="font-medium" onClick={() => setSelectedProduct(product)}>
                     {product.articol_id || "-"}
@@ -170,14 +168,18 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
                       <div className="font-medium text-sm">{product.erp_product_code}</div>
-                      <div className="text-xs text-muted-foreground max-w-[250px] truncate">
+                      <div className="text-xs text-muted-foreground max-w-[180px] truncate">
                         {product.erp_product_description || "-"}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs truncate max-w-[120px]" onClick={() => setSelectedProduct(product)}>{product.categ1 || "-"}</TableCell>
-                  <TableCell className="text-xs truncate max-w-[120px]" onClick={() => setSelectedProduct(product)}>{product.categ2 || "-"}</TableCell>
-                  <TableCell className="text-xs truncate max-w-[120px]" onClick={() => setSelectedProduct(product)}>{product.categ3 || "-"}</TableCell>
+                  <TableCell className="text-xs" onClick={() => setSelectedProduct(product)}>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="truncate max-w-[180px]">{product.categ1 || "-"}</div>
+                      <div className="truncate max-w-[180px] text-muted-foreground">{product.categ2 || "-"}</div>
+                      <div className="truncate max-w-[180px] text-muted-foreground">{product.categ3 || "-"}</div>
+                    </div>
+                  </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <Badge variant={getStockBadgeVariant(product.stare_stoc)}>
                       {product.stare_stoc || "Unknown"}
@@ -188,25 +190,47 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                       {product.stare_oferta || "Unknown"}
                     </Badge>
                   </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <PublishCell
-                      productCode={product.erp_product_code}
-                      snapshotBase64={product.site_ro_snapshot_base64}
-                      siteUrl={product.site_ro_url}
-                      sku={product.yliro_sku}
-                      site="ro"
-                      onUpdate={onRefresh}
-                    />
+                  <TableCell onClick={(e) => e.stopPropagation()} className="relative">
+                    <div className="relative group/snapshot">
+                      <PublishCell
+                        productCode={product.erp_product_code}
+                        snapshotBase64={product.site_ro_snapshot_base64}
+                        siteUrl={product.site_ro_url}
+                        sku={product.yliro_sku}
+                        site="ro"
+                        onUpdate={onRefresh}
+                      />
+                      {product.site_ro_snapshot_base64 && (
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover/snapshot:opacity-100 pointer-events-none z-50 transition-opacity duration-200">
+                          <img
+                            src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
+                            alt="RO Snapshot"
+                            className="w-[240px] rounded-lg shadow-2xl border-2 border-border"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <PublishCell
-                      productCode={product.erp_product_code}
-                      snapshotBase64={product.site_hu_snapshot_base64}
-                      siteUrl={product.site_hu_url}
-                      sku={product.ylihu_sku}
-                      site="hu"
-                      onUpdate={onRefresh}
-                    />
+                  <TableCell onClick={(e) => e.stopPropagation()} className="relative">
+                    <div className="relative group/snapshot">
+                      <PublishCell
+                        productCode={product.erp_product_code}
+                        snapshotBase64={product.site_hu_snapshot_base64}
+                        siteUrl={product.site_hu_url}
+                        sku={product.ylihu_sku}
+                        site="hu"
+                        onUpdate={onRefresh}
+                      />
+                      {product.site_hu_snapshot_base64 && (
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover/snapshot:opacity-100 pointer-events-none z-50 transition-opacity duration-200">
+                          <img
+                            src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
+                            alt="HU Snapshot"
+                            className="w-[240px] rounded-lg shadow-2xl border-2 border-border"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <Button
