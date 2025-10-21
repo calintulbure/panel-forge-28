@@ -47,6 +47,36 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
   const [validated, setValidated] = useState(product.validated || false);
   const [loading, setLoading] = useState(false);
 
+  const handleRefreshSnapshot = async (site: "ro" | "hu") => {
+    const url = site === "ro" ? roUrl : huUrl;
+    
+    if (!url) {
+      toast.error("Please enter a URL first");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('trigger-snapshot', {
+        body: {
+          productCode: product.erp_product_code,
+          siteUrl: url,
+          site: site
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success(`${site.toUpperCase()} snapshot refreshed successfully`);
+      onUpdate();
+    } catch (error) {
+      toast.error(`Failed to refresh ${site.toUpperCase()} snapshot`);
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveUrl = async (field: "site_ro_url" | "site_hu_url", value: string) => {
     setLoading(true);
     try {
@@ -57,6 +87,11 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
 
       if (error) throw error;
       toast.success("URL saved successfully");
+      
+      // Automatically trigger snapshot refresh after URL is saved
+      const site = field === "site_ro_url" ? "ro" : "hu";
+      await handleRefreshSnapshot(site);
+      
       onUpdate();
     } catch (error) {
       toast.error("Failed to save URL");
@@ -84,19 +119,6 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRefreshSnapshot = async (site: "ro" | "hu") => {
-    setLoading(true);
-    toast.info("Snapshot refresh is not yet configured. Connect your n8n webhook endpoint.");
-    setLoading(false);
-    
-    // TODO: Implement n8n webhook call
-    // const url = site === "ro" ? roUrl : huUrl;
-    // const response = await fetch('https://your-n8n-url/capture-' + site, {
-    //   method: 'POST',
-    //   body: JSON.stringify({ articol_id: product.articol_id, [`site_${site}_url`]: url })
-    // });
   };
 
   return (

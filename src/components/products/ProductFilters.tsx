@@ -53,23 +53,23 @@ export function ProductFilters({
 }: ProductFiltersProps) {
   return (
     <Card>
-      <CardContent className="pt-4 pb-4">
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          <div className="space-y-1 sm:col-span-2">
+      <CardContent className="pt-3 pb-3 md:pt-4 md:pb-4">
+        <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="space-y-0.5 md:space-y-1 sm:col-span-2">
             <Label htmlFor="search" className="text-xs">Search</Label>
             <Input
               id="search"
               placeholder="ERP code or description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-11 md:h-9"
+              className="h-9 text-sm"
             />
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 md:space-y-1">
             <Label htmlFor="category1" className="text-xs">Category 1</Label>
             <Select value={category1} onValueChange={setCategory1}>
-              <SelectTrigger id="category1" className="h-11 md:h-9">
+              <SelectTrigger id="category1" className="h-9 text-sm">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
@@ -83,10 +83,10 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 md:space-y-1">
             <Label htmlFor="category2" className="text-xs">Category 2</Label>
             <Select value={category2} onValueChange={setCategory2}>
-              <SelectTrigger id="category2" className="h-11 md:h-9">
+              <SelectTrigger id="category2" className="h-9 text-sm">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
@@ -100,10 +100,10 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 md:space-y-1">
             <Label htmlFor="category3" className="text-xs">Category 3</Label>
             <Select value={category3} onValueChange={setCategory3}>
-              <SelectTrigger id="category3" className="h-11 md:h-9">
+              <SelectTrigger id="category3" className="h-9 text-sm">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
@@ -117,10 +117,10 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 md:space-y-1">
             <Label htmlFor="offerStatus" className="text-xs">Offer Status</Label>
             <Select value={offerStatus} onValueChange={setOfferStatus}>
-              <SelectTrigger id="offerStatus" className="h-11 md:h-9">
+              <SelectTrigger id="offerStatus" className="h-9 text-sm">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
@@ -134,10 +134,10 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 md:space-y-1">
             <Label htmlFor="stockStatus" className="text-xs">Stock Status</Label>
             <Select value={stockStatus} onValueChange={setStockStatus}>
-              <SelectTrigger id="stockStatus" className="h-11 md:h-9">
+              <SelectTrigger id="stockStatus" className="h-9 text-sm">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
@@ -151,10 +151,10 @@ export function ProductFilters({
             </Select>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5 md:space-y-1">
             <Label htmlFor="validationFilter" className="text-xs">Validation</Label>
             <Select value={validationFilter} onValueChange={setValidationFilter}>
-              <SelectTrigger id="validationFilter" className="h-11 md:h-9">
+              <SelectTrigger id="validationFilter" className="h-9 text-sm">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
