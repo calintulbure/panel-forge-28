@@ -10,7 +10,7 @@ type Row = Record<string, unknown>;
 
 const TABLE = "products";
 const PK = "erp_product_code"; // primary key in your table
-const UK = "articol_id"; // unique, must never be changed once set
+const UK = "articol_id"; // unique; must never be changed
 const CHUNK_SIZE = 500;
 
 function toArray<T>(v: T | T[] | null | undefined): T[] {
@@ -22,7 +22,6 @@ function chunk<T>(arr: T[], size: number): T[][] {
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
   return out;
 }
-
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -43,22 +42,18 @@ serve(async (req) => {
       return badRequest({ error: 'Invalid operation. Must be "insert" or "update"' });
     }
     if (rows.length === 0) {
-      return badRequest({ error: "data must be an object or a non-empty array" });
+      return badRequest({ error: "data must be an object or non-empty array" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Collect incoming PKs and UKs (ignore null/undefined)
-    const incomingPKs = Array.from(
-      new Set(rows.map((r) => r[PK]).filter((v): v is string | number => v !== null && v !== undefined)),
-    );
-    const incomingUKs = Array.from(
-      new Set(rows.map((r) => r[UK]).filter((v): v is string | number => v !== null && v !== undefined)),
-    );
+    // Collect incoming PKs/UKs (ignoring null/undefined)
+    const incomingPKs = Array.from(new Set(rows.map((r) => r[PK]).filter((v): v is string | number => v != null)));
+    const incomingUKs = Array.from(new Set(rows.map((r) => r[UK]).filter((v): v is string | number => v != null)));
 
-    // Fetch what already exists in DB
+    // Pull existing PKs/UKs from DB
     const [existingPKRes, existingUKRes] = await Promise.all([
       incomingPKs.length
         ? supabase.from(TABLE).select(PK).in(PK, incomingPKs)
@@ -74,13 +69,10 @@ serve(async (req) => {
       });
     }
 
-    const existingPKSet = new Set((existingPKRes.data ?? []).map((r: any) => r[PK]));
-    const existingUKSet = new Set((existingUKRes.data ?? []).map((r: any) => r[UK]));
+    // Seed "seen" sets with what's already in DB
+    const seenPK = new Set((existingPKRes.data ?? []).map((r: any) => r[PK]));
+    const seenUK = new Set((existingUKRes.data ?? []).map((r: any) => r[UK]));
 
-    // Prepare three buckets:
-    // 1) rowsToUpdate: PK exists -> upsert on PK, but NEVER send articol_id
-    // 2) rowsToInsert: PK doesn't exist AND articol_id is free -> insert with articol_id
-    // 3) rowsSkipped: articol_id is already taken by someone else (cannot insert)
     const rowsToUpdate: Row[] = [];
     const rowsToInsert: Row[] = [];
     const rowsSkipped: { row: Row; reason: string }[] = [];
@@ -89,43 +81,58 @@ serve(async (req) => {
       const pk = r[PK];
       const uk = r[UK];
 
-      const pkExists = pk !== undefined && pk !== null && existingPKSet.has(pk as any);
-      const ukExists = uk !== undefined && uk !== null && existingUKSet.has(uk as any);
+      const hasPK = pk != null;
+      const hasUK = uk != null;
 
-      if (pkExists) {
-        // Existing product -> never update articol_id
+      // If we've already seen this PK earlier in this same request, treat it as update
+      if (hasPK && seenPK.has(pk as any)) {
+        const copy: Row = { ...r };
+        delete copy[UK]; // NEVER change articol_id
+        rowsToUpdate.push(copy);
+        continue;
+      }
+
+      // New PK (not seen yet)
+      if (operation === "update") {
+        // For updates we must have a PK; if we don't, skip.
+        if (!hasPK) {
+          rowsSkipped.push({ row: r, reason: `Missing ${PK} on update` });
+          continue;
+        }
+        // Mark PK as seen and push to update (still never send articol_id)
         const copy: Row = { ...r };
         delete copy[UK];
         rowsToUpdate.push(copy);
-      } else {
-        // New product
-        if (ukExists) {
-          // articol_id already used by another row -> do not insert (and we never reassign articol_id)
-          rowsSkipped.push({ row: r, reason: `${UK} already exists in database` });
-        } else {
-          rowsToInsert.push(r);
-        }
+        seenPK.add(pk as any);
+        continue;
       }
+
+      // operation === "insert"
+      // For inserts: if articol_id already used (in DB or accepted earlier), skip.
+      if (hasUK && seenUK.has(uk as any)) {
+        rowsSkipped.push({ row: r, reason: `${UK} already used` });
+        continue;
+      }
+
+      // Accept as new row. Add to "seen" so later duplicates are caught in-request.
+      if (hasPK) seenPK.add(pk as any);
+      if (hasUK) seenUK.add(uk as any);
+      rowsToInsert.push(r);
     }
 
     const results: Row[] = [];
     let insertedCount = 0;
     let updatedCount = 0;
 
-    // 1) INSERT new rows (keep articol_id)
+    // INSERTS (keep articol_id)
     if (rowsToInsert.length) {
       for (const c of chunk(rowsToInsert, CHUNK_SIZE)) {
-        // Using upsert on PK with ignoreDuplicates true to be race-safe,
-        // but since PK is new we expect plain insert behavior.
+        // upsert on PK with ignoreDuplicates true is race-safe;
+        // we already filtered articol_id duplicates in-request, so no UK violations.
         const { data: ins, error } = await supabase
           .from(TABLE)
-          .upsert(c, {
-            onConflict: PK,
-            ignoreDuplicates: true,
-            count: "exact",
-          })
+          .upsert(c, { onConflict: PK, ignoreDuplicates: true, count: "exact" })
           .select();
-
         if (error) {
           console.error("Insert batch error:", error);
           return serverError({ error: "Failed to insert batch", details: error.message });
@@ -135,18 +142,13 @@ serve(async (req) => {
       }
     }
 
-    // 2) UPSERT existing rows on PK (articol_id removed above so it never changes)
+    // UPDATES (NEVER send articol_id)
     if (rowsToUpdate.length) {
       for (const c of chunk(rowsToUpdate, CHUNK_SIZE)) {
         const { data: upd, error } = await supabase
           .from(TABLE)
-          .upsert(c, {
-            onConflict: PK,
-            ignoreDuplicates: false, // we DO want update behavior
-            count: "exact",
-          })
+          .upsert(c, { onConflict: PK, ignoreDuplicates: false, count: "exact" })
           .select();
-
         if (error) {
           console.error("Update batch error:", error);
           return serverError({ error: "Failed to update batch", details: error.message });
@@ -165,7 +167,7 @@ serve(async (req) => {
         updated: updatedCount,
         skipped: rowsSkipped.length,
       },
-      skipped: rowsSkipped, // rows not inserted because articol_id was already taken
+      skipped: rowsSkipped,
       data: results,
     });
   } catch (err) {
