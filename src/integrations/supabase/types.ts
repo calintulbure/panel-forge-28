@@ -23,6 +23,8 @@ export type Database = {
           created_at: string | null
           erp_product_code: string
           erp_product_description: string | null
+          producator: string | null
+          senior_erp_link: string | null
           site_hu_snapshot_base64: string | null
           site_hu_snapshot_url: string | null
           site_hu_url: string | null
@@ -46,6 +48,8 @@ export type Database = {
           created_at?: string | null
           erp_product_code: string
           erp_product_description?: string | null
+          producator?: string | null
+          senior_erp_link?: string | null
           site_hu_snapshot_base64?: string | null
           site_hu_snapshot_url?: string | null
           site_hu_url?: string | null
@@ -69,6 +73,8 @@ export type Database = {
           created_at?: string | null
           erp_product_code?: string
           erp_product_description?: string | null
+          producator?: string | null
+          senior_erp_link?: string | null
           site_hu_snapshot_base64?: string | null
           site_hu_snapshot_url?: string | null
           site_hu_url?: string | null
