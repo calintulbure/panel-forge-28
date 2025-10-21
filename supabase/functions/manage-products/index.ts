@@ -153,7 +153,6 @@ serve(async (req) => {
     }
 
     return json({
-      version: VERSION,
       success: true,
       version: VERSION,
       operation: op,
