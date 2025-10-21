@@ -127,6 +127,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_upsert_products: {
+        Args: { payload: Json }
+        Returns: number
+      }
       get_user_approval_status: {
         Args: { _user_id: string }
         Returns: {
