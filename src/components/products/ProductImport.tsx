@@ -36,12 +36,12 @@ export function ProductImport({ onImportComplete }: ProductImportProps) {
         stare_stoc: row.stare_stoc || row.Stock_Status,
       }));
 
-      // Use upsert with composite unique constraint to ignore duplicates
+      // Use upsert with primary key to handle duplicates
       const { error } = await supabase
         .from("products")
         .upsert(products, { 
-          onConflict: "erp_product_code,articol_id",
-          ignoreDuplicates: true 
+          onConflict: "erp_product_code",
+          ignoreDuplicates: false 
         });
 
       if (error) throw error;
