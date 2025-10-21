@@ -193,6 +193,8 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
               <img 
                 src={`data:image/jpeg;base64,${snapshotBase64}`} 
                 alt={`${site.toUpperCase()} snapshot`} 
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover" 
               />
               {siteUrl && (

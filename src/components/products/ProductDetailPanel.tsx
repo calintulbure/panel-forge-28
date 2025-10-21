@@ -46,12 +46,16 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
   const [huUrl, setHuUrl] = useState(product.site_hu_url || "");
   const [validated, setValidated] = useState(product.validated || false);
   const [loading, setLoading] = useState(false);
+  const [showRoPreview, setShowRoPreview] = useState(false);
+  const [showHuPreview, setShowHuPreview] = useState(false);
 
-  // Sync state when product changes to avoid stale data
+  // Sync state when product changes to avoid stale data and reset previews
   useEffect(() => {
     setRoUrl(product.site_ro_url || "");
     setHuUrl(product.site_hu_url || "");
     setValidated(product.validated || false);
+    setShowRoPreview(false);
+    setShowHuPreview(false);
   }, [product]);
 
   const handleRefreshSnapshot = async (site: "ro" | "hu") => {
@@ -246,21 +250,34 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
               <div>
                 <Label>Snapshot Preview</Label>
                 {product.site_ro_snapshot_base64 ? (
-                  <div className="mt-2">
-                    <a
-                      href={roUrl || product.site_ro_url || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
+                  showRoPreview ? (
+                    <div className="mt-2">
+                      <a
+                        href={roUrl || product.site_ro_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <img
+                          key={product.site_ro_snapshot_base64.substring(0, 50)}
+                          src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
+                          alt="RO Site Snapshot"
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                        />
+                      </a>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => setShowRoPreview(true)}
                     >
-                      <img
-                        key={product.site_ro_snapshot_base64.substring(0, 50)}
-                        src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
-                        alt="RO Site Snapshot"
-                        className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                      />
-                    </a>
-                  </div>
+                      Load RO Snapshot
+                    </Button>
+                  )
                 ) : (
                   <p className="text-sm text-muted-foreground mt-1">No snapshot available</p>
                 )}
@@ -341,21 +358,34 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
               <div>
                 <Label>Snapshot Preview</Label>
                 {product.site_hu_snapshot_base64 ? (
-                  <div className="mt-2">
-                    <a
-                      href={huUrl || product.site_hu_url || "#"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
+                  showHuPreview ? (
+                    <div className="mt-2">
+                      <a
+                        href={huUrl || product.site_hu_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <img
+                          key={product.site_hu_snapshot_base64.substring(0, 50)}
+                          src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
+                          alt="HU Site Snapshot"
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                        />
+                      </a>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => setShowHuPreview(true)}
                     >
-                      <img
-                        key={product.site_hu_snapshot_base64.substring(0, 50)}
-                        src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
-                        alt="HU Site Snapshot"
-                        className="w-full max-w-[120px] rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                      />
-                    </a>
-                  </div>
+                      Load HU Snapshot
+                    </Button>
+                  )
                 ) : (
                   <p className="text-sm text-muted-foreground mt-1">No snapshot available</p>
                 )}
