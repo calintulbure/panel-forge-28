@@ -140,9 +140,9 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
             <TableRow>
               <TableHead className="w-[100px]">Article ID</TableHead>
               <TableHead>Product Info</TableHead>
-              <TableHead>Category 1</TableHead>
-              <TableHead>Category 2</TableHead>
-              <TableHead>Category 3</TableHead>
+              <TableHead className="w-[120px]">Category 1</TableHead>
+              <TableHead className="w-[120px]">Category 2</TableHead>
+              <TableHead className="w-[120px]">Category 3</TableHead>
               <TableHead>Stock Status</TableHead>
               <TableHead>Offer Status</TableHead>
               <TableHead className="text-center">RO Publish</TableHead>
@@ -175,9 +175,9 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell onClick={() => setSelectedProduct(product)}>{product.categ1 || "-"}</TableCell>
-                  <TableCell onClick={() => setSelectedProduct(product)}>{product.categ2 || "-"}</TableCell>
-                  <TableCell onClick={() => setSelectedProduct(product)}>{product.categ3 || "-"}</TableCell>
+                  <TableCell className="text-xs truncate max-w-[120px]" onClick={() => setSelectedProduct(product)}>{product.categ1 || "-"}</TableCell>
+                  <TableCell className="text-xs truncate max-w-[120px]" onClick={() => setSelectedProduct(product)}>{product.categ2 || "-"}</TableCell>
+                  <TableCell className="text-xs truncate max-w-[120px]" onClick={() => setSelectedProduct(product)}>{product.categ3 || "-"}</TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <Badge variant={getStockBadgeVariant(product.stare_stoc)}>
                       {product.stare_stoc || "Unknown"}

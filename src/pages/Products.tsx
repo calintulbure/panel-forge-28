@@ -157,13 +157,13 @@ export default function Products() {
       />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
           <p className="text-sm text-muted-foreground">
             Showing {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length} products
           </p>
           <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-            <SelectTrigger className="w-[120px] h-9">
-              <SelectValue />
+            <SelectTrigger className="w-full sm:w-[130px] h-9">
+              <SelectValue placeholder="Items per page" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="10">10 per page</SelectItem>
