@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Trash2 } from "lucide-react";
+import { Check, X, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { PublishCell } from "./PublishCell";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +58,33 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const { toast } = useToast();
+
+  const handleValidationToggle = async (product: Product, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ validated: !product.validated })
+        .eq("erp_product_code", product.erp_product_code);
+
+      if (error) throw error;
+
+      toast({
+        title: "Validation updated",
+        description: `Product ${product.validated ? "invalidated" : "validated"}`,
+      });
+
+      onRefresh();
+    } catch (error) {
+      console.error("Validation error:", error);
+      toast({
+        title: "Error updating validation",
+        description: error instanceof Error ? error.message : "Failed to update validation",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDelete = async () => {
     if (!productToDelete) return;
@@ -111,10 +138,10 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
           <TableHeader>
             <TableRow>
               <TableHead className="w-[100px]">Article ID</TableHead>
-              <TableHead>ERP Code</TableHead>
-              <TableHead>Description</TableHead>
+              <TableHead>Product Info</TableHead>
               <TableHead>Category 1</TableHead>
               <TableHead>Category 2</TableHead>
+              <TableHead>Category 3</TableHead>
               <TableHead>Stock Status</TableHead>
               <TableHead>Offer Status</TableHead>
               <TableHead className="text-center">RO Publish</TableHead>
@@ -140,13 +167,16 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                     {product.articol_id || "-"}
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
-                    {product.erp_product_code}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate" onClick={() => setSelectedProduct(product)}>
-                    {product.erp_product_description || "-"}
+                    <div className="flex flex-col gap-1">
+                      <div className="font-medium text-sm">{product.erp_product_code}</div>
+                      <div className="text-xs text-muted-foreground max-w-[250px] truncate">
+                        {product.erp_product_description || "-"}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>{product.categ1 || "-"}</TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>{product.categ2 || "-"}</TableCell>
+                  <TableCell onClick={() => setSelectedProduct(product)}>{product.categ3 || "-"}</TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <Badge variant={getStockBadgeVariant(product.stare_stoc)}>
                       {product.stare_stoc || "Unknown"}
@@ -177,12 +207,19 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                       onUpdate={onRefresh}
                     />
                   </TableCell>
-                  <TableCell className="text-center" onClick={() => setSelectedProduct(product)}>
-                    {product.validated ? (
-                      <Check className="h-4 w-4 text-success mx-auto" />
-                    ) : (
-                      <X className="h-4 w-4 text-muted-foreground mx-auto" />
-                    )}
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => handleValidationToggle(product, e)}
+                      className="h-8 w-8"
+                    >
+                      {product.validated ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </Button>
                   </TableCell>
                   {isAdmin && (
                     <TableCell>
