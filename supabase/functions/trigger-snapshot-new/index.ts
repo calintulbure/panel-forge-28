@@ -29,7 +29,7 @@ serve(async (req) => {
       ? isProduction
         ? Deno.env.get("N8N_WEBHOOK_URL_RO_PRODUCTION")
         : Deno.env.get("N8N_WEBHOOK_URL_RO")
-      : isProduction;
+      : isProduction
         ? Deno.env.get("N8N_WEBHOOK_URL_HU_PRODUCTION")
         : Deno.env.get("N8N_WEBHOOK_URL_HU")
    
