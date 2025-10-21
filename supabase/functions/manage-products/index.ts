@@ -8,7 +8,7 @@ const corsHeaders = {
 
 type Row = Record<string, unknown>;
 const TABLE = "products";
-const CONFLICT_KEY = "erp_product_code"; // unique/PK in your table
+const CONFLICT_KEYS = "erp_product_code,article_id"; // composite unique constraint
 const CHUNK_SIZE = 500;
 
 function toArray<T>(v: T | T[] | null | undefined): T[] {
@@ -74,13 +74,16 @@ serve(async (req) => {
         totalAffected += count ?? inserted?.length ?? 0;
       }
     } else {
-      // Batch update — use UPSERT on conflict key to update each row
-      // Validate key on all rows
-      const missingKey = rows.findIndex((r) => !(CONFLICT_KEY in r) || r[CONFLICT_KEY] == null);
+      // Batch update — use UPSERT on conflict keys to update each row
+      // Validate required keys on all rows
+      const missingKey = rows.findIndex((r) => 
+        !("erp_product_code" in r) || r["erp_product_code"] == null ||
+        !("article_id" in r) || r["article_id"] == null
+      );
       if (missingKey !== -1) {
         return badRequest({
-          error: `All rows for update must include "${CONFLICT_KEY}"`,
-          example: { [CONFLICT_KEY]: "ABC123", field_to_update: "value" },
+          error: `All rows for update must include "erp_product_code" and "article_id"`,
+          example: { erp_product_code: "ABC123", article_id: 1, field_to_update: "value" },
           offendingIndex: missingKey,
         });
       }
@@ -92,7 +95,7 @@ serve(async (req) => {
           count,
         } = await supabase
           .from(TABLE)
-          .upsert(c, { onConflict: CONFLICT_KEY, ignoreDuplicates: false, count: "exact" })
+          .upsert(c, { onConflict: CONFLICT_KEYS, ignoreDuplicates: false, count: "exact" })
           .select();
 
         if (error) {
