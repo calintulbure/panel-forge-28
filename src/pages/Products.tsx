@@ -31,8 +31,9 @@ export default function Products() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
-        .order("erp_product_code", { ascending: true });
+        .select("*", { count: 'exact' })
+        .order("erp_product_code", { ascending: true })
+        .limit(100000);
 
       if (error) throw error;
       return data;
