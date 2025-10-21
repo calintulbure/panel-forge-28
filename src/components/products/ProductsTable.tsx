@@ -190,7 +190,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                       {product.stare_oferta || "Unknown"}
                     </Badge>
                   </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()} className="relative">
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="relative group/snapshot">
                       <PublishCell
                         productCode={product.erp_product_code}
@@ -201,17 +201,18 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                         onUpdate={onRefresh}
                       />
                       {product.site_ro_snapshot_base64 && (
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover/snapshot:opacity-100 pointer-events-none z-50 transition-opacity duration-200">
+                        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover/snapshot:opacity-100 pointer-events-none z-[100] transition-opacity duration-200">
                           <img
                             src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
                             alt="RO Snapshot"
-                            className="w-[240px] rounded-lg shadow-2xl border-2 border-border"
+                            className="w-[400px] rounded-lg shadow-2xl border-4 border-border bg-background"
+                            style={{ transform: 'scale(2)' }}
                           />
                         </div>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()} className="relative">
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="relative group/snapshot">
                       <PublishCell
                         productCode={product.erp_product_code}
@@ -222,11 +223,12 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                         onUpdate={onRefresh}
                       />
                       {product.site_hu_snapshot_base64 && (
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover/snapshot:opacity-100 pointer-events-none z-50 transition-opacity duration-200">
+                        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover/snapshot:opacity-100 pointer-events-none z-[100] transition-opacity duration-200">
                           <img
                             src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
                             alt="HU Snapshot"
-                            className="w-[240px] rounded-lg shadow-2xl border-2 border-border"
+                            className="w-[400px] rounded-lg shadow-2xl border-4 border-border bg-background"
+                            style={{ transform: 'scale(2)' }}
                           />
                         </div>
                       )}
