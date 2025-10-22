@@ -15,7 +15,7 @@ serve(async (req) => {
       return json({ success: false, error: parsed.error.message }, 400);
     }
 
-    const { productCode, siteUrl, site: siteIn } = parsed.data;
+    const { productCode, siteUrl, productDescription, productId, site: siteIn } = parsed.data;
     const host = new URL(siteUrl).hostname;
     const site = siteIn ?? (host.includes("yli.ro") ? "ro" : host.includes("yli.hu") ? "hu" : null);
     if (!site) return json({ success: false, error: "Cannot infer site" }, 400);
@@ -37,7 +37,7 @@ serve(async (req) => {
     const n8nRes = await fetch(webhookUrl!, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productCode, url: siteUrl })
+      body: JSON.stringify({ productCode, url: siteUrl, productDescription, productId})
     });
 
     if (!n8nRes.ok) throw new Error(`n8n failed ${n8nRes.status}`);
@@ -46,20 +46,22 @@ serve(async (req) => {
     const imageBase64 = n8nData.imageBase64;
     if (!imageBase64) throw new Error("Missing imageBase64 from n8n");
 
-    const yliroDescriere = n8nData.yliro_descriere || null;
-    const ylihuDescriere = n8nData.ylihu_descriere || null;
+    /*const yliroDescriere = n8nData.productDescription || null;
+    const productDescription = n8nData.productDescription || null;*/
 
     const updateField =
       site === "ro"
         ? { 
             site_ro_snapshot_base64: imageBase64, 
             yliro_sku: productCode,
-            ...(yliroDescriere && { yliro_descriere: yliroDescriere })
+            yliro_descriere: productDescription,
+            yliro_product_id: productId
           }
         : { 
             site_hu_snapshot_base64: imageBase64, 
             ylihu_sku: productCode,
-            ...(ylihuDescriere && { ylihu_descriere: ylihuDescriere })
+            ylihu_descriere: productDescription,
+            ylihu_product_id: productId
           };
 
     await supabase.from("products").update(updateField).eq("erp_product_code", productCode);
