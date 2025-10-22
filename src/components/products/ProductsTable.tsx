@@ -45,6 +45,9 @@ interface Product {
   ylihu_sku: string | null;
   ylihu_descriere: string | null;
   validated: boolean | null;
+  senior_erp_link: string | null;
+  ro_stock: number | null;
+  ro_stoc_detailed: string | null;
 }
 
 interface ProductsTableProps {
@@ -220,10 +223,25 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                 >
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
-                      <div className="font-semibold text-base">{product.erp_product_code}</div>
+                      {product.senior_erp_link ? (
+                        <a 
+                          href={product.senior_erp_link} 
+                          className="font-bold text-base hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {product.erp_product_code}
+                        </a>
+                      ) : (
+                        <div className="font-bold text-base">{product.erp_product_code}</div>
+                      )}
                       <div className="text-xs text-muted-foreground max-w-[180px] truncate">
                         {product.erp_product_description || "-"}
                       </div>
+                      {product.ro_stock !== null && (
+                        <div className="text-xs text-muted-foreground">
+                          Stoc: {product.ro_stock}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-xs" onClick={() => setSelectedProduct(product)}>
@@ -326,10 +344,25 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-base truncate">{product.erp_product_code}</div>
+                  {product.senior_erp_link ? (
+                    <a 
+                      href={product.senior_erp_link} 
+                      className="font-bold text-base hover:underline block truncate"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {product.erp_product_code}
+                    </a>
+                  ) : (
+                    <div className="font-bold text-base truncate">{product.erp_product_code}</div>
+                  )}
                   <div className="text-xs text-muted-foreground line-clamp-2">
                     {product.erp_product_description || "-"}
                   </div>
+                  {product.ro_stock !== null && (
+                    <div className="text-xs text-muted-foreground">
+                      Stoc: {product.ro_stock}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button

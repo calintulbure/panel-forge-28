@@ -155,8 +155,27 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
   };
 
   const handleImageClick = () => {
-    if (siteUrl) {
-      window.open(siteUrl, "_blank", "noopener,noreferrer");
+    if (snapshotBase64) {
+      const img = new Image();
+      img.src = `data:image/jpeg;base64,${snapshotBase64}`;
+      const popup = window.open("", "_blank", "width=800,height=800");
+      if (popup) {
+        popup.document.write(`
+          <html>
+            <head>
+              <title>${site.toUpperCase()} Snapshot - ${productCode}</title>
+              <style>
+                body { margin: 0; display: flex; justify-content: center; align-items: center; background: #000; }
+                img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+              </style>
+            </head>
+            <body>
+              <img src="data:image/jpeg;base64,${snapshotBase64}" alt="${site.toUpperCase()} Snapshot" />
+            </body>
+          </html>
+        `);
+        popup.document.close();
+      }
     }
   };
 
@@ -182,7 +201,7 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
         <div
           className={cn(
             "relative w-[80px] h-[80px] rounded border bg-muted flex items-center justify-center overflow-hidden group",
-            siteUrl && "cursor-pointer hover:opacity-80 transition-opacity",
+            snapshotBase64 && "cursor-pointer hover:opacity-80 transition-opacity",
           )}
           onClick={handleImageClick}
         >
@@ -197,11 +216,9 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
                 decoding="async"
                 className="w-full h-full object-cover" 
               />
-              {siteUrl && (
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              )}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </>
           ) : (
             <span className="text-xs text-muted-foreground text-center px-2">No snapshot</span>

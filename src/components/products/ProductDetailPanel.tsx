@@ -41,6 +41,9 @@ interface Product {
   ylihu_sku: string | null;
   ylihu_descriere: string | null;
   validated: boolean | null;
+  senior_erp_link: string | null;
+  ro_stock: number | null;
+  ro_stoc_detailed: string | null;
 }
 
 interface ProductDetailPanelProps {
@@ -205,11 +208,29 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
               </div>
               <div>
                 <Label className="text-muted-foreground">ERP Code</Label>
-                <p className="font-semibold text-base">{product.erp_product_code || "-"}</p>
+                {product.senior_erp_link ? (
+                  <a 
+                    href={product.senior_erp_link} 
+                    className="font-bold text-base hover:underline block"
+                  >
+                    {product.erp_product_code || "-"}
+                  </a>
+                ) : (
+                  <p className="font-bold text-base">{product.erp_product_code || "-"}</p>
+                )}
               </div>
               <div>
                 <Label className="text-muted-foreground">Description</Label>
                 <p className="font-medium">{product.erp_product_description || "-"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Stock</Label>
+                <p className="font-medium">
+                  Stoc: {product.ro_stock !== null ? product.ro_stock : "-"}
+                </p>
+                {product.ro_stoc_detailed && (
+                  <p className="text-sm text-muted-foreground mt-1">{product.ro_stoc_detailed}</p>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
