@@ -315,6 +315,33 @@ export default function DatabaseManager() {
     }
   };
 
+  const handleSyncProductUrls = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-products-urls');
+
+      if (error) throw error;
+
+      toast({
+        title: "Sync Complete",
+        description: `Updated ${data?.updated || 0} out of ${data?.total || 0} products`,
+      });
+
+      if (selectedTable === 'products') {
+        loadTableData();
+      }
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast({
+        title: "Sync failed",
+        description: error instanceof Error ? error.message : "Failed to sync product URLs",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleExportData = () => {
     if (!tableData.length) {
       toast({
@@ -401,6 +428,10 @@ export default function DatabaseManager() {
                 <Button onClick={openAddDialog} disabled={!selectedTable}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Row
+                </Button>
+                <Button onClick={handleSyncProductUrls} disabled={isLoading} variant="outline">
+                  <Database className="h-4 w-4 mr-2" />
+                  Sync Product URLs
                 </Button>
                 <Button onClick={handleExportData} disabled={!selectedTable || !tableData.length} variant="outline">
                   <Download className="h-4 w-4 mr-2" />
