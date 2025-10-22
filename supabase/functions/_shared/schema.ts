@@ -47,7 +47,13 @@ export const ProductUpsertItem = z.object({
   erp_product_description: z.string().nullable().optional(),
   stare_oferta: z.string().nullable().optional(),
   stare_stoc: z.string().nullable().optional(),
-  senior_erp_link: z.string().nullable().optional()
+  senior_erp_link: z.string().nullable().optional(),
+  site_ro_product_id: z.number().int().nullable().optional(),
+  site_hu_product_id: z.number().int().nullable().optional(),
+  ro_stock: z.number().int().nullable().optional(),
+  ro_stoc_detailed: z.string().nullable().optional(),
+  hu_stock: z.number().int().nullable().optional(),
+  hu_stock_detailed: z.string().nullable().optional()
 });
 export type ProductUpsertItem = z.infer<typeof ProductUpsertItem>;
 

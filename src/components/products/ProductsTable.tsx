@@ -149,7 +149,13 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
         const response = await fetch(snapshotUrl, { mode: 'cors' });
         if (!response.ok) {
           console.warn('High-res snapshot fetch failed:', response.status, response.statusText);
-          if (fallbackBase64) setHighResSnapshot(fallbackBase64);
+          if (fallbackBase64) {
+            // Ensure base64 has data URL prefix
+            const base64WithPrefix = fallbackBase64.startsWith('data:') 
+              ? fallbackBase64 
+              : `data:image/jpeg;base64,${fallbackBase64}`;
+            setHighResSnapshot(base64WithPrefix);
+          }
           return;
         }
         const blob = await response.blob();
@@ -159,11 +165,21 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
         };
         reader.readAsDataURL(blob);
       } else if (fallbackBase64) {
-        setHighResSnapshot(fallbackBase64);
+        // Ensure base64 has data URL prefix
+        const base64WithPrefix = fallbackBase64.startsWith('data:') 
+          ? fallbackBase64 
+          : `data:image/jpeg;base64,${fallbackBase64}`;
+        setHighResSnapshot(base64WithPrefix);
       }
     } catch (error) {
       console.error('Failed to load high-res snapshot:', error);
-      if (fallbackBase64) setHighResSnapshot(fallbackBase64);
+      if (fallbackBase64) {
+        // Ensure base64 has data URL prefix
+        const base64WithPrefix = fallbackBase64.startsWith('data:') 
+          ? fallbackBase64 
+          : `data:image/jpeg;base64,${fallbackBase64}`;
+        setHighResSnapshot(base64WithPrefix);
+      }
     }
   };
 
@@ -179,7 +195,6 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">Article ID</TableHead>
               <TableHead className="w-[180px]">Product Info</TableHead>
               <TableHead className="w-[180px]">Categories</TableHead>
               <TableHead>Stock Status</TableHead>
@@ -193,7 +208,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : 8} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? 8 : 7} className="h-24 text-center">
                   No products found.
                 </TableCell>
               </TableRow>
@@ -203,12 +218,9 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                   key={product.erp_product_code}
                   className="cursor-pointer hover:bg-muted/50 group"
                 >
-                  <TableCell className="font-medium" onClick={() => setSelectedProduct(product)}>
-                    {product.articol_id || "-"}
-                  </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
-                      <div className="font-medium text-sm">{product.erp_product_code}</div>
+                      <div className="font-semibold text-base">{product.erp_product_code}</div>
                       <div className="text-xs text-muted-foreground max-w-[180px] truncate">
                         {product.erp_product_description || "-"}
                       </div>
@@ -314,15 +326,10 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">{product.erp_product_code}</div>
+                  <div className="font-bold text-base truncate">{product.erp_product_code}</div>
                   <div className="text-xs text-muted-foreground line-clamp-2">
                     {product.erp_product_description || "-"}
                   </div>
-                  {product.articol_id && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      ID: {product.articol_id}
-                    </div>
-                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button

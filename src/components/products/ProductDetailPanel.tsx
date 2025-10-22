@@ -205,7 +205,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
               </div>
               <div>
                 <Label className="text-muted-foreground">ERP Code</Label>
-                <p className="font-medium">{product.erp_product_code || "-"}</p>
+                <p className="font-semibold text-base">{product.erp_product_code || "-"}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Description</Label>

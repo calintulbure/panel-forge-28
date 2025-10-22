@@ -15,7 +15,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Filter } from "lucide-react";
+import { ChevronDown, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProductFiltersProps {
@@ -40,6 +40,7 @@ interface ProductFiltersProps {
     offerStatuses: string[];
     stockStatuses: string[];
   };
+  onClearFilters: () => void;
 }
 
 export function ProductFilters({
@@ -58,6 +59,7 @@ export function ProductFilters({
   validationFilter,
   setValidationFilter,
   categories,
+  onClearFilters,
 }: ProductFiltersProps) {
   const [isOpen, setIsOpen] = useState(true);
 
@@ -89,6 +91,17 @@ export function ProductFilters({
 
         <CollapsibleContent>
           <CardContent className="pt-3 pb-3 md:pt-4 md:pb-4">
+            <div className="flex items-center justify-between mb-3">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onClearFilters}
+                className="h-8 text-xs"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear Filters
+              </Button>
+            </div>
             <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
               <div className="space-y-0.5 md:space-y-1 sm:col-span-2">
                 <Label htmlFor="search" className="text-xs">Search</Label>

@@ -139,6 +139,16 @@ export default function Products() {
     setCurrentPage(1);
   };
 
+  const handleClearFilters = () => {
+    setSearch("");
+    setCategory1("all");
+    setCategory2("all");
+    setCategory3("all");
+    setOfferStatus("all");
+    setStockStatus("all");
+    setValidationFilter("all");
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -172,6 +182,7 @@ export default function Products() {
         validationFilter={validationFilter}
         setValidationFilter={setValidationFilter}
         categories={categories}
+        onClearFilters={handleClearFilters}
       />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
