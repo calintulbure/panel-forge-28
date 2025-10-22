@@ -23,17 +23,18 @@ Deno.serve(async (req) => {
 
     console.log('Starting product URLs sync...');
 
-    // Fetch all products with their ERP codes
+    // Fetch non-validated products with their ERP codes
     const { data: products, error: productsError } = await supabase
       .from('products')
-      .select('erp_product_code');
+      .select('erp_product_code')
+      .not('validated', 'is', true);
 
     if (productsError) {
       console.error('Error fetching products:', productsError);
       throw productsError;
     }
 
-    console.log(`Found ${products?.length || 0} products to sync`);
+    console.log(`Found ${products?.length || 0} non-validated products to sync`);
 
     // Fetch all yli_hu_products
     const { data: huProducts, error: huError } = await supabase
@@ -70,20 +71,26 @@ Deno.serve(async (req) => {
       
       const updates = batch.map(product => {
         const erpCode = product.erp_product_code;
-        const update: any = { erp_product_code: erpCode };
+        
+        // Only process if RO product exists (matching the WHERE clause)
+        if (!roMap.has(erpCode)) {
+          return null;
+        }
 
+        const update: any = { 
+          erp_product_code: erpCode,
+          yliro_sku: erpCode,
+          site_ro_url: roMap.get(erpCode)
+        };
+
+        // Optionally add HU data if it exists (LEFT JOIN)
         if (huMap.has(erpCode)) {
           update.ylihu_sku = erpCode;
           update.site_hu_url = huMap.get(erpCode);
         }
 
-        if (roMap.has(erpCode)) {
-          update.yliro_sku = erpCode;
-          update.site_ro_url = roMap.get(erpCode);
-        }
-
         return update;
-      }).filter(update => update.ylihu_sku || update.yliro_sku);
+      }).filter(update => update !== null);
 
       if (updates.length > 0) {
         for (const update of updates) {
