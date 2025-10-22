@@ -2,24 +2,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 
 type SyncRequest = {
-  table: string;                   // e.g. "products"
-  since?: string;                  // ISO date/time; only rows with updated_at >= since
-  pageSize?: number;               // default 1000
-  conflictTarget?: string;         // e.g. "erp_product_code" or "id"
-  select?: string;                 // columns to select, default "*"
-  dryRun?: boolean;                // don't write, just count
-  filter?: Record<string, unknown> // optional equality filters, e.g. { site: "ro" }
+  table: string; // e.g. "products"
+  since?: string; // ISO date/time; only rows with updated_at >= since
+  pageSize?: number; // default 1000
+  conflictTarget?: string; // e.g. "erp_product_code" or "id"
+  select?: string; // columns to select, default "*"
+  dryRun?: boolean; // don't write, just count
+  filter?: Record<string, unknown>; // optional equality filters, e.g. { site: "ro" }
 };
 
-const DEST = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const DEST = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-const SRC = createClient(
-  Deno.env.get("SRC_SUPABASE_URL")!,
-  Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const SRC = createClient(Deno.env.get("SRC_SUPABASE_URL")!, Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY")!);
 
 Deno.serve(async (req) => {
   try {
