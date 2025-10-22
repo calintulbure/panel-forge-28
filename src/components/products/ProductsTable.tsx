@@ -60,8 +60,6 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-  const [hoveredSnapshot, setHoveredSnapshot] = useState<{ code: string; site: 'ro' | 'hu' } | null>(null);
-  const [highResSnapshot, setHighResSnapshot] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleValidationToggle = async (product: Product, e: React.MouseEvent) => {
@@ -136,61 +134,6 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
     return "secondary";
   };
 
-  const handleSnapshotHover = async (
-    productCode: string,
-    site: 'ro' | 'hu',
-    snapshotUrl: string | null,
-    fallbackBase64?: string | null
-  ) => {
-    if (!snapshotUrl && !fallbackBase64) return;
-
-    setHoveredSnapshot({ code: productCode, site });
-    setHighResSnapshot(null);
-
-    try {
-      if (snapshotUrl) {
-        const response = await fetch(snapshotUrl, { mode: 'cors' });
-        if (!response.ok) {
-          console.warn('High-res snapshot fetch failed:', response.status, response.statusText);
-          if (fallbackBase64) {
-            // Ensure base64 has data URL prefix
-            const base64WithPrefix = fallbackBase64.startsWith('data:') 
-              ? fallbackBase64 
-              : `data:image/jpeg;base64,${fallbackBase64}`;
-            setHighResSnapshot(base64WithPrefix);
-          }
-          return;
-        }
-        const blob = await response.blob();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setHighResSnapshot(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
-      } else if (fallbackBase64) {
-        // Ensure base64 has data URL prefix
-        const base64WithPrefix = fallbackBase64.startsWith('data:') 
-          ? fallbackBase64 
-          : `data:image/jpeg;base64,${fallbackBase64}`;
-        setHighResSnapshot(base64WithPrefix);
-      }
-    } catch (error) {
-      console.error('Failed to load high-res snapshot:', error);
-      if (fallbackBase64) {
-        // Ensure base64 has data URL prefix
-        const base64WithPrefix = fallbackBase64.startsWith('data:') 
-          ? fallbackBase64 
-          : `data:image/jpeg;base64,${fallbackBase64}`;
-        setHighResSnapshot(base64WithPrefix);
-      }
-    }
-  };
-
-  const handleSnapshotLeave = () => {
-    setHoveredSnapshot(null);
-    setHighResSnapshot(null);
-  };
-
   return (
     <>
       {/* Desktop Table View */}
@@ -262,36 +205,24 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                     </Badge>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div 
-                      className="relative"
-                      onMouseEnter={() => handleSnapshotHover(product.erp_product_code, 'ro', product.site_ro_snapshot_url, product.site_ro_snapshot_base64)}
-                      onMouseLeave={handleSnapshotLeave}
-                    >
-                      <PublishCell
-                        productCode={product.erp_product_code}
-                        snapshotBase64={product.site_ro_snapshot_base64}
-                        siteUrl={product.site_ro_url}
-                        sku={product.yliro_sku}
-                        site="ro"
-                        onUpdate={onRefresh}
-                      />
-                    </div>
+                    <PublishCell
+                      productCode={product.erp_product_code}
+                      snapshotBase64={product.site_ro_snapshot_base64}
+                      siteUrl={product.site_ro_url}
+                      sku={product.yliro_sku}
+                      site="ro"
+                      onUpdate={onRefresh}
+                    />
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div 
-                      className="relative"
-                      onMouseEnter={() => handleSnapshotHover(product.erp_product_code, 'hu', product.site_hu_snapshot_url, product.site_hu_snapshot_base64)}
-                      onMouseLeave={handleSnapshotLeave}
-                    >
-                      <PublishCell
-                        productCode={product.erp_product_code}
-                        snapshotBase64={product.site_hu_snapshot_base64}
-                        siteUrl={product.site_hu_url}
-                        sku={product.ylihu_sku}
-                        site="hu"
-                        onUpdate={onRefresh}
-                      />
-                    </div>
+                    <PublishCell
+                      productCode={product.erp_product_code}
+                      snapshotBase64={product.site_hu_snapshot_base64}
+                      siteUrl={product.site_hu_url}
+                      sku={product.ylihu_sku}
+                      site="hu"
+                      onUpdate={onRefresh}
+                    />
                   </TableCell>
                   <TableCell className="text-center">
                     <Button
@@ -455,17 +386,6 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
           ))
         )}
       </div>
-
-      {/* High-res snapshot popup */}
-      {hoveredSnapshot && highResSnapshot && (
-        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[100] transition-opacity duration-200">
-          <img
-            src={highResSnapshot}
-            alt={`${hoveredSnapshot.site.toUpperCase()} High-res Snapshot`}
-            className="w-[300px] h-[300px] object-contain rounded-lg shadow-2xl border-4 border-border bg-background"
-          />
-        </div>
-      )}
 
       {selectedProduct && (
         <ProductDetailPanel
