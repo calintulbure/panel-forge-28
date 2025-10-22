@@ -55,13 +55,14 @@ serve(async (req) => {
             site_ro_snapshot_base64: imageBase64, 
             yliro_sku: productCode,
             yliro_descriere: productDescription,
-            yliro_product_id: productId
+            site_ro_product_id: productId
           }
         : { 
             site_hu_snapshot_base64: imageBase64, 
             ylihu_sku: productCode,
             ylihu_descriere: productDescription,
-            ylihu_product_id: productId
+            site_hu_product_id: productId
+
           };
 
     await supabase.from("products").update(updateField).eq("erp_product_code", productCode);
