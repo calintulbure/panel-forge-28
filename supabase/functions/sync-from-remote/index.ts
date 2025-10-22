@@ -1,32 +1,26 @@
-// supabase/functions/sync-from-remote/index.ts
+// supabase/functions/sync-multiple-from-remote/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 
 type TableConfig = {
-  source: string;                 // source table name in remote (e.g., "yli_ro_products")
-  dest?: string;                  // destination table name in Lovable (defaults to source)
-  conflictTarget?: string;        // e.g., "sku" or "id"
-  select?: string;                // columns to pull, default "*"
-  since?: string;                 // ISO string; pulls rows with updated_at >= since
-  pageSize?: number;              // default 1000
+  source: string; // source table name in remote (e.g., "yli_ro_products")
+  dest?: string; // destination table name in Lovable (defaults to source)
+  conflictTarget?: string; // e.g., "sku" or "id"
+  select?: string; // columns to pull, default "*"
+  since?: string; // ISO string; pulls rows with updated_at >= since
+  pageSize?: number; // default 1000
   filter?: Record<string, unknown>; // equality filters, e.g., { status: 'active' }
 };
 
 type SyncRequest = {
   tables: TableConfig[];
-  dryRun?: boolean;               // global dry-run, can be combined with per-table settings if you want
-  haltOnError?: boolean;          // stop at first table error (default: false)
-  orderColumn?: string;           // default 'id' (change to a monotonic column if needed)
+  dryRun?: boolean; // global dry-run, can be combined with per-table settings if you want
+  haltOnError?: boolean; // stop at first table error (default: false)
+  orderColumn?: string; // default 'id' (change to a monotonic column if needed)
 };
 
-const DEST = createClient(
-  Deno.env.get("SUPABASE_URL")!,
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const DEST = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-const SRC = createClient(
-  Deno.env.get("SRC_SUPABASE_URL")!,
-  Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY")!,
-);
+const SRC = createClient(Deno.env.get("SRC_SUPABASE_URL")!, Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY")!);
 
 Deno.serve(async (req) => {
   try {
@@ -175,4 +169,26 @@ function cors() {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   };
+}
+
+function mustEnv(key: string) {
+  const v = Deno.env.get(key);
+  if (!v) throw new Error(`Missing env: ${key}`);
+  return v;
+}
+
+function clampInt(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+
+function toErr(e: unknown) {
+  if (!e) return "Unknown error";
+  if (e instanceof Error) {
+    return { message: e.message, stack: e.stack };
+  }
+  try {
+    return JSON.parse(JSON.stringify(e));
+  } catch {
+    return String(e);
+  }
 }
