@@ -118,10 +118,14 @@ Deno.serve(async (req) => {
         ? {
             site_ro_snapshot_base64: n8nData.imageBase64,
             yliro_sku: n8nData.productCode,
+            yliro_description: n8nData.productDescription,
+            yliro_articol_id: n8nData.productId
           }
         : {
             site_hu_snapshot_base64: n8nData.imageBase64,
             ylihu_sku: n8nData.productCode,
+            ylihu_description: n8nData.productDescription,
+            ylihu_articol_id: n8nData.productId
           };
 
     const { error: updateError } = await supabase
