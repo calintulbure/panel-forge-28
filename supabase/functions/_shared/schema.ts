@@ -18,7 +18,9 @@ export const TriggerSnapshotRequest = z.object({
   productCode: z.string().min(1).max(128),
   siteUrl: UrlString,
   // Optional: if omitted we infer from siteUrl (yli.ro / yli.hu)
-  site: SiteEnum.optional()
+  site: SiteEnum.optional(),
+  productDescription: z.string().nullable().optional(),
+  productId: z.number().int().nullable().optional()
 });
 export type TriggerSnapshotRequest = z.infer<typeof TriggerSnapshotRequest>;
 
