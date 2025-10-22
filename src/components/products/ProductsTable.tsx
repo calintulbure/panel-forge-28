@@ -133,22 +133,37 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
     return "secondary";
   };
 
-  const handleSnapshotHover = async (productCode: string, site: 'ro' | 'hu', snapshotUrl: string | null) => {
-    if (!snapshotUrl) return;
-    
+  const handleSnapshotHover = async (
+    productCode: string,
+    site: 'ro' | 'hu',
+    snapshotUrl: string | null,
+    fallbackBase64?: string | null
+  ) => {
+    if (!snapshotUrl && !fallbackBase64) return;
+
     setHoveredSnapshot({ code: productCode, site });
-    
+    setHighResSnapshot(null);
+
     try {
-      // Fetch the high-res image
-      const response = await fetch(snapshotUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setHighResSnapshot(reader.result as string);
-      };
-      reader.readAsDataURL(blob);
+      if (snapshotUrl) {
+        const response = await fetch(snapshotUrl, { mode: 'cors' });
+        if (!response.ok) {
+          console.warn('High-res snapshot fetch failed:', response.status, response.statusText);
+          if (fallbackBase64) setHighResSnapshot(fallbackBase64);
+          return;
+        }
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setHighResSnapshot(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } else if (fallbackBase64) {
+        setHighResSnapshot(fallbackBase64);
+      }
     } catch (error) {
       console.error('Failed to load high-res snapshot:', error);
+      if (fallbackBase64) setHighResSnapshot(fallbackBase64);
     }
   };
 
@@ -219,7 +234,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div 
                       className="relative"
-                      onMouseEnter={() => handleSnapshotHover(product.erp_product_code, 'ro', product.site_ro_snapshot_url)}
+                      onMouseEnter={() => handleSnapshotHover(product.erp_product_code, 'ro', product.site_ro_snapshot_url, product.site_ro_snapshot_base64)}
                       onMouseLeave={handleSnapshotLeave}
                     >
                       <PublishCell
@@ -235,7 +250,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div 
                       className="relative"
-                      onMouseEnter={() => handleSnapshotHover(product.erp_product_code, 'hu', product.site_hu_snapshot_url)}
+                      onMouseEnter={() => handleSnapshotHover(product.erp_product_code, 'hu', product.site_hu_snapshot_url, product.site_hu_snapshot_base64)}
                       onMouseLeave={handleSnapshotLeave}
                     >
                       <PublishCell
