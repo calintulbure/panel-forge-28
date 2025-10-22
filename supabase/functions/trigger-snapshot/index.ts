@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       throw new Error('Invalid site parameter. Must be "ro" or "hu"');
     }
 
-    console.log(`Triggering snapshot capture for ${site.toUpperCase()} site:`, { productCode, siteUrl });
+    console.log(`Triggering snapshot capture for ${site.toUpperCase()} site:`, { productCode, siteUrl, });
 
     // Determine if running in production or dev mode
     const RUN_MODE = Deno.env.get("RUN_MODE") ?? "DEVELOPMENT";
@@ -83,6 +83,8 @@ Deno.serve(async (req) => {
     console.log("n8n response received:", {
       hasImageBase64: !!n8nData.imageBase64,
       productCode: n8nData.productCode,
+      productDescription:n8nData.productDescription,
+      productId:n8nData.productId,
       mimeType: n8nData.mimeType,
     });
 
