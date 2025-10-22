@@ -1,14 +1,6 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Collapsible,
@@ -17,20 +9,28 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProductFiltersProps {
   search: string;
   setSearch: (value: string) => void;
-  category1: string;
-  setCategory1: (value: string) => void;
-  category2: string;
-  setCategory2: (value: string) => void;
-  category3: string;
-  setCategory3: (value: string) => void;
-  offerStatus: string;
-  setOfferStatus: (value: string) => void;
-  stockStatus: string;
-  setStockStatus: (value: string) => void;
+  category1: string[];
+  setCategory1: (value: string[]) => void;
+  category2: string[];
+  setCategory2: (value: string[]) => void;
+  category3: string[];
+  setCategory3: (value: string[]) => void;
+  offerStatus: string[];
+  setOfferStatus: (value: string[]) => void;
+  stockStatus: string[];
+  setStockStatus: (value: string[]) => void;
   validationFilter: string;
   setValidationFilter: (value: string) => void;
   categories: {
@@ -40,6 +40,8 @@ interface ProductFiltersProps {
     offerStatuses: string[];
     stockStatuses: string[];
   };
+  availableCateg2: string[];
+  availableCateg3: string[];
   onClearFilters: () => void;
 }
 
@@ -59,6 +61,8 @@ export function ProductFilters({
   validationFilter,
   setValidationFilter,
   categories,
+  availableCateg2,
+  availableCateg3,
   onClearFilters,
 }: ProductFiltersProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -116,87 +120,52 @@ export function ProductFilters({
 
               <div className="space-y-0.5 md:space-y-1">
                 <Label htmlFor="category1" className="text-xs">Category 1</Label>
-                <Select value={category1} onValueChange={setCategory1}>
-                  <SelectTrigger id="category1" className="h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {categories.categ1.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={categories.categ1.map(cat => ({ value: cat, label: cat }))}
+                  value={category1}
+                  onChange={setCategory1}
+                  placeholder="All categories"
+                />
               </div>
 
               <div className="space-y-0.5 md:space-y-1">
                 <Label htmlFor="category2" className="text-xs">Category 2</Label>
-                <Select value={category2} onValueChange={setCategory2}>
-                  <SelectTrigger id="category2" className="h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {categories.categ2.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={availableCateg2.map(cat => ({ value: cat, label: cat }))}
+                  value={category2}
+                  onChange={setCategory2}
+                  placeholder="All categories"
+                />
               </div>
 
               <div className="space-y-0.5 md:space-y-1">
                 <Label htmlFor="category3" className="text-xs">Category 3</Label>
-                <Select value={category3} onValueChange={setCategory3}>
-                  <SelectTrigger id="category3" className="h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {categories.categ3.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={availableCateg3.map(cat => ({ value: cat, label: cat }))}
+                  value={category3}
+                  onChange={setCategory3}
+                  placeholder="All categories"
+                />
               </div>
 
               <div className="space-y-0.5 md:space-y-1">
                 <Label htmlFor="offerStatus" className="text-xs">Offer Status</Label>
-                <Select value={offerStatus} onValueChange={setOfferStatus}>
-                  <SelectTrigger id="offerStatus" className="h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {categories.offerStatuses.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={categories.offerStatuses.map(status => ({ value: status, label: status }))}
+                  value={offerStatus}
+                  onChange={setOfferStatus}
+                  placeholder="All statuses"
+                />
               </div>
 
               <div className="space-y-0.5 md:space-y-1">
                 <Label htmlFor="stockStatus" className="text-xs">Stock Status</Label>
-                <Select value={stockStatus} onValueChange={setStockStatus}>
-                  <SelectTrigger id="stockStatus" className="h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {categories.stockStatuses.map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MultiSelect
+                  options={categories.stockStatuses.map(status => ({ value: status, label: status }))}
+                  value={stockStatus}
+                  onChange={setStockStatus}
+                  placeholder="All statuses"
+                />
               </div>
 
               <div className="space-y-0.5 md:space-y-1">
