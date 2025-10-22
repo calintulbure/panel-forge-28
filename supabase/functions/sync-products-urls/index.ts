@@ -23,11 +23,11 @@ Deno.serve(async (req) => {
 
     console.log('Starting product URLs sync...');
 
-    // Fetch non-validated products with their ERP codes
+    // Fetch non-validated products
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('erp_product_code')
-      .not('validated', 'is', true);
+      .is('validated', false);
 
     if (productsError) {
       console.error('Error fetching products:', productsError);
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${products?.length || 0} non-validated products to sync`);
 
-    // Fetch all yli_hu_products
+    // Fetch all yli_hu_products and yli_ro_products
     const { data: huProducts, error: huError } = await supabase
       .from('yli_hu_products')
       .select('sku, url_key');
@@ -46,7 +46,6 @@ Deno.serve(async (req) => {
       throw huError;
     }
 
-    // Fetch all yli_ro_products
     const { data: roProducts, error: roError } = await supabase
       .from('yli_ro_products')
       .select('sku, url_key');
@@ -62,57 +61,44 @@ Deno.serve(async (req) => {
     const huMap = new Map(huProducts?.map(p => [p.sku, p.url_key]) || []);
     const roMap = new Map(roProducts?.map(p => [p.sku, p.url_key]) || []);
 
-    // Update products in batches
+    // Process updates
     let updatedCount = 0;
-    const batchSize = 100;
 
-    for (let i = 0; i < (products?.length || 0); i += batchSize) {
-      const batch = products!.slice(i, i + batchSize);
-      
-      const updates = batch.map(product => {
-        const erpCode = product.erp_product_code;
-        
-        // Only process if RO product exists (matching the WHERE clause)
-        if (!roMap.has(erpCode)) {
-          return null;
-        }
+    for (const product of products || []) {
+      const erpCode = product.erp_product_code;
+      const roSku = roMap.get(erpCode);
+      const huSku = huMap.get(erpCode);
 
-        const update: any = { 
-          erp_product_code: erpCode,
-          yliro_sku: erpCode,
-          site_ro_url: roMap.get(erpCode)
-        };
-
-        // Optionally add HU data if it exists (LEFT JOIN)
-        if (huMap.has(erpCode)) {
-          update.ylihu_sku = erpCode;
-          update.site_hu_url = huMap.get(erpCode);
-        }
-
-        return update;
-      }).filter(update => update !== null);
-
-      if (updates.length > 0) {
-        for (const update of updates) {
-          const { error: updateError } = await supabase
-            .from('products')
-            .update({
-              ylihu_sku: update.ylihu_sku,
-              yliro_sku: update.yliro_sku,
-              site_ro_url: update.site_ro_url,
-              site_hu_url: update.site_hu_url,
-            })
-            .eq('erp_product_code', update.erp_product_code);
-
-          if (updateError) {
-            console.error(`Error updating product ${update.erp_product_code}:`, updateError);
-          } else {
-            updatedCount++;
-          }
-        }
+      // Only update if at least one match exists
+      if (!roSku && !huSku) {
+        continue;
       }
 
-      console.log(`Processed batch ${i / batchSize + 1}, updated ${updatedCount} products so far`);
+      const updateData: any = {};
+      
+      if (roSku) {
+        updateData.yliro_sku = erpCode;
+        updateData.site_ro_url = roSku;
+      }
+      
+      if (huSku) {
+        updateData.ylihu_sku = erpCode;
+        updateData.site_hu_url = huSku;
+      }
+
+      const { error: updateError } = await supabase
+        .from('products')
+        .update(updateData)
+        .eq('erp_product_code', erpCode);
+
+      if (updateError) {
+        console.error(`Error updating product ${erpCode}:`, updateError);
+      } else {
+        updatedCount++;
+        if (updatedCount % 100 === 0) {
+          console.log(`Updated ${updatedCount} products so far...`);
+        }
+      }
     }
 
     console.log(`Sync completed. Updated ${updatedCount} products.`);
