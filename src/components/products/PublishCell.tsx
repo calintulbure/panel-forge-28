@@ -193,12 +193,12 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
             ) : snapshotBase64 ? (
               <>
-                <img 
-                  src={`data:image/jpeg;base64,${snapshotBase64}`} 
-                  alt={`${site.toUpperCase()} snapshot`} 
+                <img
+                  src={`data:image/jpeg;base64,${snapshotBase64}`}
+                  alt={`${site.toUpperCase()} snapshot`}
                   loading="lazy"
                   decoding="async"
-                  className="w-full h-full object-cover" 
+                  className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
                   <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -226,8 +226,8 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
           {snapshotBase64 && (
             <div className="absolute right-full mr-2 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               <div className="w-[400px] h-[300px] border-2 border-primary rounded shadow-lg bg-background overflow-hidden">
-                <img 
-                  src={`data:image/jpeg;base64,${snapshotBase64}`} 
+                <img
+                  src={`data:image/jpeg;base64,${snapshotBase64}`}
                   alt={`${site.toUpperCase()} snapshot preview`}
                   className="w-full h-full object-contain"
                 />
@@ -269,9 +269,9 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
       {/* Full-size image dialog */}
       <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
         <DialogContent className="max-w-4xl w-full p-0">
-          <div className="relative w-full h-[80vh] bg-black">
-            <img 
-              src={`data:image/jpeg;base64,${snapshotBase64}`} 
+          <div className="relative w-full h-[50vh] bg-black">
+            <img
+              src={`data:image/jpeg;base64,${snapshotBase64}`}
               alt={`${site.toUpperCase()} Snapshot - ${productCode}`}
               className="w-full h-full object-contain"
             />
