@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ExternalLink } from "lucide-react";
+import { RefreshCw, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface PublishCellProps {
   productCode: string;
@@ -19,6 +20,7 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
   const [isDragOver, setIsDragOver] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState("");
+  const [showImageDialog, setShowImageDialog] = useState(false);
   const lastDropTime = useRef<number>(0);
   const { toast } = useToast();
 
@@ -156,26 +158,7 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
 
   const handleImageClick = () => {
     if (snapshotBase64) {
-      const img = new Image();
-      img.src = `data:image/jpeg;base64,${snapshotBase64}`;
-      const popup = window.open("", "_blank", "width=800,height=800");
-      if (popup) {
-        popup.document.write(`
-          <html>
-            <head>
-              <title>${site.toUpperCase()} Snapshot - ${productCode}</title>
-              <style>
-                body { margin: 0; display: flex; justify-content: center; align-items: center; background: #000; }
-                img { max-width: 100%; max-height: 100vh; object-fit: contain; }
-              </style>
-            </head>
-            <body>
-              <img src="data:image/jpeg;base64,${snapshotBase64}" alt="${site.toUpperCase()} Snapshot" />
-            </body>
-          </html>
-        `);
-        popup.document.close();
-      }
+      setShowImageDialog(true);
     }
   };
 
@@ -197,44 +180,59 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
       aria-label={`${site.toUpperCase()} publish cell for product ${productCode}`}
     >
       <div className="flex flex-col items-center gap-2">
-        {/* Snapshot thumbnail */}
-        <div
-          className={cn(
-            "relative w-[80px] h-[80px] rounded border bg-muted flex items-center justify-center overflow-hidden group",
-            snapshotBase64 && "cursor-pointer hover:opacity-80 transition-opacity",
-          )}
-          onClick={handleImageClick}
-        >
-          {isRefreshing ? (
-            <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-          ) : snapshotBase64 ? (
-            <>
-              <img 
-                src={`data:image/jpeg;base64,${snapshotBase64}`} 
-                alt={`${site.toUpperCase()} snapshot`} 
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover" 
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-            </>
-          ) : (
-            <span className="text-xs text-muted-foreground text-center px-2">No snapshot</span>
-          )}
+        {/* Snapshot thumbnail with hover preview */}
+        <div className="relative group">
+          <div
+            className={cn(
+              "relative w-[80px] h-[80px] rounded border bg-muted flex items-center justify-center overflow-hidden",
+              snapshotBase64 && "cursor-pointer hover:opacity-80 transition-opacity",
+            )}
+            onClick={handleImageClick}
+          >
+            {isRefreshing ? (
+              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+            ) : snapshotBase64 ? (
+              <>
+                <img 
+                  src={`data:image/jpeg;base64,${snapshotBase64}`} 
+                  alt={`${site.toUpperCase()} snapshot`} 
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover" 
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground text-center px-2">No snapshot</span>
+            )}
 
-          {/* Refresh button overlay */}
-          {siteUrl && (
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className="h-3 w-3" />
-            </Button>
+            {/* Refresh button overlay */}
+            {siteUrl && (
+              <Button
+                variant="secondary"
+                size="icon"
+                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+
+          {/* Hover preview */}
+          {snapshotBase64 && (
+            <div className="absolute left-full ml-2 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <div className="w-[400px] h-[300px] border-2 border-primary rounded shadow-lg bg-background overflow-hidden">
+                <img 
+                  src={`data:image/jpeg;base64,${snapshotBase64}`} 
+                  alt={`${site.toUpperCase()} snapshot preview`}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
           )}
         </div>
 
@@ -267,6 +265,27 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {isRefreshing && `Refreshing ${site.toUpperCase()} snapshot`}
       </div>
+
+      {/* Full-size image dialog */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="max-w-4xl w-full p-0">
+          <div className="relative w-full h-[80vh] bg-black">
+            <img 
+              src={`data:image/jpeg;base64,${snapshotBase64}`} 
+              alt={`${site.toUpperCase()} Snapshot - ${productCode}`}
+              className="w-full h-full object-contain"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
+              onClick={() => setShowImageDialog(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

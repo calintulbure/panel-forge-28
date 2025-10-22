@@ -203,7 +203,7 @@ export default function Products() {
         </div>
         {isAdmin && (
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <ProductImport onImportComplete={refetch} />
+            {/* <ProductImport onImportComplete={refetch} /> */}
             <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="h-11 md:h-9 w-full sm:w-auto">

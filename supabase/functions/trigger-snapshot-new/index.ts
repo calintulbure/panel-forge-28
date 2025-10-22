@@ -46,10 +46,21 @@ serve(async (req) => {
     const imageBase64 = n8nData.imageBase64;
     if (!imageBase64) throw new Error("Missing imageBase64 from n8n");
 
+    const yliroDescriere = n8nData.yliro_descriere || null;
+    const ylihuDescriere = n8nData.ylihu_descriere || null;
+
     const updateField =
       site === "ro"
-        ? { site_ro_snapshot_base64: imageBase64, yliro_sku: productCode }
-        : { site_hu_snapshot_base64: imageBase64, ylihu_sku: productCode };
+        ? { 
+            site_ro_snapshot_base64: imageBase64, 
+            yliro_sku: productCode,
+            ...(yliroDescriere && { yliro_descriere: yliroDescriere })
+          }
+        : { 
+            site_hu_snapshot_base64: imageBase64, 
+            ylihu_sku: productCode,
+            ...(ylihuDescriere && { ylihu_descriere: ylihuDescriere })
+          };
 
     await supabase.from("products").update(updateField).eq("erp_product_code", productCode);
 
