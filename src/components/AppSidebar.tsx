@@ -1,4 +1,4 @@
-import { Package, LogOut, Users } from "lucide-react";
+import { Package, LogOut, Users, Upload } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -23,7 +23,10 @@ export function AppSidebar() {
 
   const navItems = [
     { title: "Product Catalog", url: "/", icon: Package },
-    ...(userRole === 'admin' ? [{ title: "User Management", url: "/users", icon: Users }] : []),
+    ...(userRole === 'admin' ? [
+      { title: "Bulk Import", url: "/bulk-import", icon: Upload },
+      { title: "User Management", url: "/users", icon: Users }
+    ] : []),
   ];
 
   const getNavClass = ({ isActive }: { isActive: boolean }) =>
