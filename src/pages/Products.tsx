@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductsTable } from "@/components/products/ProductsTable";
@@ -11,20 +11,50 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 export default function Products() {
   const { userRole } = useAuth();
   const isAdmin = userRole === "admin";
-  const [search, setSearch] = useState("");
-  const [category1, setCategory1] = useState("all");
-  const [category2, setCategory2] = useState("all");
-  const [category3, setCategory3] = useState("all");
-  const [offerStatus, setOfferStatus] = useState("all");
-  const [stockStatus, setStockStatus] = useState("all");
-  const [validationFilter, setValidationFilter] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Initialize filters from URL or defaults
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [category1, setCategory1] = useState<string[]>(
+    searchParams.get("cat1")?.split(",").filter(Boolean) || []
+  );
+  const [category2, setCategory2] = useState<string[]>(
+    searchParams.get("cat2")?.split(",").filter(Boolean) || []
+  );
+  const [category3, setCategory3] = useState<string[]>(
+    searchParams.get("cat3")?.split(",").filter(Boolean) || []
+  );
+  const [offerStatus, setOfferStatus] = useState<string[]>(
+    searchParams.get("offer")?.split(",").filter(Boolean) || []
+  );
+  const [stockStatus, setStockStatus] = useState<string[]>(
+    searchParams.get("stock")?.split(",").filter(Boolean) || []
+  );
+  const [validationFilter, setValidationFilter] = useState(
+    searchParams.get("validation") || "all"
+  );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (category1.length > 0) params.set("cat1", category1.join(","));
+    if (category2.length > 0) params.set("cat2", category2.join(","));
+    if (category3.length > 0) params.set("cat3", category3.join(","));
+    if (offerStatus.length > 0) params.set("offer", offerStatus.join(","));
+    if (stockStatus.length > 0) params.set("stock", stockStatus.join(","));
+    if (validationFilter !== "all") params.set("validation", validationFilter);
+    
+    setSearchParams(params, { replace: true });
+  }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter]);
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -57,34 +87,101 @@ export default function Products() {
     },
   });
 
-  // Extract unique categories and statuses
+  // Extract unique categories and statuses with dynamic dependencies
   const categories = useMemo(() => {
     if (!products) return { categ1: [], categ2: [], categ3: [], offerStatuses: [], stockStatuses: [] };
 
     const categ1Set = new Set<string>();
-    const categ2Set = new Set<string>();
-    const categ3Set = new Set<string>();
+    const categ2Map = new Map<string, Set<string>>(); // categ1 -> categ2 values
+    const categ3Map = new Map<string, Set<string>>(); // categ2 -> categ3 values
     const offerSet = new Set<string>();
     const stockSet = new Set<string>();
 
     products.forEach((p) => {
-      if (p.categ1) categ1Set.add(p.categ1);
-      if (p.categ2) categ2Set.add(p.categ2);
-      if (p.categ3) categ3Set.add(p.categ3);
+      if (p.categ1) {
+        categ1Set.add(p.categ1);
+        if (p.categ2) {
+          if (!categ2Map.has(p.categ1)) {
+            categ2Map.set(p.categ1, new Set());
+          }
+          categ2Map.get(p.categ1)!.add(p.categ2);
+          
+          if (p.categ3) {
+            if (!categ3Map.has(p.categ2)) {
+              categ3Map.set(p.categ2, new Set());
+            }
+            categ3Map.get(p.categ2)!.add(p.categ3);
+          }
+        }
+      }
       if (p.stare_oferta) offerSet.add(p.stare_oferta);
       if (p.stare_stoc) stockSet.add(p.stare_stoc);
     });
 
     return {
       categ1: Array.from(categ1Set).sort(),
-      categ2: Array.from(categ2Set).sort(),
-      categ3: Array.from(categ3Set).sort(),
+      categ2: Array.from(new Set(Array.from(categ2Map.values()).flatMap(s => Array.from(s)))).sort(),
+      categ3: Array.from(new Set(Array.from(categ3Map.values()).flatMap(s => Array.from(s)))).sort(),
       offerStatuses: Array.from(offerSet).sort(),
       stockStatuses: Array.from(stockSet).sort(),
+      categ2Map,
+      categ3Map,
     };
   }, [products]);
 
-  // Filter products
+  // Dynamic category 2 options based on category 1 selection
+  const availableCateg2 = useMemo(() => {
+    if (!products || category1.length === 0) return categories.categ2;
+    
+    const categ2Set = new Set<string>();
+    products.forEach(p => {
+      if (p.categ1 && category1.includes(p.categ1) && p.categ2) {
+        categ2Set.add(p.categ2);
+      }
+    });
+    return Array.from(categ2Set).sort();
+  }, [products, category1, categories.categ2]);
+
+  // Dynamic category 3 options based on category 2 selection
+  const availableCateg3 = useMemo(() => {
+    if (!products || category2.length === 0) return categories.categ3;
+    
+    const categ3Set = new Set<string>();
+    products.forEach(p => {
+      if (p.categ2 && category2.includes(p.categ2) && p.categ3) {
+        categ3Set.add(p.categ3);
+      }
+    });
+    return Array.from(categ3Set).sort();
+  }, [products, category2, categories.categ3]);
+
+  // Clear dependent categories when parent changes
+  useEffect(() => {
+    if (category1.length === 0) {
+      setCategory2([]);
+      setCategory3([]);
+    } else {
+      // Remove invalid category2 selections
+      const validCateg2 = category2.filter(c2 => availableCateg2.includes(c2));
+      if (validCateg2.length !== category2.length) {
+        setCategory2(validCateg2);
+      }
+    }
+  }, [category1, availableCateg2]);
+
+  useEffect(() => {
+    if (category2.length === 0) {
+      setCategory3([]);
+    } else {
+      // Remove invalid category3 selections
+      const validCateg3 = category3.filter(c3 => availableCateg3.includes(c3));
+      if (validCateg3.length !== category3.length) {
+        setCategory3(validCateg3);
+      }
+    }
+  }, [category2, availableCateg3]);
+
+  // Filter products with OR logic for multi-selects
   const filteredProducts = useMemo(() => {
     if (!products) return [];
 
@@ -96,14 +193,14 @@ export default function Products() {
         product.erp_product_code?.toLowerCase().includes(searchLower) ||
         product.erp_product_description?.toLowerCase().includes(searchLower);
 
-      // Category filters
-      const matchesCategory1 = category1 === "all" || product.categ1 === category1;
-      const matchesCategory2 = category2 === "all" || product.categ2 === category2;
-      const matchesCategory3 = category3 === "all" || product.categ3 === category3;
+      // Category filters (OR logic - match any selected)
+      const matchesCategory1 = category1.length === 0 || category1.includes(product.categ1 || "");
+      const matchesCategory2 = category2.length === 0 || category2.includes(product.categ2 || "");
+      const matchesCategory3 = category3.length === 0 || category3.includes(product.categ3 || "");
 
-      // Status filters
-      const matchesOfferStatus = offerStatus === "all" || product.stare_oferta === offerStatus;
-      const matchesStockStatus = stockStatus === "all" || product.stare_stoc === stockStatus;
+      // Status filters (OR logic - match any selected)
+      const matchesOfferStatus = offerStatus.length === 0 || offerStatus.includes(product.stare_oferta || "");
+      const matchesStockStatus = stockStatus.length === 0 || stockStatus.includes(product.stare_stoc || "");
 
       // Validation filter
       const matchesValidation = 
@@ -141,12 +238,13 @@ export default function Products() {
 
   const handleClearFilters = () => {
     setSearch("");
-    setCategory1("all");
-    setCategory2("all");
-    setCategory3("all");
-    setOfferStatus("all");
-    setStockStatus("all");
+    setCategory1([]);
+    setCategory2([]);
+    setCategory3([]);
+    setOfferStatus([]);
+    setStockStatus([]);
     setValidationFilter("all");
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   if (isLoading) {
@@ -182,6 +280,8 @@ export default function Products() {
         validationFilter={validationFilter}
         setValidationFilter={setValidationFilter}
         categories={categories}
+        availableCateg2={availableCateg2}
+        availableCateg3={availableCateg3}
         onClearFilters={handleClearFilters}
       />
 
