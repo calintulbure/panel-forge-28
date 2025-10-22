@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.sync-from-remote]
 verify_jwt = false
+
+[functions.remote-probe]
+verify_jwt = false
