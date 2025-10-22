@@ -12,7 +12,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import PendingApproval from "./pages/PendingApproval";
 import UserManagement from "./pages/UserManagement";
-import BulkImport from "./pages/BulkImport";
+import DatabaseManager from "./pages/DatabaseManager";
 
 const queryClient = new QueryClient();
 
@@ -47,7 +47,7 @@ const App = () => (
               }
             />
             <Route
-              path="/bulk-import"
+              path="/database"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <SidebarProvider defaultOpen={false}>
@@ -58,7 +58,7 @@ const App = () => (
                           <SidebarTrigger className="h-11 w-11 md:h-10 md:w-10" />
                         </header>
                         <main className="flex-1">
-                          <BulkImport />
+                          <DatabaseManager />
                         </main>
                       </div>
                     </div>

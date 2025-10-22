@@ -24,7 +24,7 @@ export function AppSidebar() {
   const navItems = [
     { title: "Product Catalog", url: "/", icon: Package },
     ...(userRole === 'admin' ? [
-      { title: "Bulk Import", url: "/bulk-import", icon: Upload },
+      { title: "Database Manager", url: "/database", icon: Upload },
       { title: "User Management", url: "/users", icon: Users }
     ] : []),
   ];
