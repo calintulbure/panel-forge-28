@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.trigger-snapshot-new]
 verify_jwt = false
+
+[functions.sync-from-remote]
+verify_jwt = false
