@@ -140,15 +140,60 @@ export type Database = {
         }
         Relationships: []
       }
+      yli_hu_products: {
+        Row: {
+          created_at: string
+          product_id: number | null
+          sku: string
+          status: string | null
+          url_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          product_id?: number | null
+          sku: string
+          status?: string | null
+          url_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          product_id?: number | null
+          sku?: string
+          status?: string | null
+          url_key?: string | null
+        }
+        Relationships: []
+      }
+      yli_ro_products: {
+        Row: {
+          created_at: string
+          product_id: number | null
+          sku: string
+          status: string | null
+          url_key: string
+        }
+        Insert: {
+          created_at?: string
+          product_id?: number | null
+          sku: string
+          status?: string | null
+          url_key: string
+        }
+        Update: {
+          created_at?: string
+          product_id?: number | null
+          sku?: string
+          status?: string | null
+          url_key?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      bulk_upsert_products: {
-        Args: { payload: Json }
-        Returns: number
-      }
+      bulk_upsert_products: { Args: { payload: Json }; Returns: number }
       get_user_approval_status: {
         Args: { _user_id: string }
         Returns: {
