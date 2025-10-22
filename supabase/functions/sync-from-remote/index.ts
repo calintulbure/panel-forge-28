@@ -1,112 +1,166 @@
-// supabase/functions/sync-from-remote/index.ts
+// supabase/functions/sync-multiple-from-remote/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 
-type SyncRequest = {
-  table: string; // e.g. "products"
-  since?: string; // ISO date/time; only rows with updated_at >= since
-  pageSize?: number; // default 1000
-  conflictTarget?: string; // e.g. "erp_product_code" or "id"
-  select?: string; // columns to select, default "*"
-  dryRun?: boolean; // don't write, just count
-  filter?: Record<string, unknown>; // optional equality filters, e.g. { site: "ro" }
+type TableConfig = {
+  source: string;                 // source table name in remote (e.g., "yli_ro_products")
+  dest?: string;                  // destination table name in Lovable (defaults to source)
+  conflictTarget?: string;        // e.g., "sku" or "id"
+  select?: string;                // columns to pull, default "*"
+  since?: string;                 // ISO string; pulls rows with updated_at >= since
+  pageSize?: number;              // default 1000
+  filter?: Record<string, unknown>; // equality filters, e.g., { status: 'active' }
 };
 
-const DEST = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+type SyncRequest = {
+  tables: TableConfig[];
+  dryRun?: boolean;               // global dry-run, can be combined with per-table settings if you want
+  haltOnError?: boolean;          // stop at first table error (default: false)
+  orderColumn?: string;           // default 'id' (change to a monotonic column if needed)
+};
 
-const SRC = createClient(Deno.env.get("SRC_SUPABASE_URL")!, Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY")!);
+const DEST = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
+
+const SRC = createClient(
+  Deno.env.get("SRC_SUPABASE_URL")!,
+  Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY")!,
+);
 
 Deno.serve(async (req) => {
   try {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors() });
 
     const body = (await req.json()) as SyncRequest;
-
-    // --- validate input
-    if (!body?.table) {
-      return json({ success: false, error: "Missing 'table' in body" }, 400);
+    if (!body?.tables?.length) {
+      return json({ success: false, error: "Body must include { tables: TableConfig[] }" }, 400);
     }
 
-    const table = body.table;
-    const since = body.since ? new Date(body.since).toISOString() : undefined;
-    const pageSize = Math.min(Math.max(Number(body.pageSize ?? 1000), 1), 5000);
-    const conflictTarget = body.conflictTarget; // if unset, upsert uses primary key
-    const selectCols = body.select || "*";
-    const dryRun = !!body.dryRun;
-    const eqFilters = body.filter ?? {};
+    const globalDryRun = !!body.dryRun;
+    const haltOnError = !!body.haltOnError;
+    const defaultOrderColumn = body.orderColumn || "id";
 
-    const stats = { read: 0, upserted: 0, batches: 0, dryRun };
+    const results: Array<{
+      table: string;
+      destTable: string;
+      count?: number;
+      read: number;
+      upserted: number;
+      batches: number;
+      since?: string;
+      dryRun: boolean;
+      ok: boolean;
+      error?: string;
+    }> = [];
 
-    // Pull pages until empty
-    let from = 0;
-    const orderColumn = "id"; // adjust if your table uses another increasing key
+    for (const cfg of body.tables) {
+      const table = cfg.source;
+      const destTable = cfg.dest || table;
+      const since = cfg.since ? new Date(cfg.since).toISOString() : undefined;
+      const pageSize = Math.min(Math.max(Number(cfg.pageSize ?? 1000), 1), 5000);
+      const conflictTarget = cfg.conflictTarget;
+      const selectCols = cfg.select || "*";
+      const eqFilters = cfg.filter ?? {};
+      const orderColumn = defaultOrderColumn;
+      const dryRun = globalDryRun;
 
-    // Optional: count for visibility (can be omitted for speed)
-    let count: number | undefined = undefined;
-    {
-      let q = SRC.from(table).select(orderColumn, { count: "exact", head: true });
-      if (since) q = q.gte("updated_at", since);
-      for (const [k, v] of Object.entries(eqFilters)) q = q.eq(k, v as any);
-      const { count: c, error } = await q;
-      if (error) throw error;
-      count = c ?? undefined;
-    }
+      const stats = {
+        table,
+        destTable,
+        read: 0,
+        upserted: 0,
+        batches: 0,
+        since,
+        dryRun,
+        ok: true as boolean,
+        error: undefined as string | undefined,
+        count: undefined as number | undefined,
+      };
 
-    while (true) {
-      let q = SRC.from(table)
-        .select(selectCols)
-        .order(orderColumn, { ascending: true })
-        .range(from, from + pageSize - 1);
+      try {
+        // Optional: count upfront for visibility
+        {
+          let q = SRC.from(table).select(orderColumn, { count: "exact", head: true });
+          if (since) q = q.gte("updated_at", since);
+          for (const [k, v] of Object.entries(eqFilters)) q = q.eq(k, v as any);
+          const { count, error } = await q;
+          if (error) throw error;
+          stats.count = count ?? undefined;
+        }
 
-      if (since) q = q.gte("updated_at", since);
-      for (const [k, v] of Object.entries(eqFilters)) q = q.eq(k, v as any);
+        let from = 0;
+        while (true) {
+          let q = SRC.from(table)
+            .select(selectCols)
+            .order(orderColumn, { ascending: true })
+            .range(from, from + pageSize - 1);
 
-      const { data, error } = await q;
-      if (error) throw error;
+          if (since) q = q.gte("updated_at", since);
+          for (const [k, v] of Object.entries(eqFilters)) q = q.eq(k, v as any);
 
-      const batch = data ?? [];
-      if (batch.length === 0) break;
+          const { data, error } = await q;
+          if (error) throw error;
 
-      stats.read += batch.length;
-      stats.batches += 1;
+          const batch = data ?? [];
+          if (batch.length === 0) break;
 
-      // (Optional) transform step if columns differ between source and dest
-      const mapped = batch.map(transformRow);
+          stats.read += batch.length;
+          stats.batches += 1;
 
-      if (!dryRun) {
-        const upsertOptions = conflictTarget ? { onConflict: conflictTarget } : undefined;
-        const { error: upErr } = await DEST.from(table).upsert(mapped, upsertOptions);
-        if (upErr) throw upErr;
-        stats.upserted += mapped.length;
+          // Transform hook (edit per table if needed)
+          const mapped = batch.map((row) => transformRow(row, table, destTable));
+
+          if (!dryRun) {
+            const upsertOptions = conflictTarget ? { onConflict: conflictTarget } : undefined;
+            const { error: upErr } = await DEST.from(destTable).upsert(mapped, upsertOptions);
+            if (upErr) throw upErr;
+            stats.upserted += mapped.length;
+          }
+
+          from += batch.length;
+        }
+      } catch (err) {
+        stats.ok = false;
+        stats.error = err instanceof Error ? err.message : String(err);
+        console.error(`sync error [${table} -> ${destTable}]:`, stats.error);
+        results.push(stats);
+        if (haltOnError) {
+          return json({ success: false, results, message: "Stopped due to error." }, 500);
+        }
+        continue;
       }
 
-      from += batch.length;
+      results.push(stats);
     }
 
+    const ok = results.every((r) => r.ok);
     return json({
-      success: true,
-      table,
-      since,
-      count,
-      ...stats,
-      message: dryRun ? "Dry run completed" : "Sync completed",
+      success: ok,
+      results,
+      message: ok ? "Multi-table sync completed" : "Completed with errors. See results.",
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("sync-from-remote error:", msg);
+    console.error("sync-multiple-from-remote error:", msg);
     return json({ success: false, error: msg }, 500);
   }
 });
 
-// ---- row mapping if schemas differ (edit as needed)
-function transformRow(row: any) {
-  // Example: remap/strip fields
-  // return {
-  //   id: row.id,
-  //   erp_product_code: row.erp_product_code,
-  //   updated_at: row.updated_at,
-  //   // ...
-  // };
-  return row; // pass-through when schemas match
+// ---- Transform rows if schemas differ between source and destination.
+// Default pass-through; customize per table if needed.
+function transformRow(row: any, source: string, dest: string) {
+  // Example of table-specific mapping (currently not needed for your schemas):
+  // if (source === "yli_ro_products" && dest === "products_ro") {
+  //   return {
+  //     product_id: row.product_id,
+  //     sku: row.sku,
+  //     url_key: row.url_key,
+  //     status: row.status,
+  //     created_at: row.created_at,
+  //   };
+  // }
+  return row;
 }
 
 function json(data: unknown, status = 200) {
@@ -119,6 +173,4 @@ function json(data: unknown, status = 200) {
 function cors() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  };
-}
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey,
