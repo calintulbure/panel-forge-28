@@ -209,6 +209,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_products_from_sources: {
+        Args: { run_hu?: boolean; run_ro?: boolean; validated_only?: boolean }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "operator"
