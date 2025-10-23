@@ -94,13 +94,14 @@ serve(async (req) => {
     // Prepare payload for n8n
     const payload: Record<string, any> = {
       product_code: erp_product_code,
+      product_description: erp_product_description,
       site,
     };
 
     // Only include product_description if it exists
-    if (erp_product_description) {
-      payload.product_description = erp_product_description;
-    }
+    //if (erp_product_description) {
+    //  payload.product_description = erp_product_description;
+    //}
 
     console.log("Sending payload to n8n:", JSON.stringify(payload));
 
@@ -170,6 +171,7 @@ serve(async (req) => {
         site,
         input: {
           erp_product_code,
+          erp_product_description,
           website,
         },
         candidates,
