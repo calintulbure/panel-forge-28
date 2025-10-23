@@ -279,7 +279,7 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
     >
       <div className="flex flex-col items-center gap-2">
         {/* Snapshot thumbnail with hover preview */}
-        <div className="relative group">
+        <div className="relative group/cell">
           <div
             className={cn(
               "relative w-[80px] h-[80px] rounded border bg-muted flex items-center justify-center overflow-hidden",
@@ -298,8 +298,8 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
                   decoding="async"
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                  <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-black/0 group-hover/cell:bg-black/20 transition-colors flex items-center justify-center">
+                  <ExternalLink className="h-6 w-6 text-white opacity-0 group-hover/cell:opacity-100 transition-opacity" />
                 </div>
               </>
             ) : (
@@ -307,7 +307,7 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
             )}
 
             {/* Action buttons overlay */}
-            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/cell:opacity-100 transition-opacity">
               <Button
                 variant="secondary"
                 size="icon"
@@ -335,7 +335,7 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
 
           {/* Hover preview */}
           {snapshotBase64 && (
-            <div className="absolute top-full right-0 mt-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="absolute top-full right-0 mt-2 z-50 opacity-0 group-hover/cell:opacity-100 transition-opacity pointer-events-none">
               <div className="w-[400px] h-[300px] border-2 border-primary rounded shadow-lg bg-background overflow-hidden">
                 <img
                   src={`data:image/jpeg;base64,${snapshotBase64}`}
