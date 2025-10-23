@@ -30,7 +30,19 @@ serve(async (req) => {
   }
 
   try {
-    const { erp_product_code, erp_product_description, website }: MatchCandidatesRequest = await req.json();
+    //const { erp_product_code, erp_product_description, website }: MatchCandidatesRequest = await req.json();
+
+    const body: any = await req.json();
+    const erp_product_code: string = body.erp_product_code ?? body.product_code ?? body.code;
+    const website: string = body.website;
+
+    const erp_product_description: string | undefined =
+      body.erp_product_description ??
+      body.product_description ??
+      body.productDescription ??
+      body.erpProductDescription ??
+      body.description ??
+      undefined;
 
     if (!erp_product_code || !website) {
       return new Response(
@@ -98,10 +110,10 @@ serve(async (req) => {
     };
 
     // Only include product_description if it exists
-    if (erp_product_description) {
-      payload.product_description = erp_product_description;
+    if (erp_product_description?.trim()) {
+      payload.product_description = erp_product_description; // snake_case
+      payload.productDescription = erp_product_description; // camelCase
     }
-
     console.log("Sending payload to n8n:", JSON.stringify(payload));
 
     // Call n8n webhook with retry logic
