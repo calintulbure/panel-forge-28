@@ -335,7 +335,7 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
 
           {/* Hover preview */}
           {snapshotBase64 && (
-            <div className="absolute right-full mr-2 top-0 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="absolute top-full right-0 mt-2 z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               <div className="w-[400px] h-[300px] border-2 border-primary rounded shadow-lg bg-background overflow-hidden">
                 <img
                   src={`data:image/jpeg;base64,${snapshotBase64}`}
