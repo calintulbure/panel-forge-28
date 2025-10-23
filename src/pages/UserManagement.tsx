@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { CheckCircle, XCircle, Users, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,21 +36,21 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch all user roles with basic info
-      const { data: userRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
 
-      if (rolesError) throw rolesError;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-users-with-roles`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
 
-      // For now, we can't fetch email addresses from client-side
-      // The user_id is shown instead
-      const usersWithEmails = (userRoles || []).map((role) => ({
-        ...role,
-        user_email: `User ${role.user_id.substring(0, 8)}...`
-      }));
+      if (!response.ok) throw new Error("Failed to fetch users");
 
+      const { users: usersWithEmails } = await response.json();
       setUsers(usersWithEmails);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -105,6 +106,23 @@ export default function UserManagement() {
       toast.error("Failed to reject user");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleRoleChange = async (roleId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: newRole as "admin" | "operator" })
+        .eq("id", roleId);
+
+      if (error) throw error;
+      
+      toast.success("User role updated successfully");
+      fetchUsers();
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update user role");
     }
   };
 
@@ -217,16 +235,26 @@ export default function UserManagement() {
               {approvedUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border rounded-lg"
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1 flex-1">
                     <p className="font-medium text-sm">{user.user_email}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="capitalize text-xs">
-                        {user.role}
-                      </Badge>
-                      <Badge variant="default" className="text-xs">Approved</Badge>
-                    </div>
+                    <Badge variant="default" className="text-xs">Approved</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Role:</span>
+                    <Select 
+                      value={user.role} 
+                      onValueChange={(value) => handleRoleChange(user.id, value)}
+                    >
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="operator">Operator</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               ))}
