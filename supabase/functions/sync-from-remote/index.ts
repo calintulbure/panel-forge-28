@@ -144,8 +144,8 @@ Deno.serve(async (req) => {
 });
 
 async function syncOne(opts: {
-  reader: ReturnType<typeof createClient>;
-  writer: ReturnType<typeof createClient>;
+  reader: any;
+  writer: any;
   readTable: string;
   writeTable: string;
   selectCols: string;
