@@ -7,6 +7,7 @@ const corsHeaders = {
 
 interface MatchCandidatesRequest {
   erp_product_code: string;
+  erp_product_description?: string;
   website: "ro" | "hu" | string;
 }
 
@@ -29,7 +30,7 @@ serve(async (req) => {
   }
 
   try {
-    const { erp_product_code, website }: MatchCandidatesRequest = await req.json();
+    const { erp_product_code, erp_product_description, website }: MatchCandidatesRequest = await req.json();
 
     if (!erp_product_code || !website) {
       return new Response(
@@ -103,6 +104,7 @@ serve(async (req) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             product_code: erp_product_code,
+            product_description: erp_product_description,
             site 
           }),
           signal: AbortSignal.timeout(25000), // 25s timeout
