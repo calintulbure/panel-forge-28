@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ExternalLink, X } from "lucide-react";
+import { RefreshCw, ExternalLink, X, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { CandidateSelector } from "./CandidateSelector";
 
 interface PublishCellProps {
   productCode: string;
@@ -21,6 +22,9 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [showImageDialog, setShowImageDialog] = useState(false);
+  const [showCandidateSelector, setShowCandidateSelector] = useState(false);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
   const lastDropTime = useRef<number>(0);
   const { toast } = useToast();
 
@@ -162,6 +166,98 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
     }
   };
 
+  const handleFindMatch = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    setIsLoadingCandidates(true);
+    setShowCandidateSelector(true);
+    setCandidates([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("match-candidates", {
+        body: { 
+          erp_product_code: productCode, 
+          website: site 
+        },
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        toast({
+          title: "Search failed",
+          description: data.error || "Failed to find candidates",
+          variant: "destructive",
+        });
+        setCandidates([]);
+        return;
+      }
+
+      if (data.candidates && data.candidates.length > 0) {
+        setCandidates(data.candidates);
+      } else {
+        toast({
+          title: "No matches found",
+          description: "No candidate pages found for this product",
+        });
+        setCandidates([]);
+      }
+    } catch (error) {
+      console.error("Find match error:", error);
+      toast({
+        title: "Search failed",
+        description: error instanceof Error ? error.message : "Failed to search for candidates",
+        variant: "destructive",
+      });
+      setCandidates([]);
+    } finally {
+      setIsLoadingCandidates(false);
+    }
+  };
+
+  const handleConfirmCandidate = async (candidate: any) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("choose-candidate", {
+        body: {
+          erp_product_code: productCode,
+          site,
+          candidate,
+        },
+      });
+
+      if (error) throw error;
+
+      if (!data.success) {
+        toast({
+          title: "Update failed",
+          description: data.error || "Failed to apply candidate",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Candidate applied",
+        description: "Snapshot capture queued",
+      });
+
+      setShowCandidateSelector(false);
+      setTimeout(onUpdate, 2000);
+    } catch (error) {
+      console.error("Confirm candidate error:", error);
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "Failed to apply candidate",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelCandidateSelection = () => {
+    setShowCandidateSelector(false);
+    setCandidates([]);
+  };
+
   return (
     <div
       className={cn(
@@ -208,18 +304,31 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
               <span className="text-xs text-muted-foreground text-center px-2">No snapshot</span>
             )}
 
-            {/* Refresh button overlay */}
-            {siteUrl && (
+            {/* Action buttons overlay */}
+            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
+                className="h-6 w-6"
+                onClick={handleFindMatch}
+                disabled={isRefreshing || isLoadingCandidates}
+                title="Find candidate pages"
               >
-                <RefreshCw className="h-3 w-3" />
+                <Search className="h-3 w-3" />
               </Button>
-            )}
+              {siteUrl && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  title="Refresh snapshot"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Hover preview */}
@@ -286,6 +395,17 @@ export function PublishCell({ productCode, snapshotBase64, siteUrl, sku, site, o
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Candidate selector dialog */}
+      <CandidateSelector
+        open={showCandidateSelector}
+        onOpenChange={setShowCandidateSelector}
+        candidates={candidates}
+        isLoading={isLoadingCandidates}
+        onConfirm={handleConfirmCandidate}
+        onCancel={handleCancelCandidateSelection}
+        site={site}
+      />
     </div>
   );
 }

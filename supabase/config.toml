@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.get-users-with-roles]
 verify_jwt = false
+
+[functions.match-candidates]
+verify_jwt = false
+
+[functions.choose-candidate]
+verify_jwt = false
