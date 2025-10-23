@@ -91,6 +91,20 @@ serve(async (req) => {
     }
 
     console.log(`Fetching candidates from n8n for ${erp_product_code} (${site})...`);
+    console.log(`Product description: ${erp_product_description || 'not provided'}`);
+
+    // Prepare payload for n8n
+    const payload: Record<string, any> = {
+      product_code: erp_product_code,
+      site
+    };
+    
+    // Only include product_description if it exists
+    if (erp_product_description) {
+      payload.product_description = erp_product_description;
+    }
+    
+    console.log('Sending payload to n8n:', JSON.stringify(payload));
 
     // Call n8n webhook with retry logic
     let n8nResponse: Response;
@@ -102,11 +116,7 @@ serve(async (req) => {
         n8nResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            product_code: erp_product_code,
-            product_description: erp_product_description,
-            site 
-          }),
+          body: JSON.stringify(payload),
           signal: AbortSignal.timeout(25000), // 25s timeout
         });
 
