@@ -286,7 +286,7 @@ async function syncOne(opts: {
       // 4) Enforce **current TARGET** restriction (only upsert keys matching target filter right now)
       const allowedKeys = await fetchAllowedTargetKeys(writer, writeTable, conflictTarget, writeFilters);
       if (allowedKeys) {
-        toWrite = toWrite.filter((r) => allowedKeys.has(r[conflictTarget]));
+        toWrite = toWrite.filter((r: Record<string, any>) => allowedKeys.has(r[conflictTarget]));
       }
 
       if (!toWrite.length) {
