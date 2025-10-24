@@ -1,27 +1,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 
-/**
- * Request body
- *
- * - direction: "pull" | "push" | "both"
- * - tables: array of table names or objects with per-table overrides
- * - since: ISO timestamp for incremental sync; applied on SINCE_COLUMN
- * - pageSize: batch size (1..5000)
- * - select: default columns to read (overridable per-table)
- * - conflictTarget: default conflict key (overridable per-table)
- * - sinceColumn: "updated_at" | "created_at" (default "created_at")
- * - dryRun: read only (no writes)
- */
+/** ---------- Types ---------- */
 type TableItem =
   | string
   | {
-      table: string; // canonical name for this table in both DBs (if same)
-      srcTable?: string; // name in SRC (if different)
-      destTable?: string; // name in DEST (if different)
-      select?: string; // columns to read
-      conflictTarget?: string; // upsert key in target
-      sinceColumn?: string; // override since column per table
-      filters?: Record<string, any>; // <-- NEW
+      table: string;
+      srcTable?: string;
+      destTable?: string;
+      select?: string;
+      conflictTarget?: string;
+      sinceColumn?: string;
+      filters?: {
+        source?: Record<string, any>; // NEW: filter the READER (source) rows
+        target?: Record<string, any>; // NEW: filter what we write to TARGET
+      };
     };
 
 type Body = {
@@ -35,6 +27,7 @@ type Body = {
   dryRun?: boolean;
 };
 
+/** ---------- Clients & Defaults ---------- */
 const DEST = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 const SRC = createClient(env("SRC_SUPABASE_URL"), env("SRC_SUPABASE_SERVICE_ROLE_KEY"));
 
@@ -43,8 +36,9 @@ const DEFAULT_SELECT = "*";
 const DEFAULT_CONFLICT = "sku";
 const DEFAULT_PAGE = 1000;
 const MAX_PAGE = 5000;
-const DEFAULT_SINCE_COLUMN: "updated_at" | "created_at" = "created_at"; // your current tables
+const DEFAULT_SINCE_COLUMN: "updated_at" | "created_at" = "created_at";
 
+/** ---------- HTTP ---------- */
 Deno.serve(async (req) => {
   try {
     if (req.method === "OPTIONS") return new Response(null, { headers: cors() });
@@ -55,7 +49,7 @@ Deno.serve(async (req) => {
       b = await req.json();
     } catch {}
 
-    const direction = b.direction ?? "pull"; // pull SRC->DEST by default
+    const direction = b.direction ?? "pull";
     const pageSize = clamp(b.pageSize ?? DEFAULT_PAGE, 1, MAX_PAGE);
     const baseSelect = b.select ?? DEFAULT_SELECT;
     const baseConflict = b.conflictTarget ?? DEFAULT_CONFLICT;
@@ -71,7 +65,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // normalize tables into a consistent object shape
+    // Normalize table definitions
     const tables = (b.tables?.length ? b.tables : DEFAULT_TABLES).map((t) => {
       if (typeof t === "string") {
         return {
@@ -81,7 +75,7 @@ Deno.serve(async (req) => {
           select: baseSelect,
           conflictTarget: baseConflict,
           sinceColumn: baseSinceColumn,
-          filters: undefined, // <-- NEW
+          filters: undefined,
         };
       }
       return {
@@ -91,17 +85,17 @@ Deno.serve(async (req) => {
         select: t.select ?? baseSelect,
         conflictTarget: t.conflictTarget ?? baseConflict,
         sinceColumn: (t.sinceColumn as "created_at" | "updated_at" | undefined) ?? baseSinceColumn,
-        filters: t.filters, // <-- NEW
+        filters: t.filters,
       };
     });
 
     const results: any[] = [];
 
+    // pull: SRC -> DEST
     if (direction === "pull" || direction === "both") {
       for (const t of tables) {
         results.push(
           await syncOne({
-            // SRC -> DEST
             reader: SRC,
             writer: DEST,
             readTable: t.srcTable!,
@@ -113,17 +107,18 @@ Deno.serve(async (req) => {
             pageSize,
             dryRun,
             direction: "pull",
-            filters: t.filters, // <-- NEW
+            readFilters: t.filters?.source,
+            writeFilters: t.filters?.target,
           }),
         );
       }
     }
 
+    // push: DEST -> SRC
     if (direction === "push" || direction === "both") {
       for (const t of tables) {
         results.push(
           await syncOne({
-            // DEST -> SRC
             reader: DEST,
             writer: SRC,
             readTable: t.destTable!,
@@ -135,7 +130,8 @@ Deno.serve(async (req) => {
             pageSize,
             dryRun,
             direction: "push",
-            filters: t.filters, // <-- NEW
+            readFilters: t.filters?.source,
+            writeFilters: t.filters?.target,
           }),
         );
       }
@@ -148,6 +144,7 @@ Deno.serve(async (req) => {
   }
 });
 
+/** ---------- Core ---------- */
 async function syncOne(opts: {
   reader: any;
   writer: any;
@@ -160,7 +157,8 @@ async function syncOne(opts: {
   pageSize: number;
   dryRun: boolean;
   direction: "pull" | "push";
-  filters?: Record<string, any>; // <-- NEW
+  readFilters?: Record<string, any>; // NEW
+  writeFilters?: Record<string, any>; // NEW
 }) {
   const {
     reader,
@@ -174,18 +172,11 @@ async function syncOne(opts: {
     pageSize,
     dryRun,
     direction,
+    readFilters,
+    writeFilters,
   } = opts;
 
-  const stats = {
-    direction,
-    readTable,
-    writeTable,
-    read: 0,
-    upserted: 0,
-    batches: 0,
-    dryRun,
-    ok: false as boolean,
-  };
+  const stats = { direction, readTable, writeTable, read: 0, upserted: 0, batches: 0, dryRun, ok: false as boolean };
 
   try {
     let from = 0;
@@ -195,11 +186,7 @@ async function syncOne(opts: {
         .select(selectCols)
         .range(from, from + pageSize - 1);
       if (sinceISO) q = q.gte(sinceColumn as any, sinceISO);
-
-      // Simple equality filters using .match({})
-      if (opts.filters && Object.keys(opts.filters).length) {
-        q = q.match(opts.filters);
-      }
+      if (readFilters && Object.keys(readFilters).length) q = q.match(readFilters);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -210,16 +197,23 @@ async function syncOne(opts: {
       stats.read += rows.length;
       stats.batches += 1;
 
-      // Optional transforms (schema mapping) — customize below if your shapes differ.
+      // map schemas
       const mapped =
         direction === "pull"
           ? rows.map(transformSrcToDest(readTable, writeTable))
           : rows.map(transformDestToSrc(readTable, writeTable));
 
+      // apply writer/target filters client-side (equality only)
+      const toWrite = writeFilters ? mapped.filter((r) => matchesAll(r, writeFilters)) : mapped;
+      if (!toWrite.length) {
+        from += rows.length;
+        continue;
+      }
+
       if (!dryRun) {
-        const { error: upErr } = await writer.from(writeTable).upsert(mapped, { onConflict: conflictTarget });
+        const { error: upErr } = await writer.from(writeTable).upsert(toWrite, { onConflict: conflictTarget });
         if (upErr) throw upErr;
-        stats.upserted += mapped.length;
+        stats.upserted += toWrite.length;
       }
 
       from += rows.length;
@@ -234,44 +228,23 @@ async function syncOne(opts: {
   }
 }
 
-/** Map a source row (from SRC) to the destination table row (DEST). */
-function transformSrcToDest(srcTable: string, destTable: string) {
-  return (row: Record<string, any>) => {
-    // Default: pass-through (identical schemas)
-    // Example mapping per table (uncomment and adapt if needed):
-    //
-    // if (srcTable === "yli_ro_products" && destTable === "products_ro") {
-    //   return {
-    //     product_id: row.product_id,
-    //     sku: row.sku,
-    //     url_key: row.url_key,
-    //     status: row.status,
-    //     created_at: row.created_at,
-    //   };
-    // }
-    return row;
-  };
+/** simple equality filter helper */
+function matchesAll(row: Record<string, any>, filters: Record<string, any>) {
+  for (const [k, v] of Object.entries(filters)) {
+    if (row?.[k] !== v) return false;
+  }
+  return true;
 }
 
-/** Map a destination row (from DEST) to the source table row (SRC). */
-function transformDestToSrc(readTable: string, writeTable: string) {
-  return (row: Record<string, any>) => {
-    // Default: pass-through
-    // Example reverse mapping:
-    //
-    // if (readTable === "products_ro" && writeTable === "yli_ro_products") {
-    //   return {
-    //     product_id: row.product_id,
-    //     sku: row.sku,
-    //     url_key: row.site_ro_url,
-    //     status: row.status,
-    //     created_at: row.created_at,
-    //   };
-    // }
-    return row;
-  };
+/** ---------- Optional transformers (no-op by default) ---------- */
+function transformSrcToDest(_srcTable: string, _destTable: string) {
+  return (row: Record<string, any>) => row;
+}
+function transformDestToSrc(_readTable: string, _writeTable: string) {
+  return (row: Record<string, any>) => row;
 }
 
+/** ---------- Utils ---------- */
 function env(k: string) {
   const v = Deno.env.get(k);
   if (!v) throw new Error(`Missing env ${k}`);
