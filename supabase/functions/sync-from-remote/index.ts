@@ -187,12 +187,18 @@ async function syncOne(opts: {
         .range(from, from + pageSize - 1);
       if (sinceISO) q = q.gte(sinceColumn as any, sinceISO);
 
+      // Support advanced filtering
       if (readFilters && Object.keys(readFilters).length) {
         for (const [key, val] of Object.entries(readFilters)) {
           if (Array.isArray(val)) {
+            // e.g. { "articol_id": [1,2,3] }
             q = q.in(key, val);
           } else if (val && typeof val === "object") {
-            if ("not" in val) q = val.not === null ? q.not(key, "is", null) : q.neq(key, val.not);
+            // e.g. { "gt": 1000, "lt": 2000, "not": null }
+            if ("not" in val) {
+              if (val.not === null) q = q.not(key, "is", null);
+              else q = q.neq(key, val.not);
+            }
             if ("gt" in val) q = q.gt(key, val.gt);
             if ("gte" in val) q = q.gte(key, val.gte);
             if ("lt" in val) q = q.lt(key, val.lt);
