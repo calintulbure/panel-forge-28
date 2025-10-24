@@ -31,6 +31,7 @@ type Body = {
   select?: string;
   conflictTarget?: string;
   sinceColumn?: "updated_at" | "created_at";
+  filters?: Record<string, any>; // <-- NEW
   dryRun?: boolean;
 };
 
@@ -80,6 +81,7 @@ Deno.serve(async (req) => {
           select: baseSelect,
           conflictTarget: baseConflict,
           sinceColumn: baseSinceColumn,
+          filters: undefined,
         };
       }
       return {
@@ -89,6 +91,7 @@ Deno.serve(async (req) => {
         select: t.select ?? baseSelect,
         conflictTarget: t.conflictTarget ?? baseConflict,
         sinceColumn: (t.sinceColumn as "created_at" | "updated_at" | undefined) ?? baseSinceColumn,
+        filters: t.filters, // <-- NEW
       };
     });
 
@@ -110,6 +113,7 @@ Deno.serve(async (req) => {
             pageSize,
             dryRun,
             direction: "pull",
+            filters: t.filters, // <-- NEW
           }),
         );
       }
@@ -131,6 +135,7 @@ Deno.serve(async (req) => {
             pageSize,
             dryRun,
             direction: "push",
+            filters: t.filters, // <-- NEW
           }),
         );
       }
@@ -155,6 +160,7 @@ async function syncOne(opts: {
   pageSize: number;
   dryRun: boolean;
   direction: "pull" | "push";
+  filters?: Record<string, any>; // <-- NEW
 }) {
   const {
     reader,
@@ -189,6 +195,11 @@ async function syncOne(opts: {
         .select(selectCols)
         .range(from, from + pageSize - 1);
       if (sinceISO) q = q.gte(sinceColumn as any, sinceISO);
+
+      // Simple equality filters using .match({})
+      if (opts.filters && Object.keys(opts.filters).length) {
+        q = q.match(opts.filters);
+      }
 
       const { data, error } = await q;
       if (error) throw error;
