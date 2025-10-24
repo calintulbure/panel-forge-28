@@ -25,6 +25,7 @@ type Body = {
   conflictTarget?: string;
   sinceColumn?: "updated_at" | "created_at";
   dryRun?: boolean;
+  debug?: boolean; // <--- NEW
 };
 
 /** ---------- Clients & Defaults ---------- */
@@ -48,6 +49,27 @@ Deno.serve(async (req) => {
     try {
       b = await req.json();
     } catch {}
+
+    const debug = !!b.debug;
+
+    if (debug) {
+      // Use the first table (or 'products') for probing
+      const first =
+        b.tables && b.tables.length ? (typeof b.tables[0] === "string" ? b.tables[0] : b.tables[0].table) : "products";
+
+      const srcProbe = await restProbe(env("SRC_SUPABASE_URL"), env("SRC_SUPABASE_SERVICE_ROLE_KEY"), first);
+      const destProbe = await restProbe(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), first);
+
+      return json({
+        debug: true,
+        table: first,
+        src: srcProbe,
+        dest: destProbe,
+        note:
+          "If src.status!=200 or body is an error, check table exposure (public schema), RLS, or table name. " +
+          "If src.status==200 and body is [], your source REST is returning zero rows.",
+      });
+    }
 
     const direction = b.direction ?? "pull";
     const pageSize = clamp(b.pageSize ?? DEFAULT_PAGE, 1, MAX_PAGE);
@@ -145,6 +167,35 @@ Deno.serve(async (req) => {
 });
 
 /** ---------- Core ---------- */
+
+async function restProbe(baseUrl: string, serviceKey: string, table: string, select = "erp_product_code") {
+  const url = `${baseUrl.replace(/\/$/, "")}/rest/v1/${encodeURIComponent(table)}?select=${encodeURIComponent(select)}&limit=1`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+  });
+
+  let bodyText = "";
+  try {
+    bodyText = await res.text();
+  } catch {}
+
+  let bodyJson: unknown = null;
+  try {
+    bodyJson = JSON.parse(bodyText);
+  } catch {}
+
+  return {
+    url,
+    status: res.status,
+    ok: res.ok,
+    contentRange: res.headers.get("content-range"),
+    body: bodyJson ?? bodyText,
+  };
+}
+
 async function syncOne(opts: {
   reader: any;
   writer: any;
