@@ -39,6 +39,39 @@ const DEFAULT_PAGE = 1000;
 const MAX_PAGE = 5000;
 const DEFAULT_SINCE_COLUMN: "updated_at" | "created_at" = "created_at";
 
+async function restProbe(baseUrl: string, serviceKey: string, table: string, select = "erp_product_code") {
+  const url = `${baseUrl.replace(/\/$/, "")}/rest/v1/${encodeURIComponent(
+    table,
+  )}?select=${encodeURIComponent(select)}&limit=1`;
+
+  const res = await fetch(url, {
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+  });
+
+  let text = "";
+  try {
+    text = await res.text();
+  } catch {}
+
+  let body: any = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = text;
+  }
+
+  return {
+    url,
+    status: res.status,
+    ok: res.ok,
+    contentRange: res.headers.get("content-range"),
+    body,
+  };
+}
+
 /** ---------- HTTP ---------- */
 Deno.serve(async (req) => {
   try {
@@ -51,39 +84,6 @@ Deno.serve(async (req) => {
     } catch {}
 
     /** --------  DEBUG -------------------------------*/
-
-    async function restProbe(baseUrl: string, serviceKey: string, table: string, select = "erp_product_code") {
-      const url = `${baseUrl.replace(/\/$/, "")}/rest/v1/${encodeURIComponent(
-        table,
-      )}?select=${encodeURIComponent(select)}&limit=1`;
-
-      const res = await fetch(url, {
-        headers: {
-          apikey: serviceKey,
-          Authorization: `Bearer ${serviceKey}`,
-        },
-      });
-
-      let text = "";
-      try {
-        text = await res.text();
-      } catch {}
-
-      let body: any = null;
-      try {
-        body = JSON.parse(text);
-      } catch {
-        body = text;
-      }
-
-      return {
-        url,
-        status: res.status,
-        ok: res.ok,
-        contentRange: res.headers.get("content-range"),
-        body,
-      };
-    }
 
     const debug = !!b.debug;
 
