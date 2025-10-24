@@ -181,43 +181,41 @@ async function syncOne(opts: {
   try {
     let from = 0;
     for (;;) {
+      // 1) read from source
       let q = reader
         .from(readTable)
         .select(selectCols)
         .range(from, from + pageSize - 1);
       if (sinceISO) q = q.gte(sinceColumn as any, sinceISO);
-
-      // 👇 this replaces any q.match(...)
       q = applyReadFilters(q, readFilters);
 
       const { data, error } = await q;
       if (error) throw error;
-
       const rows = data ?? [];
       if (!rows.length) break;
 
-      stats.read += rows.length;
-      stats.batches += 1;
-
-      // map schemas
+      // 2) map to target schema
       const mapped =
         direction === "pull"
           ? rows.map(transformSrcToDest(readTable, writeTable))
           : rows.map(transformDestToSrc(readTable, writeTable));
 
-      // apply writer/target filters client-side (equality only)
+      // 3) optional: local content-based writeFilters on the batch
       let toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
 
-      const allowedSet = await fetchAllowedTargetKeys(writer, writeTable, conflictTarget, writeFilters);
-      if (allowedSet) {
+      // 4) **target state** enforcement: only keys currently matching target filter
+      const allowed = await fetchAllowedTargetKeys(writer, writeTable, conflictTarget, writeFilters);
+      if (allowed) {
         toWrite = toWrite.filter((r: Record<string, any>) => allowedSet.has(r[conflictTarget]));
       }
 
+      // nothing to do?
       if (!toWrite.length) {
         from += rows.length;
         continue;
       }
 
+      // 5) upsert
       if (!dryRun) {
         const { error: upErr } = await writer.from(writeTable).upsert(toWrite, { onConflict: conflictTarget });
         if (upErr) throw upErr;
