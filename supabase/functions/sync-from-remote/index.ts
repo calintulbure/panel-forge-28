@@ -280,21 +280,26 @@ async function syncOne(opts: {
           ? rows.map(transformSrcToDest(readTable, writeTable))
           : rows.map(transformDestToSrc(readTable, writeTable));
 
-      // 3) Optional content-based target write filters on the batch
-      let toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
+      // NEW: drop null/undefined fields so we never send `null` updates
+      let toWrite = mapped.map((r) => pruneNullish(r, conflictTarget));
 
-      // 4) Enforce **current TARGET** restriction (only upsert keys matching target filter right now)
-      const allowedKeys = await fetchAllowedTargetKeys(writer, writeTable, conflictTarget, writeFilters);
-      if (allowedKeys) {
-        toWrite = toWrite.filter((r: Record<string, any>) => allowedKeys.has(r[conflictTarget]));
+      // Keep any local, content-based write filters if you use them
+      if (writeFilters) {
+        toWrite = toWrite.filter((r) => matchesAll(r, writeFilters));
       }
 
+      // NEW: update-only by default: only upsert rows whose conflict key exists on target.
+      // This prevents accidental INSERTs (which would hit NOT NULL constraints).
+      const existingKeys = await fetchExistingKeys(writer, writeTable, conflictTarget, /* optional */ writeFilters);
+      toWrite = toWrite.filter((r) => existingKeys.has(r[conflictTarget]));
+
+      // If nothing left to write, continue to next page
       if (!toWrite.length) {
         from += rows.length;
         continue;
       }
 
-      // 5) Upsert in chunks with minimal returning (prevents timeouts & heavy payloads)
+      // Upsert in batches with returning: 'minimal'
       if (!dryRun) {
         const batches = chunk(toWrite, writeBatchSize);
         for (const batch of batches) {
@@ -477,4 +482,31 @@ function fmtErr(e: unknown) {
   } catch {
     return String(e);
   }
+}
+
+/** Remove null/undefined fields from a row, but always keep the conflict key. */
+function pruneNullish<T extends Record<string, any>>(row: T, conflictKey: string): T {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (v === null || v === undefined) continue; // drop nullish
+    out[k] = v;
+  }
+  // ensure conflict key is present even if nullish-pruned it
+  if (row[conflictKey] !== undefined) out[conflictKey] = row[conflictKey];
+  return out as T;
+}
+
+/** Read the set of existing keys from the target (optionally with filters). */
+async function fetchExistingKeys(
+  client: any,
+  table: string,
+  key: string,
+  filters?: Record<string, any>,
+  cap = 200_000,
+): Promise<Set<any>> {
+  let q = client.from(table).select(key).limit(cap);
+  q = applyFiltersToQuery(q, filters);
+  const { data, error } = await q;
+  if (error) throw error;
+  return new Set((data ?? []).map((r: any) => r[key]));
 }
