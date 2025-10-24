@@ -21,6 +21,7 @@ type TableItem =
       select?: string; // columns to read
       conflictTarget?: string; // upsert key in target
       sinceColumn?: string; // override since column per table
+      filters?: Record<string, any>; // <-- NEW
     };
 
 type Body = {
@@ -80,6 +81,7 @@ Deno.serve(async (req) => {
           select: baseSelect,
           conflictTarget: baseConflict,
           sinceColumn: baseSinceColumn,
+          filters: undefined, // <-- NEW
         };
       }
       return {
@@ -89,6 +91,7 @@ Deno.serve(async (req) => {
         select: t.select ?? baseSelect,
         conflictTarget: t.conflictTarget ?? baseConflict,
         sinceColumn: (t.sinceColumn as "created_at" | "updated_at" | undefined) ?? baseSinceColumn,
+        filters: t.filters, // <-- NEW
       };
     });
 
@@ -110,6 +113,7 @@ Deno.serve(async (req) => {
             pageSize,
             dryRun,
             direction: "pull",
+            filters: t.filters, // <-- NEW
           }),
         );
       }
@@ -131,6 +135,7 @@ Deno.serve(async (req) => {
             pageSize,
             dryRun,
             direction: "push",
+            filters: t.filters, // <-- NEW
           }),
         );
       }
@@ -155,6 +160,7 @@ async function syncOne(opts: {
   pageSize: number;
   dryRun: boolean;
   direction: "pull" | "push";
+  filters?: Record<string, any>; // <-- NEW
 }) {
   const {
     reader,
