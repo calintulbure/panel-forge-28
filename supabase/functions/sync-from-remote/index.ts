@@ -345,18 +345,6 @@ async function syncOne(opts: {
   }
 }
 
-/** Keep only non-nullish fields (except keepKey is preserved even if nullish check would remove it) */
-function pruneNullish<T extends Record<string, any>>(row: T, keepKey?: string): T {
-  const out: Record<string, any> = {};
-  for (const [k, v] of Object.entries(row)) {
-    if (k === keepKey) {
-      out[k] = v;
-      continue;
-    }
-    if (v !== null && v !== undefined) out[k] = v;
-  }
-  return out as T;
-}
 
 /** ---------- Filters (reader & target) ---------- */
 function applyFiltersToQuery(q: any, filters?: Record<string, FilterOps>) {
