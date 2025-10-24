@@ -35,7 +35,7 @@ const SRC = createClient(env("SRC_SUPABASE_URL"), env("SRC_SUPABASE_SERVICE_ROLE
 
 const DEFAULT_TABLES = ["yli_ro_products", "yli_hu_products"];
 const DEFAULT_SELECT = "*";
-const DEFAULT_CONFLICT = "sku";
+const DEFAULT_CONFLICT = "articol_id";
 const DEFAULT_PAGE = 1000;
 const MAX_PAGE = 5000;
 const DEFAULT_SINCE_COLUMN: "updated_at" | "created_at" = "created_at";
