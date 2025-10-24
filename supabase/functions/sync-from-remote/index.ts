@@ -207,7 +207,7 @@ async function syncOne(opts: {
 
       // apply writer/target filters client-side (equality only)
       //const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
-      const toWrite = writeFilters ? mapped.filter((r) => matchesAll(r, writeFilters)) : mapped;
+      const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
 
       if (!toWrite.length) {
         from += rows.length;
