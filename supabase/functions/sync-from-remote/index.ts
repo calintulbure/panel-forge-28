@@ -295,13 +295,13 @@ async function fetchAllowedTargetKeys(
   writeTable: string,
   conflictKey: string,
   writeFilters?: Record<string, any>,
-  limit = 100000,
+  limit = 200000,
 ): Promise<Set<any> | null> {
   if (!writeFilters || !Object.keys(writeFilters).length) return null;
 
-  // Only select the conflict key from TARGET where filters match
   let q = writer.from(writeTable).select(conflictKey).limit(limit);
   q = applyReadFilters(q, writeFilters);
+
   const { data, error } = await q;
   if (error) throw error;
 
