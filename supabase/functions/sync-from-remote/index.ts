@@ -189,15 +189,17 @@ async function syncOne(opts: {
 
       if (readFilters && Object.keys(readFilters).length) {
         for (const [key, val] of Object.entries(readFilters)) {
-          if (val && typeof val === "object" && "not" in val) {
-            // Support {"not": null} => IS NOT NULL
-            if (val.not === null) q = q.not(key, "is", null);
-            else q = q.neq(key, val.not);
+          if (Array.isArray(val)) {
+            q = q.in(key, val);
+          } else if (val && typeof val === "object") {
+            if ("not" in val) q = val.not === null ? q.not(key, "is", null) : q.neq(key, val.not);
+            if ("gt" in val) q = q.gt(key, val.gt);
+            if ("gte" in val) q = q.gte(key, val.gte);
+            if ("lt" in val) q = q.lt(key, val.lt);
+            if ("lte" in val) q = q.lte(key, val.lte);
           } else if (val === null) {
-            // IS NULL
             q = q.is(key, null);
           } else {
-            // regular equality
             q = q.eq(key, val);
           }
         }
