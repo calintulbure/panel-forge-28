@@ -345,7 +345,6 @@ async function syncOne(opts: {
   }
 }
 
-
 /** ---------- Filters (reader & target) ---------- */
 function applyFiltersToQuery(q: any, filters?: Record<string, FilterOps>) {
   if (!filters) return q;
@@ -507,15 +506,16 @@ function fmtErr(e: unknown) {
   }
 }
 
-/** Remove null/undefined fields from a row, but always keep the conflict key. */
-function pruneNullish<T extends Record<string, any>>(row: T, conflictKey: string): T {
+/** Keep only non-nullish fields (except keepKey is preserved even if nullish check would remove it) */
+function pruneNullish<T extends Record<string, any>>(row: T, keepKey?: string): T {
   const out: Record<string, any> = {};
   for (const [k, v] of Object.entries(row)) {
-    if (v === null || v === undefined) continue; // drop nullish
-    out[k] = v;
+    if (k === keepKey) {
+      out[k] = v;
+      continue;
+    }
+    if (v !== null && v !== undefined) out[k] = v;
   }
-  // ensure conflict key is present even if nullish-pruned it
-  if (row[conflictKey] !== undefined) out[conflictKey] = row[conflictKey];
   return out as T;
 }
 
