@@ -206,12 +206,11 @@ async function syncOne(opts: {
           : rows.map(transformDestToSrc(readTable, writeTable));
 
       // apply writer/target filters client-side (equality only)
-      //const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
-      const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
+      let toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
 
       const allowedSet = await fetchAllowedTargetKeys(writer, writeTable, conflictTarget, writeFilters);
       if (allowedSet) {
-        toWrite = toWrite.filter((r) => allowedSet.has(r[conflictTarget]));
+        toWrite = toWrite.filter((r: Record<string, any>) => allowedSet.has(r[conflictTarget]));
       }
 
       if (!toWrite.length) {
