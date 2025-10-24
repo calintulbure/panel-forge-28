@@ -61,9 +61,32 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
   const [loading, setLoading] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [clearSite, setClearSite] = useState<"ro" | "hu" | null>(null);
+  const [currentProduct, setCurrentProduct] = useState(product);
 
-  // Sync state when product changes to avoid stale data
+  // Fetch fresh data from database when panel opens
   useEffect(() => {
+    if (open) {
+      const fetchFreshData = async () => {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .eq("erp_product_code", product.erp_product_code)
+          .single();
+        
+        if (data && !error) {
+          setCurrentProduct(data);
+          setRoUrl(data.site_ro_url || "");
+          setHuUrl(data.site_hu_url || "");
+          setValidated(data.validated || false);
+        }
+      };
+      fetchFreshData();
+    }
+  }, [open, product.erp_product_code]);
+
+  // Sync state when product changes
+  useEffect(() => {
+    setCurrentProduct(product);
     setRoUrl(product.site_ro_url || "");
     setHuUrl(product.site_hu_url || "");
     setValidated(product.validated || false);
@@ -194,7 +217,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
     <Sheet open={open} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-4 sm:p-6">
         <SheetHeader>
-          <SheetTitle>Product Details - #{product.articol_id}</SheetTitle>
+          <SheetTitle>Product Details - #{currentProduct.articol_id}</SheetTitle>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
@@ -204,59 +227,59 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
             <div className="space-y-3">
               <div>
                 <Label className="text-muted-foreground">Article ID</Label>
-                <p className="font-medium">{product.articol_id}</p>
+                <p className="font-medium">{currentProduct.articol_id}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">ERP Code</Label>
-                {product.senior_erp_link ? (
+                {currentProduct.senior_erp_link ? (
                   <a 
-                    href={product.senior_erp_link} 
+                    href={currentProduct.senior_erp_link} 
                     className="font-bold text-base hover:underline block"
                   >
-                    {product.erp_product_code || "-"}
+                    {currentProduct.erp_product_code || "-"}
                   </a>
                 ) : (
-                  <p className="font-bold text-base">{product.erp_product_code || "-"}</p>
+                  <p className="font-bold text-base">{currentProduct.erp_product_code || "-"}</p>
                 )}
               </div>
               <div>
                 <Label className="text-muted-foreground">Description</Label>
-                <p className="font-medium">{product.erp_product_description || "-"}</p>
+                <p className="font-medium">{currentProduct.erp_product_description || "-"}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Stock</Label>
                 <p className="font-medium">
-                  Stoc: {product.ro_stock !== null ? product.ro_stock : "-"}
+                  Stoc: {currentProduct.ro_stock !== null ? currentProduct.ro_stock : "-"}
                 </p>
-                {product.ro_stoc_detailed && (
-                  <p className="text-sm text-muted-foreground mt-1">{product.ro_stoc_detailed}</p>
+                {currentProduct.ro_stoc_detailed && (
+                  <p className="text-sm text-muted-foreground mt-1">{currentProduct.ro_stoc_detailed}</p>
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Category 1</Label>
-                  <p className="font-medium text-sm">{product.categ1 || "-"}</p>
+                  <p className="font-medium text-sm">{currentProduct.categ1 || "-"}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Category 2</Label>
-                  <p className="font-medium text-sm">{product.categ2 || "-"}</p>
+                  <p className="font-medium text-sm">{currentProduct.categ2 || "-"}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Category 3</Label>
-                  <p className="font-medium text-sm">{product.categ3 || "-"}</p>
+                  <p className="font-medium text-sm">{currentProduct.categ3 || "-"}</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Stock Status</Label>
                   <Badge variant="secondary" className="mt-1">
-                    {product.stare_stoc || "Unknown"}
+                    {currentProduct.stare_stoc || "Unknown"}
                   </Badge>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Offer Status</Label>
                   <Badge variant="secondary" className="mt-1">
-                    {product.stare_oferta || "Unknown"}
+                    {currentProduct.stare_oferta || "Unknown"}
                   </Badge>
                 </div>
               </div>
@@ -304,7 +327,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <p className="font-mono text-sm mt-1">{product.yliro_sku || "Not generated"}</p>
+                  <p className="font-mono text-sm mt-1">{currentProduct.yliro_sku || "Not generated"}</p>
                 </div>
 
                 <div>
@@ -319,23 +342,23 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <p className="text-sm mt-1">{product.yliro_descriere || "Not generated"}</p>
+                  <p className="text-sm mt-1">{currentProduct.yliro_descriere || "Not generated"}</p>
                 </div>
               </TooltipProvider>
 
               <div>
                 <Label>Snapshot Preview</Label>
-                {product.site_ro_snapshot_base64 ? (
+                {currentProduct.site_ro_snapshot_base64 ? (
                   <div className="mt-2">
                     <a
-                      href={roUrl || product.site_ro_url || "#"}
+                      href={roUrl || currentProduct.site_ro_url || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block"
                     >
                       <img
-                        key={product.site_ro_snapshot_base64.substring(0, 50)}
-                        src={`data:image/jpeg;base64,${product.site_ro_snapshot_base64}`}
+                        key={currentProduct.site_ro_snapshot_base64.substring(0, 50)}
+                        src={`data:image/jpeg;base64,${currentProduct.site_ro_snapshot_base64}`}
                         alt="RO Site Snapshot"
                         loading="lazy"
                         decoding="async"
@@ -415,7 +438,7 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <p className="font-mono text-sm mt-1">{product.ylihu_sku || "Not generated"}</p>
+                  <p className="font-mono text-sm mt-1">{currentProduct.ylihu_sku || "Not generated"}</p>
                 </div>
 
                 <div>
@@ -430,23 +453,23 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <p className="text-sm mt-1">{product.ylihu_descriere || "Not generated"}</p>
+                  <p className="text-sm mt-1">{currentProduct.ylihu_descriere || "Not generated"}</p>
                 </div>
               </TooltipProvider>
 
               <div>
                 <Label>Snapshot Preview</Label>
-                {product.site_hu_snapshot_base64 ? (
+                {currentProduct.site_hu_snapshot_base64 ? (
                   <div className="mt-2">
                     <a
-                      href={huUrl || product.site_hu_url || "#"}
+                      href={huUrl || currentProduct.site_hu_url || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block"
                     >
                       <img
-                        key={product.site_hu_snapshot_base64.substring(0, 50)}
-                        src={`data:image/jpeg;base64,${product.site_hu_snapshot_base64}`}
+                        key={currentProduct.site_hu_snapshot_base64.substring(0, 50)}
+                        src={`data:image/jpeg;base64,${currentProduct.site_hu_snapshot_base64}`}
                         alt="HU Site Snapshot"
                         loading="lazy"
                         decoding="async"

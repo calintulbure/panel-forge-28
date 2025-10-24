@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Filter, X } from "lucide-react";
+import { ChevronDown, Filter, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
 import {
@@ -43,6 +43,7 @@ interface ProductFiltersProps {
   availableCateg2: string[];
   availableCateg3: string[];
   onClearFilters: () => void;
+  onRefresh: () => void;
 }
 
 export function ProductFilters({
@@ -64,6 +65,7 @@ export function ProductFilters({
   availableCateg2,
   availableCateg3,
   onClearFilters,
+  onRefresh,
 }: ProductFiltersProps) {
   const [isOpen, setIsOpen] = useState(true);
 
@@ -96,15 +98,26 @@ export function ProductFilters({
         <CollapsibleContent>
           <CardContent className="pt-3 pb-3 md:pt-4 md:pb-4">
             <div className="flex items-center justify-between mb-3">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onClearFilters}
-                className="h-8 text-xs"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filters
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onRefresh}
+                  className="h-8 text-xs"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Refresh
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onClearFilters}
+                  className="h-8 text-xs"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear Filters
+                </Button>
+              </div>
             </div>
             <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
               <div className="space-y-0.5 md:space-y-1 sm:col-span-2">

@@ -85,6 +85,7 @@ export default function Products() {
 
       return allProducts;
     },
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   // Extract unique categories and statuses with dynamic dependencies
@@ -283,6 +284,7 @@ export default function Products() {
         availableCateg2={availableCateg2}
         availableCateg3={availableCateg3}
         onClearFilters={handleClearFilters}
+        onRefresh={() => refetch()}
       />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
