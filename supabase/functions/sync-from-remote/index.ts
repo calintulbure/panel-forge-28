@@ -179,6 +179,18 @@ async function syncOne(opts: {
   const stats = { direction, readTable, writeTable, read: 0, upserted: 0, batches: 0, dryRun, ok: false as boolean };
 
   try {
+    // TEMP PROBE – remove after debugging
+    try {
+      const { data: probeData, error: probeErr } = await reader.from(readTable).select("*").limit(1);
+      console.log("PROBE", {
+        readTable,
+        gotRow: probeData?.length ?? 0,
+        err: probeErr?.message ?? null,
+      });
+    } catch (e) {
+      console.log("PROBE threw", e);
+    }
+
     let from = 0;
     for (;;) {
       // 1) read from source
