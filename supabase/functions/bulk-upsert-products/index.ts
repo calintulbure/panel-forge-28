@@ -110,7 +110,7 @@ serve(async (req) => {
       for (const c of upChunks) {
         const { error: uErr } = await supabase
           .from(DEST_TABLE)
-          .upsert(c, { onConflict: CONFLICT_KEY, returning: "minimal" });
+          .upsert(c, { onConflict: CONFLICT_KEY });
         if (uErr) {
           console.error("UPSERT ERROR sample:", JSON.stringify(c.slice(0, 3)));
           throw uErr;
@@ -138,7 +138,6 @@ function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json" },
-    status,
   });
 }
 
