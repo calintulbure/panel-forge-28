@@ -1,1 +1,4 @@
 project_id = "vmijvdxllubdudppeemr"
+
+[functions.sync-from-remote-multi]
+verify_jwt = false

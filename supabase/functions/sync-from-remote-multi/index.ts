@@ -115,7 +115,7 @@ async function fullSyncOneTable(opts: {
           continue;
         }
 
-        const { error: upErr } = await DEST.from(destTable).upsert(batch, { onConflict: conflictKey, returning: "minimal" });
+        const { error: upErr } = await DEST.from(destTable).upsert(batch, { onConflict: conflictKey });
         if (upErr) {
           // give helpful debug: include the first problematic item
           const sample = JSON.stringify(batch.slice(0, 3));
