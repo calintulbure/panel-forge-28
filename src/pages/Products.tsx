@@ -283,22 +283,7 @@ export default function Products() {
         onRefresh={() => refetch()}
       />
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-          <p className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}-{endIndex} of {filteredCount} products
-          </p>
-          <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
-            <SelectTrigger className="w-full sm:w-[130px] h-9">
-              <SelectValue placeholder="Items per page" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10 per page</SelectItem>
-              <SelectItem value="50">50 per page</SelectItem>
-              <SelectItem value="100">100 per page</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3">
         {isAdmin && (
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             {/* <ProductImport onImportComplete={refetch} /> */}
@@ -318,6 +303,21 @@ export default function Products() {
             </Dialog>
           </div>
         )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+          <p className="text-sm text-muted-foreground">
+            Showing {startIndex + 1}-{endIndex} of {filteredCount} products
+          </p>
+          <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
+            <SelectTrigger className="w-full sm:w-[130px] h-9">
+              <SelectValue placeholder="Items per page" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 per page</SelectItem>
+              <SelectItem value="50">50 per page</SelectItem>
+              <SelectItem value="100">100 per page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <ProductsTable 

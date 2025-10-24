@@ -254,56 +254,64 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
         <div className="mt-6 space-y-6">
           {/* ERP INFO */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">ERP Information</h3>
-            <div className="relative">
+            <h3 className="text-lg font-semibold mb-4">ERP Information</h3>
+            <div className="relative rounded-lg border bg-card p-6">
               {/* Left side - main content */}
               <div className="pr-32">
-                <div className="space-y-2">
-                  {/* ERP Code - 50% larger */}
+                <div className="space-y-3">
+                  {/* ERP Code - 50% larger with link styling */}
                   {currentProduct.senior_erp_link ? (
                     <a 
                       href={currentProduct.senior_erp_link} 
-                      className="font-bold text-2xl hover:underline block"
+                      className="font-bold text-3xl hover:underline hover:text-primary block transition-colors"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       {currentProduct.erp_product_code || "-"}
                     </a>
                   ) : (
-                    <p className="font-bold text-2xl">{currentProduct.erp_product_code || "-"}</p>
+                    <p className="font-bold text-3xl text-foreground">{currentProduct.erp_product_code || "-"}</p>
                   )}
                   
                   {/* Description */}
-                  <p className="text-base">{currentProduct.erp_product_description || "-"}</p>
+                  <p className="text-base text-muted-foreground leading-relaxed">
+                    {currentProduct.erp_product_description || "-"}
+                  </p>
+                  
+                  <Separator className="my-4" />
                   
                   {/* Categories with indentation */}
-                  <div className="space-y-1 mt-3">
-                    <p className="text-sm">{currentProduct.categ1 || "-"}</p>
-                    <p className="text-sm ml-4">{currentProduct.categ2 || "-"}</p>
-                    <p className="text-sm ml-8">{currentProduct.categ3 || "-"}</p>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">{currentProduct.categ1 || "-"}</p>
+                    <p className="text-sm text-muted-foreground ml-6">{currentProduct.categ2 || "-"}</p>
+                    <p className="text-sm text-muted-foreground ml-12">{currentProduct.categ3 || "-"}</p>
                   </div>
                   
+                  <Separator className="my-4" />
+                  
                   {/* Stock Information */}
-                  <div className="mt-3">
-                    <p className="text-sm">
-                      Stoc: {currentProduct.ro_stock !== null ? currentProduct.ro_stock : "-"}
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Stock: <span className="font-bold text-lg">{currentProduct.ro_stock !== null ? currentProduct.ro_stock : "-"}</span>
                     </p>
                     {currentProduct.ro_stoc_detailed && (
-                      <p className="text-xs text-muted-foreground mt-1">{currentProduct.ro_stoc_detailed}</p>
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{currentProduct.ro_stoc_detailed}</p>
                     )}
                   </div>
                 </div>
               </div>
               
               {/* Right side - status badges floating */}
-              <div className="absolute top-0 right-0 flex flex-col gap-2">
-                <Badge variant="secondary" className="w-fit">
+              <div className="absolute top-6 right-6 flex flex-col gap-2">
+                <Badge variant="secondary" className="w-fit shadow-sm">
                   {currentProduct.stare_oferta || "Unknown"}
                 </Badge>
                 {currentProduct.stare_oferta_secundara && (
-                  <Badge variant="outline" className="w-fit">
+                  <Badge variant="outline" className="w-fit shadow-sm">
                     {currentProduct.stare_oferta_secundara}
                   </Badge>
                 )}
-                <Badge variant="secondary" className="w-fit">
+                <Badge variant="secondary" className="w-fit shadow-sm">
                   {currentProduct.stare_stoc || "Unknown"}
                 </Badge>
               </div>
