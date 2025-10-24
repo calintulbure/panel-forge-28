@@ -186,7 +186,22 @@ async function syncOne(opts: {
         .select(selectCols)
         .range(from, from + pageSize - 1);
       if (sinceISO) q = q.gte(sinceColumn as any, sinceISO);
-      if (readFilters && Object.keys(readFilters).length) q = q.match(readFilters);
+
+      if (readFilters && Object.keys(readFilters).length) {
+        for (const [key, val] of Object.entries(readFilters)) {
+          if (val && typeof val === "object" && "not" in val) {
+            // Support {"not": null} => IS NOT NULL
+            if (val.not === null) q = q.not(key, "is", null);
+            else q = q.neq(key, val.not);
+          } else if (val === null) {
+            // IS NULL
+            q = q.is(key, null);
+          } else {
+            // regular equality
+            q = q.eq(key, val);
+          }
+        }
+      }
 
       const { data, error } = await q;
       if (error) throw error;
