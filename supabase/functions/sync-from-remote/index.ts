@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     // 3) Normalized request defaults
     const direction = b.direction ?? "pull";
     const pageSize = clamp(b.pageSize ?? DEFAULT_PAGE, 1, MAX_PAGE);
-    const writeBatchSize = clamp(b.writeBatchSize ?? DEFAULT_WRITE_BATCH, 1, MAX_WRITE_BATCH);
+    const writeBatchSize = clamp((b as any).writeBatchSize ?? 100, 1, 1000);
     const baseSelect = b.select ?? DEFAULT_SELECT;
     const baseConflict = b.conflictTarget ?? DEFAULT_CONFLICT;
     const baseSinceColumn = b.sinceColumn ?? DEFAULT_SINCE_COLUMN;
@@ -281,8 +281,25 @@ async function syncOne(opts: {
           : rows.map(transformDestToSrc(readTable, writeTable));
 
       // NEW: drop null/undefined fields so we never send `null` updates
-      let toWrite = mapped.map((r: Record<string, any>) => pruneNullish(r, conflictTarget));
+let toWrite = mapped; //let toWrite = mapped.map((r: Record<string, any>) => pruneNullish(r, conflictTarget));
 
+// HARD-GUARD: require conflict key
+const key = conflictTarget;
+toWrite = toWrite.filter((r: any) => r && r[key] !== null && r[key] !== undefined);
+
+// Batch the writes
+for (let i = 0; i < toWrite.length; i += writeBatchSize) {
+  const chunk = toWrite.slice(i, i + writeBatchSize);
+  if (!dryRun && chunk.length) {
+    const { error: upErr } = await writer.from(writeTable).upsert(chunk, { onConflict: conflictTarget });
+    if (upErr) {
+      console.error("UPSERT ERROR", { table: writeTable, onConflict: conflictTarget, size: chunk.length, msg: upErr.message });
+      throw upErr; // will be caught and returned as JSON error instead of silent shutdown
+    }
+    stats.upserted += chunk.length;
+  }
+}
+      
       // Keep any local, content-based write filters if you use them
       if (writeFilters) {
         toWrite = toWrite.filter((r: Record<string, any>) => matchesAll(r, writeFilters));
