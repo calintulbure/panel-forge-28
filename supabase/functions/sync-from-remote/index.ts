@@ -187,29 +187,8 @@ async function syncOne(opts: {
         .range(from, from + pageSize - 1);
       if (sinceISO) q = q.gte(sinceColumn as any, sinceISO);
 
-      // Support advanced filtering
-      if (readFilters && Object.keys(readFilters).length) {
-        for (const [key, val] of Object.entries(readFilters)) {
-          if (Array.isArray(val)) {
-            // e.g. { "articol_id": [1,2,3] }
-            q = q.in(key, val);
-          } else if (val && typeof val === "object") {
-            // e.g. { "gt": 1000, "lt": 2000, "not": null }
-            if ("not" in val) {
-              if (val.not === null) q = q.not(key, "is", null);
-              else q = q.neq(key, val.not);
-            }
-            if ("gt" in val) q = q.gt(key, val.gt);
-            if ("gte" in val) q = q.gte(key, val.gte);
-            if ("lt" in val) q = q.lt(key, val.lt);
-            if ("lte" in val) q = q.lte(key, val.lte);
-          } else if (val === null) {
-            q = q.is(key, null);
-          } else {
-            q = q.eq(key, val);
-          }
-        }
-      }
+      // 👇 this replaces any q.match(...)
+      q = applyReadFilters(q, readFilters);
 
       const { data, error } = await q;
       if (error) throw error;
@@ -227,7 +206,9 @@ async function syncOne(opts: {
           : rows.map(transformDestToSrc(readTable, writeTable));
 
       // apply writer/target filters client-side (equality only)
-      const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
+      //const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
+      const toWrite = writeFilters ? mapped.filter((r) => matchesAll(r, writeFilters)) : mapped;
+
       if (!toWrite.length) {
         from += rows.length;
         continue;
@@ -251,10 +232,64 @@ async function syncOne(opts: {
   }
 }
 
+function applyReadFilters(q: any, filters?: Record<string, any>) {
+  if (!filters) return q;
+  for (const [key, val] of Object.entries(filters)) {
+    if (Array.isArray(val)) {
+      // e.g. { articol_id: [1,2,3] }
+      q = q.in(key, val);
+    } else if (val !== null && typeof val === "object") {
+      // operator bag, e.g. { gt: 1000, lte: 2000, not: null }
+      if ("not" in val) {
+        q = val.not === null ? q.not(key, "is", null) : q.neq(key, val.not);
+      }
+      if ("gt" in val) q = q.gt(key, val.gt);
+      if ("gte" in val) q = q.gte(key, val.gte);
+      if ("lt" in val) q = q.lt(key, val.lt);
+      if ("lte" in val) q = q.lte(key, val.lte);
+      if ("ilike" in val) q = q.ilike(key, val.ilike); // optional
+      if ("like" in val) q = q.like(key, val.like); // optional
+    } else if (val === null) {
+      q = q.is(key, null);
+    } else {
+      // primitives: number | string | boolean
+      q = q.eq(key, val);
+    }
+  }
+  return q;
+}
+
 /** simple equality filter helper */
-function matchesAll(row: Record<string, any>, filters: Record<string, any>) {
-  for (const [k, v] of Object.entries(filters)) {
-    if (row?.[k] !== v) return false;
+function matchesAll(row: Record<string, any>, filters?: Record<string, any>) {
+  if (!filters) return true;
+  for (const [key, val] of Object.entries(filters)) {
+    const got = row?.[key];
+    if (Array.isArray(val)) {
+      if (!val.includes(got)) return false;
+    } else if (val !== null && typeof val === "object") {
+      if ("not" in val) {
+        if (val.not === null && got === null) return false;
+        if (val.not !== null && got === val.not) return false;
+      }
+      if ("gt" in val && !(got > val.gt)) return false;
+      if ("gte" in val && !(got >= val.gte)) return false;
+      if ("lt" in val && !(got < val.lt)) return false;
+      if ("lte" in val && !(got <= val.lte)) return false;
+      if ("ilike" in val) {
+        const s = (got ?? "").toString().toLowerCase();
+        const pat = val.ilike.toLowerCase().replace(/%/g, ".*");
+        if (!new RegExp(`^${pat}$`).test(s)) return false;
+      }
+      if ("like" in val) {
+        const s = (got ?? "").toString();
+        const pat = val.like.replace(/%/g, ".*");
+        if (!new RegExp(`^${pat}$`).test(s)) return false;
+      }
+    } else if (val === null) {
+      if (got !== null) return false;
+    } else {
+      if (got !== val) return false;
+    }
   }
   return true;
 }
