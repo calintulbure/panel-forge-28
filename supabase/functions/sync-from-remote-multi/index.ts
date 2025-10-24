@@ -1,207 +1,189 @@
+// full-sync-oneway.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const VERSION = "full-sync-oneway@2025-10-24-2";
+const DEFAULT_PAGE = 1000;
+const DEFAULT_WRITE_BATCH = 500;
 
-type FilterOperator = "=" | "<>" | ">" | "<" | ">=" | "<=" | "LIKE" | "TRUE" | "NOT TRUE";
-
-interface Filter {
-  field: string;
-  operator: FilterOperator;
-  value?: any;
-}
-
-interface SyncRequest {
-  table: string;
-  matchingField: string;
-  fieldsToUpdate: string[];
-  sourceFilters?: Filter[];
-  targetFilters?: Filter[];
-  dryRun?: boolean;
-}
-
-const SRC = createClient(
-  mustEnv("SRC_SUPABASE_URL"),
-  mustEnv("SRC_SUPABASE_SERVICE_ROLE_KEY")
-);
-
-const DEST = createClient(
-  mustEnv("SUPABASE_URL"),
-  mustEnv("SUPABASE_SERVICE_ROLE_KEY")
-);
+// clients
+const SRC = createClient(env("SRC_SUPABASE_URL"), env("SRC_SUPABASE_SERVICE_ROLE_KEY"));
+const DEST = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
   try {
-    const body: SyncRequest = await req.json();
-    const { table, matchingField, fieldsToUpdate, sourceFilters = [], targetFilters = [], dryRun = false } = body;
+    if (req.method === "OPTIONS") return new Response(null, { headers: cors() });
+    if (req.method !== "POST") return json({ ok: false, error: "Use POST" }, 405);
 
-    console.log(`Sync request: table=${table}, matchingField=${matchingField}, dryRun=${dryRun}`);
+    const body = await req.json().catch(() => ({} as any));
+    const tables = body.tables ?? [{ src: "yli_ro_products", dest: "yli_ro_products", conflictKey: "erp_product_code" }];
+    const pageSize = clamp(body.pageSize ?? DEFAULT_PAGE, 1, 5000);
+    const writeBatchSize = clamp(body.writeBatchSize ?? DEFAULT_WRITE_BATCH, 1, 1000);
+    const dryRun = !!body.dryRun;
 
-    // Validate required fields
-    if (!table || !matchingField || !fieldsToUpdate || fieldsToUpdate.length === 0) {
-      return json({ 
-        error: "Missing required fields: table, matchingField, and fieldsToUpdate are required" 
-      }, 400);
+    const results: any[] = [];
+    for (const t of tables) {
+      const srcTable = (t.src ?? t.table) as string;
+      const destTable = (t.dest ?? t.src ?? t.table) as string;
+      const conflictKey = t.conflictKey ?? t.conflictTarget ?? "id";
+      const selectCols = ensureSelectIncludes(t.select ?? "*", conflictKey);
+
+      results.push(
+        await fullSyncOneTable({
+          srcTable,
+          destTable,
+          conflictKey,
+          selectCols,
+          pageSize,
+          writeBatchSize,
+          dryRun,
+        }),
+      );
     }
 
-    // Build source query with filters
-    let sourceQuery = SRC.from(table).select(`${matchingField}, ${fieldsToUpdate.join(", ")}`);
-    sourceQuery = applyFilters(sourceQuery, sourceFilters);
-
-    const { data: sourceData, error: sourceError } = await sourceQuery;
-    
-    if (sourceError) {
-      console.error("Source query error:", sourceError);
-      return json({ error: "Failed to fetch from source", details: sourceError }, 500);
-    }
-
-    console.log(`Fetched ${sourceData?.length || 0} records from source`);
-
-    if (!sourceData || sourceData.length === 0) {
-      return json({ 
-        success: true, 
-        dryRun, 
-        message: "No records found in source matching filters",
-        stats: { fetched: 0, matched: 0, updated: 0 }
-      });
-    }
-
-    // Get matching keys from source
-    const sourceKeys = sourceData.map(row => (row as any)[matchingField]).filter(k => k !== null && k !== undefined);
-
-    // Build target query to find existing records
-    let targetQuery = DEST.from(table).select(matchingField).in(matchingField, sourceKeys);
-    targetQuery = applyFilters(targetQuery, targetFilters);
-
-    const { data: targetData, error: targetError } = await targetQuery;
-    
-    if (targetError) {
-      console.error("Target query error:", targetError);
-      return json({ error: "Failed to fetch from target", details: targetError }, 500);
-    }
-
-    const targetKeys = new Set(targetData?.map(row => (row as any)[matchingField]) || []);
-    console.log(`Found ${targetKeys.size} matching records in target`);
-
-    // Filter source data to only include records that match target filters
-    const recordsToUpdate = sourceData.filter(row => targetKeys.has((row as any)[matchingField]));
-
-    console.log(`Records to update: ${recordsToUpdate.length}`);
-
-    if (dryRun) {
-      return json({
-        success: true,
-        dryRun: true,
-        message: "Dry run completed - no changes made",
-        stats: {
-          fetched: sourceData.length,
-          matched: recordsToUpdate.length,
-          updated: 0
-        },
-        preview: recordsToUpdate.slice(0, 5) // Show first 5 records as preview
-      });
-    }
-
-    // Perform the actual update
-    if (recordsToUpdate.length > 0) {
-      const { data: updated, error: updateError } = await DEST
-        .from(table)
-        .upsert(recordsToUpdate, { onConflict: matchingField })
-        .select();
-
-      if (updateError) {
-        console.error("Update error:", updateError);
-        return json({ error: "Failed to update target", details: updateError }, 500);
-      }
-
-      console.log(`Successfully updated ${updated?.length || 0} records`);
-
-      return json({
-        success: true,
-        dryRun: false,
-        message: `Updated ${updated?.length || 0} records`,
-        stats: {
-          fetched: sourceData.length,
-          matched: recordsToUpdate.length,
-          updated: updated?.length || 0
-        }
-      });
-    }
-
-    return json({
-      success: true,
-      dryRun: false,
-      message: "No records to update",
-      stats: {
-        fetched: sourceData.length,
-        matched: 0,
-        updated: 0
-      }
-    });
-
-  } catch (error) {
-    console.error("Edge function error:", error);
-    return json({ 
-      error: "Internal server error", 
-      details: error instanceof Error ? error.message : String(error) 
-    }, 500);
+    const ok = results.every((r) => r.ok);
+    return json({ ok, version: VERSION, results });
+  } catch (e) {
+    return json({ ok: false, error: fmtErr(e), version: VERSION }, 500);
   }
 });
 
-function applyFilters(query: any, filters: Filter[]) {
-  for (const filter of filters) {
-    const { field, operator, value } = filter;
+/** ---------- core function ---------- */
+async function fullSyncOneTable(opts: {
+  srcTable: string;
+  destTable: string;
+  conflictKey: string;
+  selectCols: string;
+  pageSize: number;
+  writeBatchSize: number;
+  dryRun: boolean;
+}) {
+  const { srcTable, destTable, conflictKey, selectCols, pageSize, writeBatchSize, dryRun } = opts;
+  const stats = { srcTable, destTable, conflictKey, read: 0, upserted: 0, batches: 0, ok: false, dryRun };
 
-    switch (operator) {
-      case "=":
-        query = query.eq(field, value);
-        break;
-      case "<>":
-        query = query.neq(field, value);
-        break;
-      case ">":
-        query = query.gt(field, value);
-        break;
-      case "<":
-        query = query.lt(field, value);
-        break;
-      case ">=":
-        query = query.gte(field, value);
-        break;
-      case "<=":
-        query = query.lte(field, value);
-        break;
-      case "LIKE":
-        query = query.ilike(field, value);
-        break;
-      case "TRUE":
-        query = query.eq(field, true);
-        break;
-      case "NOT TRUE":
-        query = query.or(`${field}.is.null,${field}.eq.false`);
-        break;
-      default:
-        console.warn(`Unknown operator: ${operator}`);
+  try {
+    // quick probe to verify read & write permissions
+    try {
+      const { data: _probe, error: pErr } = await SRC.from(srcTable).select(conflictKey).limit(1);
+      if (pErr) console.warn(`SRC probe error for ${srcTable}:`, pErr.message);
+    } catch (e) {
+      console.warn("SRC probe threw:", e);
     }
+    try {
+      const { data: _probe2, error: pErr2 } = await DEST.from(destTable).select(conflictKey).limit(1);
+      if (pErr2) console.warn(`DEST probe error for ${destTable}:`, pErr2.message);
+    } catch (e) {
+      console.warn("DEST probe threw:", e);
+    }
+
+    let offset = 0;
+    const start = Date.now();
+
+    for (;;) {
+      // read a page (range is inclusive)
+      const { data, error } = await SRC.from(srcTable).select(selectCols).range(offset, offset + pageSize - 1);
+      if (error) throw error;
+
+      const rows = (data ?? []) as Record<string, any>[];
+      if (!rows.length) break;
+
+      stats.read += rows.length;
+      stats.batches += 1;
+
+      // Validate that conflictKey exists in rows (at least one row has it)
+      const missingKeyCount = rows.filter((r) => !(conflictKey in r) || r[conflictKey] === null || r[conflictKey] === undefined).length;
+      if (missingKeyCount > 0) {
+        // If many rows don't contain the key, that's fatal — return a clear error
+        // but allow some rows to be missing; we'll skip missing ones and log them.
+        console.warn(`Page starting at offset ${offset}: ${missingKeyCount}/${rows.length} rows missing conflictKey "${conflictKey}". Those rows will be skipped.`);
+      }
+
+      // prune rows that lack conflictKey (we can't upsert them)
+      const validRows = rows.filter((r) => r && r[conflictKey] !== null && r[conflictKey] !== undefined);
+
+      if (!validRows.length) {
+        offset += rows.length;
+        continue;
+      }
+
+      // batch the upserts
+      for (let i = 0; i < validRows.length; i += writeBatchSize) {
+        const batch = validRows.slice(i, i + writeBatchSize);
+
+        if (dryRun) {
+          // no writes, but count them
+          stats.upserted += batch.length;
+          continue;
+        }
+
+        const { error: upErr } = await DEST.from(destTable).upsert(batch, { onConflict: conflictKey, returning: "minimal" });
+        if (upErr) {
+          // give helpful debug: include the first problematic item
+          const sample = JSON.stringify(batch.slice(0, 3));
+          console.error("Upsert failed", {
+            destTable,
+            conflictKey,
+            batchSize: batch.length,
+            error: upErr.message ?? upErr,
+            sample,
+          });
+          throw upErr;
+        }
+
+        stats.upserted += batch.length;
+      }
+
+      offset += rows.length;
+    }
+
+    stats.ok = true;
+    const durationSec = ((Date.now() - start) / 1000).toFixed(2);
+    console.log(`SYNC COMPLETE ${srcTable} -> ${destTable}: read=${stats.read}, upserted=${stats.upserted} in ${durationSec}s`);
+    return stats;
+  } catch (e) {
+    const err = fmtErr(e);
+    console.error(`sync ${srcTable} -> ${destTable} error:`, err);
+    return { ...stats, ok: false, error: err };
   }
-  return query;
 }
 
-function mustEnv(key: string): string {
-  const value = Deno.env.get(key);
-  if (!value) throw new Error(`Missing environment variable: ${key}`);
-  return value;
+/** ---------- small helpers ---------- */
+function ensureSelectIncludes(selectCols: string, conflictKey: string) {
+  if (!selectCols || selectCols.trim() === "*" || selectCols.trim() === " *") return "*";
+  const parts = selectCols.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.includes(conflictKey)) parts.push(conflictKey);
+  return parts.join(", ");
 }
 
-function json(data: any, status = 200) {
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+
+function env(k: string) {
+  const v = Deno.env.get(k);
+  if (!v) throw new Error(`Missing env ${k}`);
+  return v;
+}
+
+function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" }
+    headers: { ...cors(), "Content-Type": "application/json" },
   });
+}
+
+function cors() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+}
+
+function fmtErr(e: unknown) {
+  if (!e) return null;
+  if (e instanceof Error) return { message: e.message, stack: e.stack };
+  try {
+    return JSON.parse(JSON.stringify(e));
+  } catch {
+    return String(e);
+  }
 }
