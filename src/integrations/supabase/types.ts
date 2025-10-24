@@ -118,6 +118,7 @@ export type Database = {
           site_ro_url: string | null
           stare_oferta: string | null
           stare_stoc: string | null
+          tosync: number | null
           updated_at: string | null
           validated: boolean | null
           ylihu_descriere: string | null
@@ -149,6 +150,7 @@ export type Database = {
           site_ro_url?: string | null
           stare_oferta?: string | null
           stare_stoc?: string | null
+          tosync?: number | null
           updated_at?: string | null
           validated?: boolean | null
           ylihu_descriere?: string | null
@@ -180,6 +182,7 @@ export type Database = {
           site_ro_url?: string | null
           stare_oferta?: string | null
           stare_stoc?: string | null
+          tosync?: number | null
           updated_at?: string | null
           validated?: boolean | null
           ylihu_descriere?: string | null
