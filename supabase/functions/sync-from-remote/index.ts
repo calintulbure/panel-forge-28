@@ -50,6 +50,41 @@ Deno.serve(async (req) => {
       b = await req.json();
     } catch {}
 
+    /** --------  DEBUG -------------------------------*/
+
+    async function restProbe(baseUrl: string, serviceKey: string, table: string, select = "erp_product_code") {
+      const url = `${baseUrl.replace(/\/$/, "")}/rest/v1/${encodeURIComponent(
+        table,
+      )}?select=${encodeURIComponent(select)}&limit=1`;
+
+      const res = await fetch(url, {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+      });
+
+      let text = "";
+      try {
+        text = await res.text();
+      } catch {}
+
+      let body: any = null;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = text;
+      }
+
+      return {
+        url,
+        status: res.status,
+        ok: res.ok,
+        contentRange: res.headers.get("content-range"),
+        body,
+      };
+    }
+
     const debug = !!b.debug;
 
     if (debug) {
@@ -66,8 +101,8 @@ Deno.serve(async (req) => {
         src: srcProbe,
         dest: destProbe,
         note:
-          "If src.status!=200 or body is an error, check table exposure (public schema), RLS, or table name. " +
-          "If src.status==200 and body is [], your source REST is returning zero rows.",
+          "If src.status != 200 or src.body is an error, check table exposure (public schema), RLS, or table name. " +
+          "If src.status == 200 and body == [], your source REST returns zero rows.",
       });
     }
 
@@ -167,34 +202,6 @@ Deno.serve(async (req) => {
 });
 
 /** ---------- Core ---------- */
-
-async function restProbe(baseUrl: string, serviceKey: string, table: string, select = "erp_product_code") {
-  const url = `${baseUrl.replace(/\/$/, "")}/rest/v1/${encodeURIComponent(table)}?select=${encodeURIComponent(select)}&limit=1`;
-  const res = await fetch(url, {
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-    },
-  });
-
-  let bodyText = "";
-  try {
-    bodyText = await res.text();
-  } catch {}
-
-  let bodyJson: unknown = null;
-  try {
-    bodyJson = JSON.parse(bodyText);
-  } catch {}
-
-  return {
-    url,
-    status: res.status,
-    ok: res.ok,
-    contentRange: res.headers.get("content-range"),
-    body: bodyJson ?? bodyText,
-  };
-}
 
 async function syncOne(opts: {
   reader: any;
