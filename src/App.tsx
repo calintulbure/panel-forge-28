@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import Products from "./pages/Products";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ const App = () => (
                         </main>
                       </div>
                     </div>
+                    <ChatWidget />
                   </SidebarProvider>
                 </ProtectedRoute>
               }
@@ -62,6 +64,7 @@ const App = () => (
                         </main>
                       </div>
                     </div>
+                    <ChatWidget />
                   </SidebarProvider>
                 </ProtectedRoute>
               }
@@ -82,6 +85,7 @@ const App = () => (
                         </main>
                       </div>
                     </div>
+                    <ChatWidget />
                   </SidebarProvider>
                 </ProtectedRoute>
               }
