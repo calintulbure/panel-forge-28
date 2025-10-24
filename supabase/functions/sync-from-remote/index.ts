@@ -203,8 +203,15 @@ async function syncOne(opts: {
 
       const { data, error } = await q;
       if (error) throw error;
+
       const rows = data ?? [];
-      if (!rows.length) break;
+      if (!rows.length) {
+        if (from === 0) {
+          const { count, error: cntErr } = await reader.from(readTable).select("*", { count: "exact", head: true });
+          console.log("EMPTY-FIRST-PAGE", { readTable, count, cntErr: cntErr?.message ?? null });
+        }
+        break;
+      }
 
       // 2) map to target schema
       const mapped =
