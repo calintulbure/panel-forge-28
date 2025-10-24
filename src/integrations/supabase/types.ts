@@ -192,6 +192,105 @@ export type Database = {
         }
         Relationships: []
       }
+      products_bak: {
+        Row: {
+          articol_id: number
+          categ1: string | null
+          categ2: string | null
+          categ3: string | null
+          created_at: string | null
+          erp_product_code: string | null
+          erp_product_description: string | null
+          hu_stock: number | null
+          hu_stock_detailed: string | null
+          producator: string | null
+          ro_stoc_detailed: string | null
+          ro_stock: number | null
+          senior_erp_link: string | null
+          site_hu_product_id: number | null
+          site_hu_snapshot_base64: string | null
+          site_hu_snapshot_url: string | null
+          site_hu_url: string | null
+          site_ro_product_id: number | null
+          site_ro_snapshot_base64: string | null
+          site_ro_snapshot_url: string | null
+          site_ro_url: string | null
+          stare_oferta: string | null
+          stare_stoc: string | null
+          tosync: number | null
+          updated_at: string | null
+          validated: boolean | null
+          ylihu_descriere: string | null
+          ylihu_sku: string | null
+          yliro_descriere: string | null
+          yliro_sku: string | null
+        }
+        Insert: {
+          articol_id: number
+          categ1?: string | null
+          categ2?: string | null
+          categ3?: string | null
+          created_at?: string | null
+          erp_product_code?: string | null
+          erp_product_description?: string | null
+          hu_stock?: number | null
+          hu_stock_detailed?: string | null
+          producator?: string | null
+          ro_stoc_detailed?: string | null
+          ro_stock?: number | null
+          senior_erp_link?: string | null
+          site_hu_product_id?: number | null
+          site_hu_snapshot_base64?: string | null
+          site_hu_snapshot_url?: string | null
+          site_hu_url?: string | null
+          site_ro_product_id?: number | null
+          site_ro_snapshot_base64?: string | null
+          site_ro_snapshot_url?: string | null
+          site_ro_url?: string | null
+          stare_oferta?: string | null
+          stare_stoc?: string | null
+          tosync?: number | null
+          updated_at?: string | null
+          validated?: boolean | null
+          ylihu_descriere?: string | null
+          ylihu_sku?: string | null
+          yliro_descriere?: string | null
+          yliro_sku?: string | null
+        }
+        Update: {
+          articol_id?: number
+          categ1?: string | null
+          categ2?: string | null
+          categ3?: string | null
+          created_at?: string | null
+          erp_product_code?: string | null
+          erp_product_description?: string | null
+          hu_stock?: number | null
+          hu_stock_detailed?: string | null
+          producator?: string | null
+          ro_stoc_detailed?: string | null
+          ro_stock?: number | null
+          senior_erp_link?: string | null
+          site_hu_product_id?: number | null
+          site_hu_snapshot_base64?: string | null
+          site_hu_snapshot_url?: string | null
+          site_hu_url?: string | null
+          site_ro_product_id?: number | null
+          site_ro_snapshot_base64?: string | null
+          site_ro_snapshot_url?: string | null
+          site_ro_url?: string | null
+          stare_oferta?: string | null
+          stare_stoc?: string | null
+          tosync?: number | null
+          updated_at?: string | null
+          validated?: boolean | null
+          ylihu_descriere?: string | null
+          ylihu_sku?: string | null
+          yliro_descriere?: string | null
+          yliro_sku?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           approved: boolean | null
