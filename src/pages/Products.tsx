@@ -56,176 +56,137 @@ export default function Products() {
     setSearchParams(params, { replace: true });
   }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter]);
 
-  const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products"],
+  // Fetch filter options (categories and statuses)
+  const { data: filterOptions } = useQuery({
+    queryKey: ["products-filter-options"],
     queryFn: async () => {
-      // Fetch all products by paginating through them
-      let allProducts: any[] = [];
-      let from = 0;
-      const batchSize = 1000;
-      let hasMore = true;
+      const { data, error } = await supabase
+        .from("products")
+        .select("categ1,categ2,categ3,stare_oferta,stare_stoc");
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .order("erp_product_code", { ascending: true })
-          .range(from, from + batchSize - 1);
+      if (error) throw error;
 
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          allProducts = [...allProducts, ...data];
-          from += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
-        }
-      }
+      const categ1Set = new Set<string>();
+      const categ2Set = new Set<string>();
+      const categ3Set = new Set<string>();
+      const offerSet = new Set<string>();
+      const stockSet = new Set<string>();
 
-      return allProducts;
+      data?.forEach((p) => {
+        if (p.categ1) categ1Set.add(p.categ1);
+        if (p.categ2) categ2Set.add(p.categ2);
+        if (p.categ3) categ3Set.add(p.categ3);
+        if (p.stare_oferta) offerSet.add(p.stare_oferta);
+        if (p.stare_stoc) stockSet.add(p.stare_stoc);
+      });
+
+      return {
+        categ1: Array.from(categ1Set).sort(),
+        categ2: Array.from(categ2Set).sort(),
+        categ3: Array.from(categ3Set).sort(),
+        offerStatuses: Array.from(offerSet).sort(),
+        stockStatuses: Array.from(stockSet).sort(),
+      };
     },
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
+    staleTime: 60000, // Cache for 1 minute
   });
 
-  // Extract unique categories and statuses with dynamic dependencies
+  // Fetch total count with filters
+  const { data: totalCount } = useQuery({
+    queryKey: ["products-count", search, category1, category2, category3, offerStatus, stockStatus, validationFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("products")
+        .select("*", { count: "exact", head: true });
+
+      // Apply filters
+      if (search) {
+        query = query.or(`erp_product_code.ilike.%${search}%,erp_product_description.ilike.%${search}%`);
+      }
+      if (category1.length > 0) {
+        query = query.in("categ1", category1);
+      }
+      if (category2.length > 0) {
+        query = query.in("categ2", category2);
+      }
+      if (category3.length > 0) {
+        query = query.in("categ3", category3);
+      }
+      if (offerStatus.length > 0) {
+        query = query.in("stare_oferta", offerStatus);
+      }
+      if (stockStatus.length > 0) {
+        query = query.in("stare_stoc", stockStatus);
+      }
+      if (validationFilter === "validated") {
+        query = query.eq("validated", true);
+      } else if (validationFilter === "not_validated") {
+        query = query.or("validated.is.null,validated.eq.false");
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  // Fetch paginated products with filters
+  const { data: products, isLoading, refetch } = useQuery({
+    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, stockStatus, validationFilter],
+    queryFn: async () => {
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
+      let query = supabase
+        .from("products")
+        .select("*")
+        .order("erp_product_code", { ascending: true })
+        .range(from, to);
+
+      // Apply filters
+      if (search) {
+        query = query.or(`erp_product_code.ilike.%${search}%,erp_product_description.ilike.%${search}%`);
+      }
+      if (category1.length > 0) {
+        query = query.in("categ1", category1);
+      }
+      if (category2.length > 0) {
+        query = query.in("categ2", category2);
+      }
+      if (category3.length > 0) {
+        query = query.in("categ3", category3);
+      }
+      if (offerStatus.length > 0) {
+        query = query.in("stare_oferta", offerStatus);
+      }
+      if (stockStatus.length > 0) {
+        query = query.in("stare_stoc", stockStatus);
+      }
+      if (validationFilter === "validated") {
+        query = query.eq("validated", true);
+      } else if (validationFilter === "not_validated") {
+        query = query.or("validated.is.null,validated.eq.false");
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const categories = useMemo(() => {
-    if (!products) return { categ1: [], categ2: [], categ3: [], offerStatuses: [], stockStatuses: [] };
+    return filterOptions || { categ1: [], categ2: [], categ3: [], offerStatuses: [], stockStatuses: [] };
+  }, [filterOptions]);
 
-    const categ1Set = new Set<string>();
-    const categ2Map = new Map<string, Set<string>>(); // categ1 -> categ2 values
-    const categ3Map = new Map<string, Set<string>>(); // categ2 -> categ3 values
-    const offerSet = new Set<string>();
-    const stockSet = new Set<string>();
-
-    products.forEach((p) => {
-      if (p.categ1) {
-        categ1Set.add(p.categ1);
-        if (p.categ2) {
-          if (!categ2Map.has(p.categ1)) {
-            categ2Map.set(p.categ1, new Set());
-          }
-          categ2Map.get(p.categ1)!.add(p.categ2);
-          
-          if (p.categ3) {
-            if (!categ3Map.has(p.categ2)) {
-              categ3Map.set(p.categ2, new Set());
-            }
-            categ3Map.get(p.categ2)!.add(p.categ3);
-          }
-        }
-      }
-      if (p.stare_oferta) offerSet.add(p.stare_oferta);
-      if (p.stare_stoc) stockSet.add(p.stare_stoc);
-    });
-
-    return {
-      categ1: Array.from(categ1Set).sort(),
-      categ2: Array.from(new Set(Array.from(categ2Map.values()).flatMap(s => Array.from(s)))).sort(),
-      categ3: Array.from(new Set(Array.from(categ3Map.values()).flatMap(s => Array.from(s)))).sort(),
-      offerStatuses: Array.from(offerSet).sort(),
-      stockStatuses: Array.from(stockSet).sort(),
-      categ2Map,
-      categ3Map,
-    };
-  }, [products]);
-
-  // Dynamic category 2 options based on category 1 selection
-  const availableCateg2 = useMemo(() => {
-    if (!products || category1.length === 0) return categories.categ2;
-    
-    const categ2Set = new Set<string>();
-    products.forEach(p => {
-      if (p.categ1 && category1.includes(p.categ1) && p.categ2) {
-        categ2Set.add(p.categ2);
-      }
-    });
-    return Array.from(categ2Set).sort();
-  }, [products, category1, categories.categ2]);
-
-  // Dynamic category 3 options based on category 2 selection
-  const availableCateg3 = useMemo(() => {
-    if (!products || category2.length === 0) return categories.categ3;
-    
-    const categ3Set = new Set<string>();
-    products.forEach(p => {
-      if (p.categ2 && category2.includes(p.categ2) && p.categ3) {
-        categ3Set.add(p.categ3);
-      }
-    });
-    return Array.from(categ3Set).sort();
-  }, [products, category2, categories.categ3]);
-
-  // Clear dependent categories when parent changes
-  useEffect(() => {
-    if (category1.length === 0) {
-      setCategory2([]);
-      setCategory3([]);
-    } else {
-      // Remove invalid category2 selections
-      const validCateg2 = category2.filter(c2 => availableCateg2.includes(c2));
-      if (validCateg2.length !== category2.length) {
-        setCategory2(validCateg2);
-      }
-    }
-  }, [category1, availableCateg2]);
-
-  useEffect(() => {
-    if (category2.length === 0) {
-      setCategory3([]);
-    } else {
-      // Remove invalid category3 selections
-      const validCateg3 = category3.filter(c3 => availableCateg3.includes(c3));
-      if (validCateg3.length !== category3.length) {
-        setCategory3(validCateg3);
-      }
-    }
-  }, [category2, availableCateg3]);
-
-  // Filter products with OR logic for multi-selects
-  const filteredProducts = useMemo(() => {
-    if (!products) return [];
-
-    return products.filter((product) => {
-      // Search filter
-      const searchLower = search.toLowerCase();
-      const matchesSearch =
-        !search ||
-        product.erp_product_code?.toLowerCase().includes(searchLower) ||
-        product.erp_product_description?.toLowerCase().includes(searchLower);
-
-      // Category filters (OR logic - match any selected)
-      const matchesCategory1 = category1.length === 0 || category1.includes(product.categ1 || "");
-      const matchesCategory2 = category2.length === 0 || category2.includes(product.categ2 || "");
-      const matchesCategory3 = category3.length === 0 || category3.includes(product.categ3 || "");
-
-      // Status filters (OR logic - match any selected)
-      const matchesOfferStatus = offerStatus.length === 0 || offerStatus.includes(product.stare_oferta || "");
-      const matchesStockStatus = stockStatus.length === 0 || stockStatus.includes(product.stare_stoc || "");
-
-      // Validation filter
-      const matchesValidation = 
-        validationFilter === "all" ||
-        (validationFilter === "validated" && product.validated === true) ||
-        (validationFilter === "not_validated" && product.validated !== true);
-
-      return (
-        matchesSearch &&
-        matchesCategory1 &&
-        matchesCategory2 &&
-        matchesCategory3 &&
-        matchesOfferStatus &&
-        matchesStockStatus &&
-        matchesValidation
-      );
-    });
-  }, [products, search, category1, category2, category3, offerStatus, stockStatus, validationFilter]);
+  // Use all categories for filters (no dynamic filtering for simplicity)
+  const availableCateg2 = categories.categ2;
+  const availableCateg3 = categories.categ3;
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const filteredCount = totalCount || 0;
+  const totalPages = Math.ceil(filteredCount / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredCount);
 
   // Reset to page 1 when filters change
   useMemo(() => {
@@ -290,7 +251,7 @@ export default function Products() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
           <p className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length} products
+            Showing {startIndex + 1}-{endIndex} of {filteredCount} products
           </p>
           <Select value={itemsPerPage.toString()} onValueChange={handleItemsPerPageChange}>
             <SelectTrigger className="w-full sm:w-[130px] h-9">
@@ -324,7 +285,7 @@ export default function Products() {
         )}
       </div>
 
-      <ProductsTable products={paginatedProducts} onRefresh={refetch} isAdmin={isAdmin} />
+      <ProductsTable products={products || []} onRefresh={refetch} isAdmin={isAdmin} />
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
