@@ -281,17 +281,17 @@ async function syncOne(opts: {
           : rows.map(transformDestToSrc(readTable, writeTable));
 
       // NEW: drop null/undefined fields so we never send `null` updates
-      let toWrite = mapped.map((r) => pruneNullish(r, conflictTarget));
+      let toWrite = mapped.map((r: Record<string, any>) => pruneNullish(r, conflictTarget));
 
       // Keep any local, content-based write filters if you use them
       if (writeFilters) {
-        toWrite = toWrite.filter((r) => matchesAll(r, writeFilters));
+        toWrite = toWrite.filter((r: Record<string, any>) => matchesAll(r, writeFilters));
       }
 
       // NEW: update-only by default: only upsert rows whose conflict key exists on target.
       // This prevents accidental INSERTs (which would hit NOT NULL constraints).
       const existingKeys = await fetchExistingKeys(writer, writeTable, conflictTarget, /* optional */ writeFilters);
-      toWrite = toWrite.filter((r) => existingKeys.has(r[conflictTarget]));
+      toWrite = toWrite.filter((r: Record<string, any>) => existingKeys.has(r[conflictTarget]));
 
       // If nothing left to write, continue to next page
       if (!toWrite.length) {
