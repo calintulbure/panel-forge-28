@@ -209,6 +209,11 @@ async function syncOne(opts: {
       //const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
       const toWrite = writeFilters ? mapped.filter((r: Record<string, any>) => matchesAll(r, writeFilters)) : mapped;
 
+      const allowedSet = await fetchAllowedTargetKeys(writer, writeTable, conflictTarget, writeFilters);
+      if (allowedSet) {
+        toWrite = toWrite.filter((r) => allowedSet.has(r[conflictTarget]));
+      }
+
       if (!toWrite.length) {
         from += rows.length;
         continue;
@@ -236,30 +241,24 @@ function applyReadFilters(q: any, filters?: Record<string, any>) {
   if (!filters) return q;
   for (const [key, val] of Object.entries(filters)) {
     if (Array.isArray(val)) {
-      // e.g. { articol_id: [1,2,3] }
       q = q.in(key, val);
     } else if (val !== null && typeof val === "object") {
-      // operator bag, e.g. { gt: 1000, lte: 2000, not: null }
-      if ("not" in val) {
-        q = val.not === null ? q.not(key, "is", null) : q.neq(key, val.not);
-      }
+      if ("not" in val) q = val.not === null ? q.not(key, "is", null) : q.neq(key, val.not);
       if ("gt" in val) q = q.gt(key, val.gt);
       if ("gte" in val) q = q.gte(key, val.gte);
       if ("lt" in val) q = q.lt(key, val.lt);
       if ("lte" in val) q = q.lte(key, val.lte);
-      if ("ilike" in val) q = q.ilike(key, val.ilike); // optional
-      if ("like" in val) q = q.like(key, val.like); // optional
+      if ("ilike" in val) q = q.ilike(key, val.ilike);
+      if ("like" in val) q = q.like(key, val.like);
     } else if (val === null) {
       q = q.is(key, null);
     } else {
-      // primitives: number | string | boolean
       q = q.eq(key, val);
     }
   }
   return q;
 }
 
-/** simple equality filter helper */
 function matchesAll(row: Record<string, any>, filters?: Record<string, any>) {
   if (!filters) return true;
   for (const [key, val] of Object.entries(filters)) {
@@ -292,6 +291,24 @@ function matchesAll(row: Record<string, any>, filters?: Record<string, any>) {
     }
   }
   return true;
+}
+
+async function fetchAllowedTargetKeys(
+  writer: any,
+  writeTable: string,
+  conflictKey: string,
+  writeFilters?: Record<string, any>,
+  limit = 100000,
+): Promise<Set<any> | null> {
+  if (!writeFilters || !Object.keys(writeFilters).length) return null;
+
+  // Only select the conflict key from TARGET where filters match
+  let q = writer.from(writeTable).select(conflictKey).limit(limit);
+  q = applyReadFilters(q, writeFilters);
+  const { data, error } = await q;
+  if (error) throw error;
+
+  return new Set((data ?? []).map((r: any) => r[conflictKey]));
 }
 
 /** ---------- Optional transformers (no-op by default) ---------- */
