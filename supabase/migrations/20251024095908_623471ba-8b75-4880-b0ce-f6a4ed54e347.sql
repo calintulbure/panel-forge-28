@@ -1,0 +1,1 @@
+create unique index if not exists products_uniq_erp_code on products(erp_product_code);
