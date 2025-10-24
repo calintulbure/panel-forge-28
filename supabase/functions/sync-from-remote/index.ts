@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+const VERSION = "sync-from-remote@2025-10-24-11:15Z";
 
 /** ---------- Types ---------- */
 type TableItem =
@@ -87,22 +88,15 @@ Deno.serve(async (req) => {
 
     const debug = !!b.debug;
 
+    // PRINT to logs so you can confirm in Cloud → Logs
+    console.log("DEBUG FLAG =", debug, "BODY =", JSON.stringify(b));
+
     if (debug) {
-      // Use the first table (or 'products') for probing
-      const first =
-        b.tables && b.tables.length ? (typeof b.tables[0] === "string" ? b.tables[0] : b.tables[0].table) : "products";
-
-      const srcProbe = await restProbe(env("SRC_SUPABASE_URL"), env("SRC_SUPABASE_SERVICE_ROLE_KEY"), first);
-      const destProbe = await restProbe(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), first);
-
       return json({
-        debug: true,
-        table: first,
-        src: srcProbe,
-        dest: destProbe,
-        note:
-          "If src.status != 200 or src.body is an error, check table exposure (public schema), RLS, or table name. " +
-          "If src.status == 200 and body == [], your source REST returns zero rows.",
+        ok: true,
+        version: VERSION,
+        mode: "debug-short-circuit",
+        received: b,
       });
     }
 
