@@ -206,7 +206,7 @@ async function syncOne(opts: {
       // 4) **target state** enforcement: only keys currently matching target filter
       const allowed = await fetchAllowedTargetKeys(writer, writeTable, conflictTarget, writeFilters);
       if (allowed) {
-        toWrite = toWrite.filter((r: Record<string, any>) => allowedSet.has(r[conflictTarget]));
+        toWrite = toWrite.filter((r: Record<string, any>) => allowed.has(r[conflictTarget]));
       }
 
       // nothing to do?
