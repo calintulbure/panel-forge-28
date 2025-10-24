@@ -38,6 +38,12 @@ export default function Products() {
   const [validationFilter, setValidationFilter] = useState(
     searchParams.get("validation") || "all"
   );
+  const [yliRoSkuFilter, setYliRoSkuFilter] = useState(
+    searchParams.get("roSku") || "all"
+  );
+  const [yliHuSkuFilter, setYliHuSkuFilter] = useState(
+    searchParams.get("huSku") || "all"
+  );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
@@ -52,9 +58,11 @@ export default function Products() {
     if (offerStatus.length > 0) params.set("offer", offerStatus.join(","));
     if (stockStatus.length > 0) params.set("stock", stockStatus.join(","));
     if (validationFilter !== "all") params.set("validation", validationFilter);
+    if (yliRoSkuFilter !== "all") params.set("roSku", yliRoSkuFilter);
+    if (yliHuSkuFilter !== "all") params.set("huSku", yliHuSkuFilter);
     
     setSearchParams(params, { replace: true });
-  }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter]);
+  }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
 
   // Fetch filter options (categories and statuses)
   const { data: filterOptions } = useQuery({
@@ -93,7 +101,7 @@ export default function Products() {
 
   // Fetch total count with filters
   const { data: totalCount } = useQuery({
-    queryKey: ["products-count", search, category1, category2, category3, offerStatus, stockStatus, validationFilter],
+    queryKey: ["products-count", search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
     queryFn: async () => {
       let query = supabase
         .from("products")
@@ -123,6 +131,16 @@ export default function Products() {
       } else if (validationFilter === "not_validated") {
         query = query.or("validated.is.null,validated.eq.false");
       }
+      if (yliRoSkuFilter === "blank") {
+        query = query.is("yliro_sku", null);
+      } else if (yliRoSkuFilter === "not_blank") {
+        query = query.not("yliro_sku", "is", null);
+      }
+      if (yliHuSkuFilter === "blank") {
+        query = query.is("ylihu_sku", null);
+      } else if (yliHuSkuFilter === "not_blank") {
+        query = query.not("ylihu_sku", "is", null);
+      }
 
       const { count, error } = await query;
       if (error) throw error;
@@ -132,7 +150,7 @@ export default function Products() {
 
   // Fetch paginated products with filters
   const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, stockStatus, validationFilter],
+    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
     queryFn: async () => {
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
@@ -167,11 +185,22 @@ export default function Products() {
       } else if (validationFilter === "not_validated") {
         query = query.or("validated.is.null,validated.eq.false");
       }
+      if (yliRoSkuFilter === "blank") {
+        query = query.is("yliro_sku", null);
+      } else if (yliRoSkuFilter === "not_blank") {
+        query = query.not("yliro_sku", "is", null);
+      }
+      if (yliHuSkuFilter === "blank") {
+        query = query.is("ylihu_sku", null);
+      } else if (yliHuSkuFilter === "not_blank") {
+        query = query.not("ylihu_sku", "is", null);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
   const categories = useMemo(() => {
@@ -191,7 +220,7 @@ export default function Products() {
   // Reset to page 1 when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter]);
+  }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
 
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(Number(value));
@@ -206,6 +235,8 @@ export default function Products() {
     setOfferStatus([]);
     setStockStatus([]);
     setValidationFilter("all");
+    setYliRoSkuFilter("all");
+    setYliHuSkuFilter("all");
     setSearchParams(new URLSearchParams(), { replace: true });
   };
 
@@ -241,6 +272,10 @@ export default function Products() {
         setStockStatus={setStockStatus}
         validationFilter={validationFilter}
         setValidationFilter={setValidationFilter}
+        yliRoSkuFilter={yliRoSkuFilter}
+        setYliRoSkuFilter={setYliRoSkuFilter}
+        yliHuSkuFilter={yliHuSkuFilter}
+        setYliHuSkuFilter={setYliHuSkuFilter}
         categories={categories}
         availableCateg2={availableCateg2}
         availableCateg3={availableCateg3}

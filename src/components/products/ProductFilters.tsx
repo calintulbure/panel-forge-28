@@ -33,6 +33,10 @@ interface ProductFiltersProps {
   setStockStatus: (value: string[]) => void;
   validationFilter: string;
   setValidationFilter: (value: string) => void;
+  yliRoSkuFilter: string;
+  setYliRoSkuFilter: (value: string) => void;
+  yliHuSkuFilter: string;
+  setYliHuSkuFilter: (value: string) => void;
   categories: {
     categ1: string[];
     categ2: string[];
@@ -61,6 +65,10 @@ export function ProductFilters({
   setStockStatus,
   validationFilter,
   setValidationFilter,
+  yliRoSkuFilter,
+  setYliRoSkuFilter,
+  yliHuSkuFilter,
+  setYliHuSkuFilter,
   categories,
   availableCateg2,
   availableCateg3,
@@ -81,123 +89,151 @@ export function ProductFilters({
   }, []);
 
   return (
-    <Card>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <div className="flex items-center justify-between pt-3 px-4 md:hidden">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filters</span>
+    <div className="sticky top-0 z-10 bg-background pb-4">
+      <Card>
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <div className="flex items-center justify-between pt-3 px-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium">Filters</span>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onRefresh}
+                className="h-8 text-xs"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Refresh
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onClearFilters}
+                className="h-8 text-xs"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear
+              </Button>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
           </div>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-        </div>
 
-        <CollapsibleContent>
-          <CardContent className="pt-3 pb-3 md:pt-4 md:pb-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onRefresh}
-                  className="h-8 text-xs"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Refresh
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={onClearFilters}
-                  className="h-8 text-xs"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear Filters
-                </Button>
-              </div>
-            </div>
-            <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-              <div className="space-y-0.5 md:space-y-1 sm:col-span-2">
-                <Label htmlFor="search" className="text-xs">Search</Label>
-                <Input
-                  id="search"
-                  placeholder="ERP code or description..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-9 text-sm"
-                />
-              </div>
+          <CollapsibleContent>
+            <CardContent className="pt-3 pb-3 md:pt-4 md:pb-4">
+              <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <div className="space-y-0.5 md:space-y-1 sm:col-span-2">
+                  <Label htmlFor="search" className="text-xs">Search</Label>
+                  <Input
+                    id="search"
+                    placeholder="ERP code or description..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                </div>
 
-              <div className="space-y-0.5 md:space-y-1">
-                <Label htmlFor="category1" className="text-xs">Category 1</Label>
-                <MultiSelect
-                  options={categories.categ1.map(cat => ({ value: cat, label: cat }))}
-                  value={category1}
-                  onChange={setCategory1}
-                  placeholder="All categories"
-                />
-              </div>
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="category1" className="text-xs">Category 1</Label>
+                  <MultiSelect
+                    options={categories.categ1.map(cat => ({ value: cat, label: cat }))}
+                    value={category1}
+                    onChange={setCategory1}
+                    placeholder="All categories"
+                  />
+                </div>
 
-              <div className="space-y-0.5 md:space-y-1">
-                <Label htmlFor="category2" className="text-xs">Category 2</Label>
-                <MultiSelect
-                  options={availableCateg2.map(cat => ({ value: cat, label: cat }))}
-                  value={category2}
-                  onChange={setCategory2}
-                  placeholder="All categories"
-                />
-              </div>
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="category2" className="text-xs">Category 2</Label>
+                  <MultiSelect
+                    options={availableCateg2.map(cat => ({ value: cat, label: cat }))}
+                    value={category2}
+                    onChange={setCategory2}
+                    placeholder="All categories"
+                  />
+                </div>
 
-              <div className="space-y-0.5 md:space-y-1">
-                <Label htmlFor="category3" className="text-xs">Category 3</Label>
-                <MultiSelect
-                  options={availableCateg3.map(cat => ({ value: cat, label: cat }))}
-                  value={category3}
-                  onChange={setCategory3}
-                  placeholder="All categories"
-                />
-              </div>
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="category3" className="text-xs">Category 3</Label>
+                  <MultiSelect
+                    options={availableCateg3.map(cat => ({ value: cat, label: cat }))}
+                    value={category3}
+                    onChange={setCategory3}
+                    placeholder="All categories"
+                  />
+                </div>
 
-              <div className="space-y-0.5 md:space-y-1">
-                <Label htmlFor="offerStatus" className="text-xs">Offer Status</Label>
-                <MultiSelect
-                  options={categories.offerStatuses.map(status => ({ value: status, label: status }))}
-                  value={offerStatus}
-                  onChange={setOfferStatus}
-                  placeholder="All statuses"
-                />
-              </div>
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="offerStatus" className="text-xs">Offer Status</Label>
+                  <MultiSelect
+                    options={categories.offerStatuses.map(status => ({ value: status, label: status }))}
+                    value={offerStatus}
+                    onChange={setOfferStatus}
+                    placeholder="All statuses"
+                  />
+                </div>
 
-              <div className="space-y-0.5 md:space-y-1">
-                <Label htmlFor="stockStatus" className="text-xs">Stock Status</Label>
-                <MultiSelect
-                  options={categories.stockStatuses.map(status => ({ value: status, label: status }))}
-                  value={stockStatus}
-                  onChange={setStockStatus}
-                  placeholder="All statuses"
-                />
-              </div>
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="stockStatus" className="text-xs">Stock Status</Label>
+                  <MultiSelect
+                    options={categories.stockStatuses.map(status => ({ value: status, label: status }))}
+                    value={stockStatus}
+                    onChange={setStockStatus}
+                    placeholder="All statuses"
+                  />
+                </div>
 
-              <div className="space-y-0.5 md:space-y-1">
-                <Label htmlFor="validationFilter" className="text-xs">Validation</Label>
-                <Select value={validationFilter} onValueChange={setValidationFilter}>
-                  <SelectTrigger id="validationFilter" className="h-9 text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="validated">Validated only</SelectItem>
-                    <SelectItem value="not_validated">Not validated only</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="validationFilter" className="text-xs">Validation</Label>
+                  <Select value={validationFilter} onValueChange={setValidationFilter}>
+                    <SelectTrigger id="validationFilter" className="h-9 text-sm">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="validated">Validated only</SelectItem>
+                      <SelectItem value="not_validated">Not validated only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="yliRoSkuFilter" className="text-xs">RO SKU</Label>
+                  <Select value={yliRoSkuFilter} onValueChange={setYliRoSkuFilter}>
+                    <SelectTrigger id="yliRoSkuFilter" className="h-9 text-sm">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="blank">Blank</SelectItem>
+                      <SelectItem value="not_blank">Not blank</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="yliHuSkuFilter" className="text-xs">HU SKU</Label>
+                  <Select value={yliHuSkuFilter} onValueChange={setYliHuSkuFilter}>
+                    <SelectTrigger id="yliHuSkuFilter" className="h-9 text-sm">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="blank">Blank</SelectItem>
+                      <SelectItem value="not_blank">Not blank</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
-    </Card>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+    </div>
   );
 }

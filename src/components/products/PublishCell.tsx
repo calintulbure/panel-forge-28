@@ -55,8 +55,11 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
         description: `${site.toUpperCase()} snapshot capture triggered`,
       });
 
-      // Wait a bit then refresh
-      setTimeout(onUpdate, 2000);
+      // Wait a bit then refresh to get updated data
+      setTimeout(() => {
+        onUpdate();
+        setIsRefreshing(false);
+      }, 2000);
     } catch (error) {
       console.error("Refresh error:", error);
       toast({
@@ -64,7 +67,6 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
         description: error instanceof Error ? error.message : "Failed to refresh snapshot",
         variant: "destructive",
       });
-    } finally {
       setIsRefreshing(false);
     }
   };
@@ -114,7 +116,10 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
           description: `${site.toUpperCase()} URL saved and snapshot capture triggered`,
         });
 
-        setTimeout(onUpdate, 2000);
+        setTimeout(() => {
+          onUpdate();
+          setIsRefreshing(false);
+        }, 2000);
       } catch (error) {
         console.error("URL processing error:", error);
         toast({
@@ -122,7 +127,6 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
           description: error instanceof Error ? error.message : "Failed to process URL",
           variant: "destructive",
         });
-      } finally {
         setIsRefreshing(false);
       }
     },

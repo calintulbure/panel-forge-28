@@ -113,6 +113,21 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
       if (error) throw error;
       
       toast.success(`${site.toUpperCase()} snapshot refreshed successfully`);
+      
+      // Fetch fresh data immediately after refresh
+      const { data, error: fetchError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("erp_product_code", product.erp_product_code)
+        .single();
+      
+      if (data && !fetchError) {
+        setCurrentProduct(data);
+        setRoUrl(data.site_ro_url || "");
+        setHuUrl(data.site_hu_url || "");
+        setValidated(data.validated || false);
+      }
+      
       onUpdate();
     } catch (error) {
       toast.error(`Failed to refresh ${site.toUpperCase()} snapshot`);
