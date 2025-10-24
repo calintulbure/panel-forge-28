@@ -33,6 +33,7 @@ interface Product {
   categ2: string | null;
   categ3: string | null;
   stare_oferta: string | null;
+  stare_oferta_secundara: string | null;
   stare_stoc: string | null;
   site_ro_url: string | null;
   site_ro_snapshot_url: string | null;
@@ -53,10 +54,11 @@ interface Product {
 interface ProductsTableProps {
   products: Product[];
   onRefresh: () => void;
+  onUpdateProduct?: (updatedProduct: Product) => void;
   isAdmin: boolean;
 }
 
-export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTableProps) {
+export function ProductsTable({ products, onRefresh, onUpdateProduct, isAdmin }: ProductsTableProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -211,6 +213,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                       snapshotBase64={product.site_ro_snapshot_base64}
                       siteUrl={product.site_ro_url}
                       sku={product.yliro_sku}
+                      skuClassName="font-bold text-black dark:text-white"
                       site="ro"
                       onUpdate={onRefresh}
                     />
@@ -222,6 +225,7 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
                       snapshotBase64={product.site_hu_snapshot_base64}
                       siteUrl={product.site_hu_url}
                       sku={product.ylihu_sku}
+                      skuClassName="font-bold text-black dark:text-white"
                       site="hu"
                       onUpdate={onRefresh}
                     />
@@ -396,7 +400,13 @@ export function ProductsTable({ products, onRefresh, isAdmin }: ProductsTablePro
           product={selectedProduct}
           open={!!selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onUpdate={onRefresh}
+          onUpdate={(updatedProduct) => {
+            if (updatedProduct && onUpdateProduct) {
+              onUpdateProduct(updatedProduct);
+            } else {
+              onRefresh();
+            }
+          }}
           isAdmin={isAdmin}
         />
       )}

@@ -320,7 +320,23 @@ export default function Products() {
         )}
       </div>
 
-      <ProductsTable products={products || []} onRefresh={refetch} isAdmin={isAdmin} />
+      <ProductsTable 
+        products={products || []} 
+        onRefresh={refetch}
+        onUpdateProduct={(updatedProduct) => {
+          // Update only the specific product in the cache
+          if (products) {
+            const index = products.findIndex(p => p.erp_product_code === updatedProduct.erp_product_code);
+            if (index !== -1) {
+              const newProducts = [...products];
+              newProducts[index] = { ...newProducts[index], ...updatedProduct };
+              // Manually trigger a re-render with the updated product
+              refetch();
+            }
+          }
+        }}
+        isAdmin={isAdmin} 
+      />
 
       {/* Pagination Controls */}
       {totalPages > 1 && (

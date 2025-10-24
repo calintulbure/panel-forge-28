@@ -29,6 +29,7 @@ interface Product {
   categ2: string | null;
   categ3: string | null;
   stare_oferta: string | null;
+  stare_oferta_secundara: string | null;
   stare_stoc: string | null;
   site_ro_url: string | null;
   site_ro_snapshot_url: string | null;
@@ -50,7 +51,7 @@ interface ProductDetailPanelProps {
   product: Product;
   open: boolean;
   onClose: () => void;
-  onUpdate: () => void;
+  onUpdate: (updatedProduct?: Product) => void;
   isAdmin: boolean;
 }
 
@@ -126,9 +127,11 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
         setRoUrl(data.site_ro_url || "");
         setHuUrl(data.site_hu_url || "");
         setValidated(data.validated || false);
+        // Trigger a selective update with the fresh data
+        onUpdate(data);
+      } else {
+        onUpdate();
       }
-      
-      onUpdate();
     } catch (error) {
       toast.error(`Failed to refresh ${site.toUpperCase()} snapshot`);
       console.error(error);
@@ -217,7 +220,20 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
       setValidated(false);
       
       toast.success(`${clearSite.toUpperCase()} product data cleared successfully`);
-      onUpdate();
+      
+      // Fetch fresh data to propagate the cleared state
+      const { data, error: fetchError } = await supabase
+        .from("products")
+        .select("*")
+        .eq("erp_product_code", product.erp_product_code)
+        .single();
+      
+      if (data && !fetchError) {
+        setCurrentProduct(data);
+        onUpdate(data);
+      } else {
+        onUpdate();
+      }
     } catch (error) {
       toast.error(`Failed to clear ${clearSite?.toUpperCase()} data`);
       console.error(error);
@@ -239,64 +255,57 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
           {/* ERP INFO */}
           <div>
             <h3 className="text-lg font-semibold mb-3">ERP Information</h3>
-            <div className="space-y-3">
-              <div>
-                <Label className="text-muted-foreground">Article ID</Label>
-                <p className="font-medium">{currentProduct.articol_id}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">ERP Code</Label>
-                {currentProduct.senior_erp_link ? (
-                  <a 
-                    href={currentProduct.senior_erp_link} 
-                    className="font-bold text-base hover:underline block"
-                  >
-                    {currentProduct.erp_product_code || "-"}
-                  </a>
-                ) : (
-                  <p className="font-bold text-base">{currentProduct.erp_product_code || "-"}</p>
-                )}
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Description</Label>
-                <p className="font-medium">{currentProduct.erp_product_description || "-"}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Stock</Label>
-                <p className="font-medium">
-                  Stoc: {currentProduct.ro_stock !== null ? currentProduct.ro_stock : "-"}
-                </p>
-                {currentProduct.ro_stoc_detailed && (
-                  <p className="text-sm text-muted-foreground mt-1">{currentProduct.ro_stoc_detailed}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Category 1</Label>
-                  <p className="font-medium text-sm">{currentProduct.categ1 || "-"}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Category 2</Label>
-                  <p className="font-medium text-sm">{currentProduct.categ2 || "-"}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Category 3</Label>
-                  <p className="font-medium text-sm">{currentProduct.categ3 || "-"}</p>
+            <div className="relative">
+              {/* Left side - main content */}
+              <div className="pr-32">
+                <div className="space-y-2">
+                  {/* ERP Code - 50% larger */}
+                  {currentProduct.senior_erp_link ? (
+                    <a 
+                      href={currentProduct.senior_erp_link} 
+                      className="font-bold text-2xl hover:underline block"
+                    >
+                      {currentProduct.erp_product_code || "-"}
+                    </a>
+                  ) : (
+                    <p className="font-bold text-2xl">{currentProduct.erp_product_code || "-"}</p>
+                  )}
+                  
+                  {/* Description */}
+                  <p className="text-base">{currentProduct.erp_product_description || "-"}</p>
+                  
+                  {/* Categories with indentation */}
+                  <div className="space-y-1 mt-3">
+                    <p className="text-sm">{currentProduct.categ1 || "-"}</p>
+                    <p className="text-sm ml-4">{currentProduct.categ2 || "-"}</p>
+                    <p className="text-sm ml-8">{currentProduct.categ3 || "-"}</p>
+                  </div>
+                  
+                  {/* Stock Information */}
+                  <div className="mt-3">
+                    <p className="text-sm">
+                      Stoc: {currentProduct.ro_stock !== null ? currentProduct.ro_stock : "-"}
+                    </p>
+                    {currentProduct.ro_stoc_detailed && (
+                      <p className="text-xs text-muted-foreground mt-1">{currentProduct.ro_stoc_detailed}</p>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Stock Status</Label>
-                  <Badge variant="secondary" className="mt-1">
-                    {currentProduct.stare_stoc || "Unknown"}
+              
+              {/* Right side - status badges floating */}
+              <div className="absolute top-0 right-0 flex flex-col gap-2">
+                <Badge variant="secondary" className="w-fit">
+                  {currentProduct.stare_oferta || "Unknown"}
+                </Badge>
+                {currentProduct.stare_oferta_secundara && (
+                  <Badge variant="outline" className="w-fit">
+                    {currentProduct.stare_oferta_secundara}
                   </Badge>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Offer Status</Label>
-                  <Badge variant="secondary" className="mt-1">
-                    {currentProduct.stare_oferta || "Unknown"}
-                  </Badge>
-                </div>
+                )}
+                <Badge variant="secondary" className="w-fit">
+                  {currentProduct.stare_stoc || "Unknown"}
+                </Badge>
               </div>
             </div>
           </div>

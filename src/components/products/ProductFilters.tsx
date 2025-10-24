@@ -101,7 +101,11 @@ export function ProductFilters({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={onRefresh}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRefresh();
+                }}
                 className="h-8 text-xs"
               >
                 <RefreshCw className="h-3 w-3 mr-1" />

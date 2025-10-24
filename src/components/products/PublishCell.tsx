@@ -13,11 +13,12 @@ interface PublishCellProps {
   snapshotBase64: string | null;
   siteUrl: string | null;
   sku: string | null;
+  skuClassName?: string;
   site: "ro" | "hu";
   onUpdate: () => void;
 }
 
-export function PublishCell({ productCode, productDescription, snapshotBase64, siteUrl, sku, site, onUpdate }: PublishCellProps) {
+export function PublishCell({ productCode, productDescription, snapshotBase64, siteUrl, sku, skuClassName, site, onUpdate }: PublishCellProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -352,7 +353,7 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
         </div>
 
         {/* SKU display */}
-        <div className="text-xs font-mono text-center text-muted-foreground">{sku || "-"}</div>
+        <div className={cn("text-xs font-mono text-center", skuClassName || "text-muted-foreground")}>{sku || "-"}</div>
 
         {/* URL input for keyboard users */}
         {showUrlInput && (
