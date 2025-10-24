@@ -240,7 +240,7 @@ async function syncOne(opts: {
   };
 
   try {
-    // Probe reader access quickly (1 row)
+    // Probe read access
     try {
       const { data: probe, error: probeErr } = await reader.from(readTable).select(conflictTarget).limit(1);
       if (probeErr) console.warn(`PROBE(${readTable}) error:`, probeErr.message);
@@ -249,9 +249,19 @@ async function syncOne(opts: {
       console.warn(`PROBE(${readTable}) threw:`, e);
     }
 
+    // Warn if conflict key isn’t in the selection
+    {
+      const selCols = selectCols.split(",").map((s) => s.trim());
+      if (!selCols.includes(conflictTarget)) {
+        console.warn(
+          `WARN: selectCols does not include conflictTarget "${conflictTarget}". Add it to avoid empty keys.`,
+        );
+      }
+    }
+
     let from = 0;
     for (;;) {
-      // 1) Read page from READER
+      // 1) Read a page
       let q = reader
         .from(readTable)
         .select(selectCols)
@@ -274,56 +284,51 @@ async function syncOne(opts: {
       stats.read += rows.length;
       stats.batches += 1;
 
-      // 2) Map to target shape (no-op by default)
+      // 2) Map to target (no-op by default)
       const mapped =
         direction === "pull"
           ? rows.map(transformSrcToDest(readTable, writeTable))
           : rows.map(transformDestToSrc(readTable, writeTable));
 
-      // NEW: drop null/undefined fields so we never send `null` updates
-let toWrite = mapped; //let toWrite = mapped.map((r: Record<string, any>) => pruneNullish(r, conflictTarget));
+      // 3) Prune null/undefined fields EXCEPT the conflict key (so we keep it even if null-check rejects it later)
+      let toWrite = mapped.map((r: Record<string, any>) => pruneNullish(r, conflictTarget));
 
-// HARD-GUARD: require conflict key
-const key = conflictTarget;
-toWrite = toWrite.filter((r: any) => r && r[key] !== null && r[key] !== undefined);
+      // 4) Require conflict key present (no null/undefined)
+      toWrite = toWrite.filter((r: any) => r && r[conflictTarget] !== null && r[conflictTarget] !== undefined);
 
-// Batch the writes
-for (let i = 0; i < toWrite.length; i += writeBatchSize) {
-  const chunk = toWrite.slice(i, i + writeBatchSize);
-  if (!dryRun && chunk.length) {
-    const { error: upErr } = await writer.from(writeTable).upsert(chunk, { onConflict: conflictTarget });
-    if (upErr) {
-      console.error("UPSERT ERROR", { table: writeTable, onConflict: conflictTarget, size: chunk.length, msg: upErr.message });
-      throw upErr; // will be caught and returned as JSON error instead of silent shutdown
-    }
-    stats.upserted += chunk.length;
-  }
-}
-      
-      // Keep any local, content-based write filters if you use them
+      // 5) Optional local write filters (content-based)
       if (writeFilters) {
         toWrite = toWrite.filter((r: Record<string, any>) => matchesAll(r, writeFilters));
       }
 
-      // NEW: update-only by default: only upsert rows whose conflict key exists on target.
-      // This prevents accidental INSERTs (which would hit NOT NULL constraints).
-      const existingKeys = await fetchExistingKeys(writer, writeTable, conflictTarget, /* optional */ writeFilters);
-      toWrite = toWrite.filter((r: Record<string, any>) => existingKeys.has(r[conflictTarget]));
+      // 6) Update-only: keep only rows whose key exists in target
+      //    (prevents accidental INSERTs and NOT NULL failures)
+      const existingKeys = await fetchExistingKeys(writer, writeTable, conflictTarget, writeFilters);
+      if (existingKeys && existingKeys.size) {
+        toWrite = toWrite.filter((r: any) => existingKeys.has(r[conflictTarget]));
+      }
 
-      // If nothing left to write, continue to next page
       if (!toWrite.length) {
         from += rows.length;
         continue;
       }
 
-      // Upsert in batches with returning: 'minimal'
+      // 7) Upsert in batches (one time, after all filters), with minimal returning
       if (!dryRun) {
-        const batches = chunk(toWrite, writeBatchSize);
-        for (const batch of batches) {
+        for (let i = 0; i < toWrite.length; i += writeBatchSize) {
+          const batch = toWrite.slice(i, i + writeBatchSize);
           const { error: upErr } = await writer
             .from(writeTable)
             .upsert(batch, { onConflict: conflictTarget, returning: "minimal" });
-          if (upErr) throw upErr;
+          if (upErr) {
+            console.error("UPSERT ERROR", {
+              table: writeTable,
+              onConflict: conflictTarget,
+              size: batch.length,
+              msg: upErr.message,
+            });
+            throw upErr;
+          }
           stats.upserted += batch.length;
         }
       }
@@ -338,6 +343,19 @@ for (let i = 0; i < toWrite.length; i += writeBatchSize) {
     console.error(`sync ${opts.direction} ${opts.readTable} -> ${opts.writeTable} error:`, err);
     return { ...stats, ok: false, error: err };
   }
+}
+
+/** Keep only non-nullish fields (except keepKey is preserved even if nullish check would remove it) */
+function pruneNullish<T extends Record<string, any>>(row: T, keepKey?: string): T {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (k === keepKey) {
+      out[k] = v;
+      continue;
+    }
+    if (v !== null && v !== undefined) out[k] = v;
+  }
+  return out as T;
 }
 
 /** ---------- Filters (reader & target) ---------- */
