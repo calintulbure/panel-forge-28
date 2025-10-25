@@ -2,3 +2,6 @@ project_id = "vmijvdxllubdudppeemr"
 
 [functions.sync-from-remote-multi]
 verify_jwt = false
+
+[functions.bulk-upsert-products]
+verify_jwt = false
