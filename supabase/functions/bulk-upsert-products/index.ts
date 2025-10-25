@@ -5,7 +5,7 @@ import { BulkUpsertRequest, BulkUpsertResponse } from "../_shared/schema.ts";
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 // --- Config: destination table and conflict key
-const DEST_TABLE = "yli_ro_products"; // change if needed
+const DEST_TABLE = "products";
 const CONFLICT_KEY = "erp_product_code";
 
 // Fields that are allowed to be UPDATED on existing rows (user-specified)
