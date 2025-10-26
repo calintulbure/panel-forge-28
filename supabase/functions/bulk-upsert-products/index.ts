@@ -33,7 +33,9 @@ const BATCH_UPSERT = 300;
 
 serve(async (req) => {
   try {
+    console.log('Bulk upsert request received');
     const body = await req.json().catch(() => ({}));
+    console.log(`Payload size: ${Array.isArray(body?.payload) ? body.payload.length : 0} items`);
     const parsed = BulkUpsertRequest.safeParse(body);
 
     if (!parsed.success) {
@@ -126,6 +128,7 @@ serve(async (req) => {
       affected,
       message: `Inserted ${inserted} rows, updated ${upserted} rows (only allowed fields).`,
     };
+    console.log(`Successfully processed: ${affected} rows (inserted: ${inserted}, updated: ${upserted})`);
     return json(resp);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
