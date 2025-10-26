@@ -138,16 +138,16 @@ export function ProductsTable({
   return <>
       {/* Desktop Table View */}
       <div className="hidden md:block rounded-md border overflow-x-auto">
-        <Table className="min-w-[850px]">
-          <TableHeader className="sticky top-0 z-20 bg-background border-b">
+        <Table className="w-full table-fixed">
+          <TableHeader className="bg-background border-b">
             <TableRow>
-              <TableHead className="w-[140px]">
+              <TableHead className="w-[160px]">
                 <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
                   Product Info
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[200px]">
+              <TableHead className="w-[220px]">
                 <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
                   Categories
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -165,9 +165,9 @@ export function ProductsTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="text-center w-[100px]">RO Publish</TableHead>
-              <TableHead className="text-center w-[100px]">HU Publish</TableHead>
-              <TableHead className="text-center w-[70px]">
+              <TableHead className="text-center w-[90px]">RO Publish</TableHead>
+              <TableHead className="text-center w-[90px]">HU Publish</TableHead>
+              <TableHead className="text-center w-[60px]">
                 <Button variant="ghost" onClick={() => handleSort('validated')} className="h-8 px-2">
                   Validated
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -184,9 +184,9 @@ export function ProductsTable({
               </TableRow> : sortedProducts.map(product => <TableRow key={product.erp_product_code} className="cursor-pointer hover:bg-muted/50 group">
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
-                      {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline" onClick={e => e.stopPropagation()}>
+                      {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline block truncate" onClick={e => e.stopPropagation()}>
                           {product.erp_product_code}
-                        </a> : <div className="font-bold text-base">{product.erp_product_code}</div>}
+                        </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
                       <div className="text-xs text-muted-foreground truncate">
                         {product.erp_product_description || "-"}
                       </div>
