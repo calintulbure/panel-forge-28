@@ -22,6 +22,8 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   "senior_erp_link",
   "ro_stock",
   "ro_stoc_detailed",
+  "hu_stock",
+  "hu_stock_detailed",
 ]);
 
 // Batch sizes
@@ -76,9 +78,8 @@ serve(async (req) => {
         const upd: Record<string, any> = { [CONFLICT_KEY]: key };
         for (const f of ALLOWED_UPDATE_FIELDS) {
           if (Object.prototype.hasOwnProperty.call(row, f)) {
-            const v = row[f];
-            // Skip null and undefined to avoid overwriting destination with null
-            if (v !== null && v !== undefined) upd[f] = v;
+            // Include the field even if it's null (to allow clearing fields)
+            upd[f] = row[f];
           }
         }
         // Only push if there's at least one allowed field to update (besides key)
