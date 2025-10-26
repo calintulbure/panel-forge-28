@@ -134,7 +134,7 @@ export function ProductFilters({
   };
 
   return (
-    <div className="sticky top-0 z-10 bg-background pb-4">
+    <div className="sticky top-0 z-10 bg-background pb-4" data-filter-block>
       <Card>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <div className="flex items-center justify-between pt-3 px-4">
