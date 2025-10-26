@@ -274,10 +274,7 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onFocus={() => setShowUrlInput(true)}
-      onBlur={() => {
-        setTimeout(() => setShowUrlInput(false), 200);
-      }}
+      onClick={() => !siteUrl && setShowUrlInput(true)}
       tabIndex={0}
       role="button"
       aria-label={`${site.toUpperCase()} publish cell for product ${productCode}`}
@@ -369,19 +366,30 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
         {/* SKU display */}
         <div className={cn("text-xs font-mono text-center", skuClassName || "text-muted-foreground")}>{sku || "-"}</div>
 
-        {/* URL input for keyboard users */}
-        {showUrlInput && (
-          <form onSubmit={handleUrlSubmit} className="w-full px-1">
+        {/* URL display/input */}
+        {showUrlInput ? (
+          <form onSubmit={handleUrlSubmit} className="w-full px-1" onClick={(e) => e.stopPropagation()}>
             <input
               type="url"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
-              placeholder={`Paste yli.${site} URL`}
+              placeholder={siteUrl || `Paste yli.${site} URL`}
               className="w-full text-xs px-2 py-1 rounded border bg-background"
               aria-label={`URL input for ${site.toUpperCase()} site`}
+              autoFocus
             />
           </form>
-        )}
+        ) : siteUrl ? (
+          <a
+            href={siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary hover:underline truncate block px-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {siteUrl}
+          </a>
+        ) : null}
 
         {/* Drag hint */}
         {isDragOver && (

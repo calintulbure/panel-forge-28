@@ -29,6 +29,8 @@ interface ProductFiltersProps {
   setCategory3: (value: string[]) => void;
   offerStatus: string[];
   setOfferStatus: (value: string[]) => void;
+  offerStatusSecondary: string[];
+  setOfferStatusSecondary: (value: string[]) => void;
   stockStatus: string[];
   setStockStatus: (value: string[]) => void;
   validationFilter: string;
@@ -42,6 +44,7 @@ interface ProductFiltersProps {
     categ2: string[];
     categ3: string[];
     offerStatuses: string[];
+    offerStatusesSecondary: string[];
     stockStatuses: string[];
   };
   availableCateg2: string[];
@@ -61,6 +64,8 @@ export function ProductFilters({
   setCategory3,
   offerStatus,
   setOfferStatus,
+  offerStatusSecondary,
+  setOfferStatusSecondary,
   stockStatus,
   setStockStatus,
   validationFilter,
@@ -80,14 +85,74 @@ export function ProductFilters({
     return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
   });
 
+  // Auto-collapse on scroll down
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // If scrolling down and past the threshold, collapse
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsOpen(false);
+      }
+      
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Count active filters
+  const activeFiltersCount = 
+    (search ? 1 : 0) +
+    category1.length +
+    category2.length +
+    category3.length +
+    offerStatus.length +
+    offerStatusSecondary.length +
+    stockStatus.length +
+    (validationFilter !== "all" ? 1 : 0) +
+    (yliRoSkuFilter !== "all" ? 1 : 0) +
+    (yliHuSkuFilter !== "all" ? 1 : 0);
+
+  // Get active filter labels
+  const getActiveFilters = () => {
+    const filters: string[] = [];
+    if (search) filters.push(`Search: ${search}`);
+    if (category1.length > 0) filters.push(`Cat1: ${category1.length}`);
+    if (category2.length > 0) filters.push(`Cat2: ${category2.length}`);
+    if (category3.length > 0) filters.push(`Cat3: ${category3.length}`);
+    if (offerStatus.length > 0) filters.push(`Offer: ${offerStatus.length}`);
+    if (offerStatusSecondary.length > 0) filters.push(`Offer2: ${offerStatusSecondary.length}`);
+    if (stockStatus.length > 0) filters.push(`Stock: ${stockStatus.length}`);
+    if (validationFilter !== "all") filters.push(`Validation: ${validationFilter}`);
+    if (yliRoSkuFilter !== "all") filters.push(`RO SKU: ${yliRoSkuFilter}`);
+    if (yliHuSkuFilter !== "all") filters.push(`HU SKU: ${yliHuSkuFilter}`);
+    return filters;
+  };
+
   return (
     <div className="sticky top-0 z-10 bg-background pb-4">
       <Card>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <div className="flex items-center justify-between pt-3 px-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               <Filter className="h-4 w-4" />
               <span className="text-sm font-medium">Filters</span>
+              {!isOpen && activeFiltersCount > 0 && (
+                <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                  <span className="text-xs text-muted-foreground">({activeFiltersCount} active)</span>
+                  <div className="flex gap-1 flex-wrap overflow-x-auto">
+                    {getActiveFilters().map((filter, idx) => (
+                      <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded whitespace-nowrap">
+                        {filter}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <Button 
@@ -170,6 +235,16 @@ export function ProductFilters({
                     options={categories.offerStatuses.map(status => ({ value: status, label: status }))}
                     value={offerStatus}
                     onChange={setOfferStatus}
+                    placeholder="All statuses"
+                  />
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="offerStatusSecondary" className="text-xs">Offer Status 2</Label>
+                  <MultiSelect
+                    options={categories.offerStatusesSecondary.map(status => ({ value: status, label: status }))}
+                    value={offerStatusSecondary}
+                    onChange={setOfferStatusSecondary}
                     placeholder="All statuses"
                   />
                 </div>
