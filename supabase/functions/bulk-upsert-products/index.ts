@@ -50,7 +50,24 @@ serve(async (req) => {
     }
 
     // Normalize and validate presence of conflict key in payload items
-    const rows = payload.map((r: any) => (typeof r === "object" && r ? r : {}));
+    const rows = payload.map((r: any) => {
+      const row = typeof r === "object" && r ? r : {};
+      
+      // Apply cascading logic for hierarchical fields
+      // If parent is null, set children to null
+      if (!row.categ1) {
+        row.categ2 = null;
+        row.categ3 = null;
+      } else if (!row.categ2) {
+        row.categ3 = null;
+      }
+      
+      if (!row.stare_oferta) {
+        row.stare_oferta_secundara = null;
+      }
+      
+      return row;
+    });
     const keys = Array.from(new Set(rows.map((r) => r[CONFLICT_KEY]).filter(Boolean)));
 
     if (!keys.length) {
