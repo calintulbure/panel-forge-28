@@ -141,39 +141,39 @@ export function ProductsTable({
         <Table className="min-w-[850px]">
           <TableHeader className="sticky top-[120px] z-20 bg-background border-b">
             <TableRow>
-              <TableHead className="min-w-[200px]">
+              <TableHead className="w-[180px]">
                 <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
                   Product Info
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="min-w-[140px]">
+              <TableHead className="w-[180px]">
                 <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
                   Categories
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="min-w-[100px]">
+              <TableHead className="w-[120px]">
                 <Button variant="ghost" onClick={() => handleSort('stare_stoc')} className="h-8 px-2">
                   Stock Status
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="min-w-[100px]">
+              <TableHead className="w-[120px]">
                 <Button variant="ghost" onClick={() => handleSort('stare_oferta')} className="h-8 px-2">
                   Offer Status
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="text-center min-w-[90px]">RO Publish</TableHead>
-              <TableHead className="text-center min-w-[90px]">HU Publish</TableHead>
-              <TableHead className="text-center min-w-[80px]">
+              <TableHead className="text-center w-[90px]">RO Publish</TableHead>
+              <TableHead className="text-center w-[90px]">HU Publish</TableHead>
+              <TableHead className="text-center w-[80px]">
                 <Button variant="ghost" onClick={() => handleSort('validated')} className="h-8 px-2">
                   Validated
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              {isAdmin && <TableHead className="min-w-[50px]"></TableHead>}
+              {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
