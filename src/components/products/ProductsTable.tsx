@@ -139,15 +139,15 @@ export function ProductsTable({
       {/* Desktop Table View */}
       <div className="hidden md:block rounded-md border overflow-x-auto">
         <Table className="min-w-[850px]">
-          <TableHeader className="sticky top-[120px] z-20 bg-background border-b">
+          <TableHeader className="sticky top-0 z-20 bg-background border-b">
             <TableRow>
-              <TableHead className="w-[180px]">
+              <TableHead className="w-[140px]">
                 <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
                   Product Info
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[180px]">
+              <TableHead className="w-[200px]">
                 <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
                   Categories
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -165,9 +165,9 @@ export function ProductsTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="text-center w-[90px]">RO Publish</TableHead>
-              <TableHead className="text-center w-[90px]">HU Publish</TableHead>
-              <TableHead className="text-center w-[80px]">
+              <TableHead className="text-center w-[100px]">RO Publish</TableHead>
+              <TableHead className="text-center w-[100px]">HU Publish</TableHead>
+              <TableHead className="text-center w-[70px]">
                 <Button variant="ghost" onClick={() => handleSort('validated')} className="h-8 px-2">
                   Validated
                   <ArrowUpDown className="ml-2 h-4 w-4" />
