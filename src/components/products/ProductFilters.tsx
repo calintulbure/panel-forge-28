@@ -344,8 +344,9 @@ export function ProductFilters({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="blank">Blank</SelectItem>
-                      <SelectItem value="not_blank">Not blank</SelectItem>
+                      <SelectItem value="null">null</SelectItem>
+                      <SelectItem value="0">0</SelectItem>
+                      <SelectItem value=">0">&gt;0</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -358,8 +359,9 @@ export function ProductFilters({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="blank">Blank</SelectItem>
-                      <SelectItem value="not_blank">Not blank</SelectItem>
+                      <SelectItem value="null">null</SelectItem>
+                      <SelectItem value="0">0</SelectItem>
+                      <SelectItem value=">0">&gt;0</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

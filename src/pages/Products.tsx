@@ -211,15 +211,23 @@ export default function Products() {
       } else if (yliHuSkuFilter === "not_blank") {
         query = query.not("ylihu_sku", "is", null);
       }
-      if (yliRoProdIdFilter === "blank") {
-        query = query.is("site_ro_product_id", null);
-      } else if (yliRoProdIdFilter === "not_blank") {
-        query = query.not("site_ro_product_id", "is", null);
+      if (yliRoProdIdFilter !== "all") {
+        if (yliRoProdIdFilter === "null") {
+          query = query.is("site_ro_product_id", null);
+        } else if (yliRoProdIdFilter === "0") {
+          query = query.eq("site_ro_product_id", 0);
+        } else if (yliRoProdIdFilter === ">0") {
+          query = query.gt("site_ro_product_id", 0);
+        }
       }
-      if (yliHuProdIdFilter === "blank") {
-        query = query.is("site_hu_product_id", null);
-      } else if (yliHuProdIdFilter === "not_blank") {
-        query = query.not("site_hu_product_id", "is", null);
+      if (yliHuProdIdFilter !== "all") {
+        if (yliHuProdIdFilter === "null") {
+          query = query.is("site_hu_product_id", null);
+        } else if (yliHuProdIdFilter === "0") {
+          query = query.eq("site_hu_product_id", 0);
+        } else if (yliHuProdIdFilter === ">0") {
+          query = query.gt("site_hu_product_id", 0);
+        }
       }
 
       const { count, error } = await query;
@@ -278,15 +286,23 @@ export default function Products() {
       } else if (yliHuSkuFilter === "not_blank") {
         query = query.not("ylihu_sku", "is", null);
       }
-      if (yliRoProdIdFilter === "blank") {
-        query = query.is("site_ro_product_id", null);
-      } else if (yliRoProdIdFilter === "not_blank") {
-        query = query.not("site_ro_product_id", "is", null);
+      if (yliRoProdIdFilter !== "all") {
+        if (yliRoProdIdFilter === "null") {
+          query = query.is("site_ro_product_id", null);
+        } else if (yliRoProdIdFilter === "0") {
+          query = query.eq("site_ro_product_id", 0);
+        } else if (yliRoProdIdFilter === ">0") {
+          query = query.gt("site_ro_product_id", 0);
+        }
       }
-      if (yliHuProdIdFilter === "blank") {
-        query = query.is("site_hu_product_id", null);
-      } else if (yliHuProdIdFilter === "not_blank") {
-        query = query.not("site_hu_product_id", "is", null);
+      if (yliHuProdIdFilter !== "all") {
+        if (yliHuProdIdFilter === "null") {
+          query = query.is("site_hu_product_id", null);
+        } else if (yliHuProdIdFilter === "0") {
+          query = query.eq("site_hu_product_id", 0);
+        } else if (yliHuProdIdFilter === ">0") {
+          query = query.gt("site_hu_product_id", 0);
+        }
       }
 
       const { data, error } = await query;
