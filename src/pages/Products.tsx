@@ -85,14 +85,37 @@ export default function Products() {
       const offerSecondarySet = new Set<string>();
       const stockSet = new Set<string>();
       const offerRelationMap = new Map<string, Set<string>>();
+      const categ1To2Map = new Map<string, Set<string>>();
+      const categ1And2To3Map = new Map<string, Set<string>>();
 
       data?.forEach((p) => {
-        if (p.categ1) categ1Set.add(p.categ1);
+        if (p.categ1) {
+          categ1Set.add(p.categ1);
+          
+          // Build categ1 -> categ2 relationship
+          if (p.categ2) {
+            if (!categ1To2Map.has(p.categ1)) {
+              categ1To2Map.set(p.categ1, new Set<string>());
+            }
+            categ1To2Map.get(p.categ1)!.add(p.categ2);
+            
+            // Build categ1+categ2 -> categ3 relationship
+            if (p.categ3) {
+              const key = `${p.categ1}|${p.categ2}`;
+              if (!categ1And2To3Map.has(key)) {
+                categ1And2To3Map.set(key, new Set<string>());
+              }
+              categ1And2To3Map.get(key)!.add(p.categ3);
+            }
+          }
+        }
+        
         if (p.categ2) categ2Set.add(p.categ2);
         if (p.categ3) categ3Set.add(p.categ3);
+        
         if (p.stare_oferta) {
           offerSet.add(p.stare_oferta);
-          // Build relationship map
+          // Build offer relationship map
           if (!offerRelationMap.has(p.stare_oferta)) {
             offerRelationMap.set(p.stare_oferta, new Set<string>());
           }
@@ -104,10 +127,20 @@ export default function Products() {
         if (p.stare_stoc) stockSet.add(p.stare_stoc);
       });
 
-      // Convert map to object with sorted arrays
+      // Convert maps to objects with sorted arrays
       const offerRelations: Record<string, string[]> = {};
       offerRelationMap.forEach((secondaries, primary) => {
         offerRelations[primary] = Array.from(secondaries).sort();
+      });
+
+      const categ1To2: Record<string, string[]> = {};
+      categ1To2Map.forEach((categ2s, categ1) => {
+        categ1To2[categ1] = Array.from(categ2s).sort();
+      });
+
+      const categ1And2To3: Record<string, string[]> = {};
+      categ1And2To3Map.forEach((categ3s, key) => {
+        categ1And2To3[key] = Array.from(categ3s).sort();
       });
 
       return {
@@ -118,6 +151,8 @@ export default function Products() {
         offerStatusesSecondary: Array.from(offerSecondarySet).sort(),
         stockStatuses: Array.from(stockSet).sort(),
         offerRelations,
+        categ1To2,
+        categ1And2To3,
       };
     },
     staleTime: 60000, // Cache for 1 minute
@@ -234,21 +269,72 @@ export default function Products() {
   });
 
   const categories = useMemo(() => {
-    return filterOptions || { categ1: [], categ2: [], categ3: [], offerStatuses: [], offerStatusesSecondary: [], stockStatuses: [], offerRelations: {} };
+    return filterOptions || { 
+      categ1: [], 
+      categ2: [], 
+      categ3: [], 
+      offerStatuses: [], 
+      offerStatusesSecondary: [], 
+      stockStatuses: [], 
+      offerRelations: {},
+      categ1To2: {},
+      categ1And2To3: {}
+    };
   }, [filterOptions]);
 
-  // Use all categories for filters (no dynamic filtering for simplicity)
-  const availableCateg2 = categories.categ2;
-  const availableCateg3 = categories.categ3;
+  // Filter category2 based on selected category1
+  const availableCateg2 = useMemo(() => {
+    if (category1.length === 0) {
+      return categories.categ2;
+    }
+    
+    const categ2Set = new Set<string>();
+    category1.forEach(c1 => {
+      const categ2s = categories.categ1To2[c1] || [];
+      categ2s.forEach(c2 => categ2Set.add(c2));
+    });
+    
+    return Array.from(categ2Set).sort();
+  }, [category1, categories.categ2, categories.categ1To2]);
+
+  // Filter category3 based on selected category1 and category2
+  const availableCateg3 = useMemo(() => {
+    if (category1.length === 0) {
+      return categories.categ3;
+    }
+    
+    const categ3Set = new Set<string>();
+    
+    if (category2.length === 0) {
+      // Only categ1 selected - show all categ3 for any combination of selected categ1
+      category1.forEach(c1 => {
+        Object.keys(categories.categ1And2To3).forEach(key => {
+          if (key.startsWith(`${c1}|`)) {
+            const categ3s = categories.categ1And2To3[key] || [];
+            categ3s.forEach(c3 => categ3Set.add(c3));
+          }
+        });
+      });
+    } else {
+      // Both categ1 and categ2 selected - show categ3 for specific combinations
+      category1.forEach(c1 => {
+        category2.forEach(c2 => {
+          const key = `${c1}|${c2}`;
+          const categ3s = categories.categ1And2To3[key] || [];
+          categ3s.forEach(c3 => categ3Set.add(c3));
+        });
+      });
+    }
+    
+    return Array.from(categ3Set).sort();
+  }, [category1, category2, categories.categ3, categories.categ1And2To3]);
 
   // Filter secondary offer statuses based on selected primary offer status
   const availableOfferStatusSecondary = useMemo(() => {
     if (offerStatus.length === 0) {
-      // No primary status selected, show all secondary statuses
       return categories.offerStatusesSecondary;
     }
     
-    // Collect all secondary statuses for selected primary statuses
     const secondarySet = new Set<string>();
     offerStatus.forEach(primary => {
       const secondaries = categories.offerRelations[primary] || [];
@@ -258,8 +344,29 @@ export default function Products() {
     return Array.from(secondarySet).sort();
   }, [offerStatus, categories.offerStatusesSecondary, categories.offerRelations]);
 
-  // Clear invalid secondary offer statuses when primary offer status changes
+  // Clear invalid selections when parent selections change
   useEffect(() => {
+    // Clear invalid category2 when category1 changes
+    if (category2.length > 0 && availableCateg2.length > 0) {
+      const validCateg2 = category2.filter(c2 => availableCateg2.includes(c2));
+      if (validCateg2.length !== category2.length) {
+        setCategory2(validCateg2);
+      }
+    }
+  }, [availableCateg2]);
+
+  useEffect(() => {
+    // Clear invalid category3 when category1 or category2 changes
+    if (category3.length > 0 && availableCateg3.length > 0) {
+      const validCateg3 = category3.filter(c3 => availableCateg3.includes(c3));
+      if (validCateg3.length !== category3.length) {
+        setCategory3(validCateg3);
+      }
+    }
+  }, [availableCateg3]);
+
+  useEffect(() => {
+    // Clear invalid secondary offer statuses when primary offer status changes
     if (offerStatusSecondary.length > 0 && availableOfferStatusSecondary.length > 0) {
       const validSecondaries = offerStatusSecondary.filter(sec => 
         availableOfferStatusSecondary.includes(sec)
