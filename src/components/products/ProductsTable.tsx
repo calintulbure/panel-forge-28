@@ -141,7 +141,7 @@ export function ProductsTable({
         <Table>
           <TableHeader className="sticky top-[120px] z-20 bg-background border-b">
             <TableRow>
-              <TableHead className="w-[200px]">
+              <TableHead className="w-[300px]">
                 <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
                   Product Info
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -187,7 +187,7 @@ export function ProductsTable({
                       {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline" onClick={e => e.stopPropagation()}>
                           {product.erp_product_code}
                         </a> : <div className="font-bold text-base">{product.erp_product_code}</div>}
-                      <div className="text-xs text-muted-foreground max-w-[190px] truncate">
+                      <div className="text-xs text-muted-foreground max-w-[290px] truncate">
                         {product.erp_product_description || "-"}
                       </div>
                       {product.ro_stock !== null && <div className="text-xs text-muted-foreground">
@@ -208,9 +208,16 @@ export function ProductsTable({
                     </Badge>
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
-                    <Badge variant={getOfferBadgeVariant(product.stare_oferta)}>
-                      {product.stare_oferta || "Unknown"}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={getOfferBadgeVariant(product.stare_oferta)}>
+                        {product.stare_oferta || "Unknown"}
+                      </Badge>
+                      {product.stare_oferta_secundara && (
+                        <Badge variant="outline" className="text-xs">
+                          {product.stare_oferta_secundara}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     <PublishCell productCode={product.erp_product_code} productDescription={product.erp_product_description} snapshotBase64={product.site_ro_snapshot_base64} siteUrl={product.site_ro_url} sku={product.yliro_sku} skuClassName="font-bold text-black dark:text-white" site="ro" onUpdate={onRefresh} />
@@ -282,6 +289,11 @@ export function ProductsTable({
                 <Badge variant={getOfferBadgeVariant(product.stare_oferta)} className="text-xs">
                   {product.stare_oferta || "Unknown"}
                 </Badge>
+                {product.stare_oferta_secundara && (
+                  <Badge variant="outline" className="text-xs">
+                    {product.stare_oferta_secundara}
+                  </Badge>
+                )}
               </div>
 
               <div className="flex items-center gap-3 pt-2 border-t" onClick={e => e.stopPropagation()}>

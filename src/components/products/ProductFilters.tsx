@@ -29,6 +29,8 @@ interface ProductFiltersProps {
   setCategory3: (value: string[]) => void;
   offerStatus: string[];
   setOfferStatus: (value: string[]) => void;
+  offerStatusSecondary: string[];
+  setOfferStatusSecondary: (value: string[]) => void;
   stockStatus: string[];
   setStockStatus: (value: string[]) => void;
   validationFilter: string;
@@ -42,6 +44,7 @@ interface ProductFiltersProps {
     categ2: string[];
     categ3: string[];
     offerStatuses: string[];
+    offerStatusesSecondary: string[];
     stockStatuses: string[];
   };
   availableCateg2: string[];
@@ -61,6 +64,8 @@ export function ProductFilters({
   setCategory3,
   offerStatus,
   setOfferStatus,
+  offerStatusSecondary,
+  setOfferStatusSecondary,
   stockStatus,
   setStockStatus,
   validationFilter,
@@ -107,6 +112,7 @@ export function ProductFilters({
     if (category2.length > 0) filters.push(`Cat2: ${category2.length}`);
     if (category3.length > 0) filters.push(`Cat3: ${category3.length}`);
     if (offerStatus.length > 0) filters.push(`Offer: ${offerStatus.length}`);
+    if (offerStatusSecondary.length > 0) filters.push(`Offer2: ${offerStatusSecondary.length}`);
     if (stockStatus.length > 0) filters.push(`Stock: ${stockStatus.length}`);
     if (validationFilter !== 'all') filters.push(`Validation: ${validationFilter}`);
     if (yliRoSkuFilter !== 'all') filters.push(`RO SKU: ${yliRoSkuFilter}`);
@@ -218,6 +224,16 @@ export function ProductFilters({
                     options={categories.offerStatuses.map(status => ({ value: status, label: status }))}
                     value={offerStatus}
                     onChange={setOfferStatus}
+                    placeholder="All statuses"
+                  />
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="offerStatusSecondary" className="text-xs">Offer Status 2</Label>
+                  <MultiSelect
+                    options={categories.offerStatusesSecondary.map(status => ({ value: status, label: status }))}
+                    value={offerStatusSecondary}
+                    onChange={setOfferStatusSecondary}
                     placeholder="All statuses"
                   />
                 </div>
