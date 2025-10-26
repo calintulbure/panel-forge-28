@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowUpDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -62,7 +63,29 @@ export function ProductsTable({ products, onRefresh, onUpdateProduct, isAdmin }:
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Product | null; direction: 'asc' | 'desc' }>({ key: null, direction: 'asc' });
   const { toast } = useToast();
+
+  const sortedProducts = [...products].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    
+    const aValue = a[sortConfig.key];
+    const bValue = b[sortConfig.key];
+    
+    if (aValue === null || aValue === undefined) return 1;
+    if (bValue === null || bValue === undefined) return -1;
+    
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = (key: keyof Product) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
   const handleValidationToggle = async (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -143,25 +166,50 @@ export function ProductsTable({ products, onRefresh, onUpdateProduct, isAdmin }:
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[180px]">Product Info</TableHead>
-              <TableHead className="w-[180px]">Categories</TableHead>
-              <TableHead>Stock Status</TableHead>
-              <TableHead>Offer Status</TableHead>
+              <TableHead className="w-[180px]">
+                <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
+                  Product Info
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead className="w-[180px]">
+                <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
+                  Categories
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort('stare_stoc')} className="h-8 px-2">
+                  Stock Status
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => handleSort('stare_oferta')} className="h-8 px-2">
+                  Offer Status
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
               <TableHead className="text-center">RO Publish</TableHead>
               <TableHead className="text-center">HU Publish</TableHead>
-              <TableHead className="text-center">Validated</TableHead>
+              <TableHead className="text-center">
+                <Button variant="ghost" onClick={() => handleSort('validated')} className="h-8 px-2">
+                  Validated
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
               {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.length === 0 ? (
+            {sortedProducts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 8 : 7} className="h-24 text-center">
                   No products found.
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product) => (
+              sortedProducts.map((product) => (
                 <TableRow
                   key={product.erp_product_code}
                   className="cursor-pointer hover:bg-muted/50 group"
@@ -235,12 +283,12 @@ export function ProductsTable({ products, onRefresh, onUpdateProduct, isAdmin }:
                       variant="ghost"
                       size="icon"
                       onClick={(e) => handleValidationToggle(product, e)}
-                      className="h-8 w-8"
+                      className="h-12 w-12"
                     >
                       {product.validated ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        <CheckCircle2 className="h-7 w-7 text-green-600" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-muted-foreground" />
+                        <XCircle className="h-7 w-7 text-muted-foreground" />
                       )}
                     </Button>
                   </TableCell>
@@ -268,12 +316,12 @@ export function ProductsTable({ products, onRefresh, onUpdateProduct, isAdmin }:
 
       {/* Mobile Card View */}
       <div className="md:hidden space-y-3">
-        {products.length === 0 ? (
+        {sortedProducts.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             No products found.
           </div>
         ) : (
-          products.map((product) => (
+          sortedProducts.map((product) => (
             <div
               key={product.erp_product_code}
               className="border rounded-lg p-4 space-y-3 bg-card"
@@ -306,12 +354,12 @@ export function ProductsTable({ products, onRefresh, onUpdateProduct, isAdmin }:
                     variant="ghost"
                     size="icon"
                     onClick={(e) => handleValidationToggle(product, e)}
-                    className="h-11 w-11"
+                    className="h-16 w-16"
                   >
                     {product.validated ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CheckCircle2 className="h-7 w-7 text-green-600" />
                     ) : (
-                      <XCircle className="h-5 w-5 text-muted-foreground" />
+                      <XCircle className="h-7 w-7 text-muted-foreground" />
                     )}
                   </Button>
                   {isAdmin && (
