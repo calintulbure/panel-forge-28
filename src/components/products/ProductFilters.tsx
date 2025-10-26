@@ -118,12 +118,30 @@ export function ProductFilters({
   const getActiveFilters = () => {
     const filters = [];
     if (search) filters.push(`Search: ${search}`);
-    if (category1.length > 0) filters.push(`Cat1: ${category1.length}`);
-    if (category2.length > 0) filters.push(`Cat2: ${category2.length}`);
-    if (category3.length > 0) filters.push(`Cat3: ${category3.length}`);
-    if (offerStatus.length > 0) filters.push(`Offer: ${offerStatus.length}`);
-    if (offerStatusSecondary.length > 0) filters.push(`Offer2: ${offerStatusSecondary.length}`);
-    if (stockStatus.length > 0) filters.push(`Stock: ${stockStatus.length}`);
+    if (category1.length > 0) {
+      const display = category1.length === 1 ? category1[0] : `${category1[0]} +${category1.length - 1}`;
+      filters.push(`Cat1: ${display}`);
+    }
+    if (category2.length > 0) {
+      const display = category2.length === 1 ? category2[0] : `${category2[0]} +${category2.length - 1}`;
+      filters.push(`Cat2: ${display}`);
+    }
+    if (category3.length > 0) {
+      const display = category3.length === 1 ? category3[0] : `${category3[0]} +${category3.length - 1}`;
+      filters.push(`Cat3: ${display}`);
+    }
+    if (offerStatus.length > 0) {
+      const display = offerStatus.length === 1 ? offerStatus[0] : `${offerStatus[0]} +${offerStatus.length - 1}`;
+      filters.push(`Offer: ${display}`);
+    }
+    if (offerStatusSecondary.length > 0) {
+      const display = offerStatusSecondary.length === 1 ? offerStatusSecondary[0] : `${offerStatusSecondary[0]} +${offerStatusSecondary.length - 1}`;
+      filters.push(`Offer2: ${display}`);
+    }
+    if (stockStatus.length > 0) {
+      const display = stockStatus.length === 1 ? stockStatus[0] : `${stockStatus[0]} +${stockStatus.length - 1}`;
+      filters.push(`Stock: ${display}`);
+    }
     if (validationFilter !== 'all') filters.push(`Validation: ${validationFilter}`);
     if (yliRoSkuFilter !== 'all') filters.push(`RO SKU: ${yliRoSkuFilter}`);
     if (yliHuSkuFilter !== 'all') filters.push(`HU SKU: ${yliHuSkuFilter}`);
