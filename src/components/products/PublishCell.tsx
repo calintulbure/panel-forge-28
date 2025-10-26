@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ExternalLink, X, Search } from "lucide-react";
+import { RefreshCw, ExternalLink, X, Search, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -313,6 +313,20 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
 
             {/* Action buttons overlay */}
             <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover/cell:opacity-100 transition-opacity">
+              {siteUrl && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(siteUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  title="Open page"
+                >
+                  <Link className="h-3 w-3" />
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="icon"

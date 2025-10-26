@@ -141,7 +141,7 @@ export function ProductsTable({
         <Table>
           <TableHeader className="sticky top-0 z-20 bg-background">
             <TableRow>
-              <TableHead className="w-[180px]">
+              <TableHead className="w-[400px]">
                 <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
                   Product Info
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -167,7 +167,7 @@ export function ProductsTable({
               </TableHead>
               <TableHead className="text-center">RO Publish</TableHead>
               <TableHead className="text-center">HU Publish</TableHead>
-              <TableHead className="text-center">
+              <TableHead className="text-center w-[80px]">
                 <Button variant="ghost" onClick={() => handleSort('validated')} className="h-8 px-2">
                   Validated
                   <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -187,7 +187,7 @@ export function ProductsTable({
                       {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline" onClick={e => e.stopPropagation()}>
                           {product.erp_product_code}
                         </a> : <div className="font-bold text-base">{product.erp_product_code}</div>}
-                      <div className="text-xs text-muted-foreground max-w-[180px] truncate">
+                      <div className="text-xs text-muted-foreground max-w-[380px] truncate">
                         {product.erp_product_description || "-"}
                       </div>
                       {product.ro_stock !== null && <div className="text-xs text-muted-foreground">
