@@ -214,9 +214,12 @@ export function ProductFilters({
                     onChange={(e) => setSearchInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.currentTarget.blur();
                         setSearch(searchInput);
                       }
                     }}
+                    onBlur={() => setSearch(searchInput)}
                     className="h-9 text-sm"
                   />
                 </div>
