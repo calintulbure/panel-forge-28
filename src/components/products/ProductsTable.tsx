@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -56,46 +56,9 @@ export function ProductsTable({
     key: null,
     direction: 'asc'
   });
-  const [headerTop, setHeaderTop] = useState(0);
-  const headerRef = useRef<HTMLTableSectionElement>(null);
   const {
     toast
   } = useToast();
-
-  // Calculate filter block height dynamically
-  useEffect(() => {
-    const calculateHeaderPosition = () => {
-      const filterElement = document.querySelector('[data-filter-block]');
-      if (filterElement) {
-        const rect = filterElement.getBoundingClientRect();
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const filterBottom = rect.bottom + scrollTop - scrollTop;
-        setHeaderTop(rect.height);
-      }
-    };
-
-    calculateHeaderPosition();
-    window.addEventListener('resize', calculateHeaderPosition);
-    window.addEventListener('scroll', calculateHeaderPosition);
-
-    // Use MutationObserver to detect filter collapse/expand
-    const filterElement = document.querySelector('[data-filter-block]');
-    if (filterElement) {
-      const observer = new MutationObserver(calculateHeaderPosition);
-      observer.observe(filterElement, { attributes: true, childList: true, subtree: true });
-      
-      return () => {
-        observer.disconnect();
-        window.removeEventListener('resize', calculateHeaderPosition);
-        window.removeEventListener('scroll', calculateHeaderPosition);
-      };
-    }
-
-    return () => {
-      window.removeEventListener('resize', calculateHeaderPosition);
-      window.removeEventListener('scroll', calculateHeaderPosition);
-    };
-  }, []);
   const sortedProducts = [...products].sort((a, b) => {
     if (!sortConfig.key) return 0;
     const aValue = a[sortConfig.key];
@@ -174,47 +137,43 @@ export function ProductsTable({
   };
   return <>
       {/* Desktop Table View */}
-      <div className="hidden md:block rounded-md border overflow-x-auto max-w-full">
-        <Table className="min-w-full">
-          <TableHeader 
-            ref={headerRef}
-            className="sticky z-20 bg-muted border-b"
-            style={{ top: `${headerTop}px` }}
-          >
+      <div className="hidden md:block rounded-md border overflow-visible">
+        <Table>
+          <TableHeader className="sticky top-[120px] z-20 bg-muted/30 border-b backdrop-blur-sm">
             <TableRow>
-              <TableHead className="w-[220px] min-w-[220px]">
+              <TableHead className="w-[300px]">
                 <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
                   Product Info
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[160px] min-w-[160px]">
+              <TableHead className="w-[180px]">
                 <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
                   Categories
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[120px] min-w-[120px]">
+              <TableHead>
                 <Button variant="ghost" onClick={() => handleSort('stare_stoc')} className="h-8 px-2">
                   Stock Status
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[140px] min-w-[140px]">
+              <TableHead>
                 <Button variant="ghost" onClick={() => handleSort('stare_oferta')} className="h-8 px-2">
                   Offer Status
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="text-center w-[120px] min-w-[120px]">RO Publish</TableHead>
-              <TableHead className="text-center w-[120px] min-w-[120px]">HU Publish</TableHead>
-              <TableHead className="text-center w-[100px] min-w-[100px]">
+              <TableHead className="text-center">RO Publish</TableHead>
+              <TableHead className="text-center">HU Publish</TableHead>
+              <TableHead className="text-center w-[80px]">
                 <Button variant="ghost" onClick={() => handleSort('validated')} className="h-8 px-2">
                   Validated
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              {isAdmin && <TableHead className="w-[50px] min-w-[50px]"></TableHead>}
+              {isAdmin && <TableHead className="w-[50px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -225,10 +184,10 @@ export function ProductsTable({
               </TableRow> : sortedProducts.map(product => <TableRow key={product.erp_product_code} className="cursor-pointer hover:bg-muted/50 group">
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
-                      {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-sm hover:underline" onClick={e => e.stopPropagation()}>
+                      {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline" onClick={e => e.stopPropagation()}>
                           {product.erp_product_code}
-                        </a> : <div className="font-bold text-sm">{product.erp_product_code}</div>}
-                      <div className="text-xs text-muted-foreground truncate">
+                        </a> : <div className="font-bold text-base">{product.erp_product_code}</div>}
+                      <div className="text-xs text-muted-foreground max-w-[290px] truncate">
                         {product.erp_product_description || "-"}
                       </div>
                       {product.ro_stock !== null && <div className="text-xs text-muted-foreground">
@@ -238,9 +197,9 @@ export function ProductsTable({
                   </TableCell>
                   <TableCell className="text-xs" onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-0.5">
-                      <div className="truncate">{product.categ1 || "-"}</div>
-                      <div className="truncate text-muted-foreground">{product.categ2 || "-"}</div>
-                      <div className="truncate text-muted-foreground">{product.categ3 || "-"}</div>
+                      <div className="truncate max-w-[180px]">{product.categ1 || "-"}</div>
+                      <div className="truncate max-w-[180px] text-muted-foreground">{product.categ2 || "-"}</div>
+                      <div className="truncate max-w-[180px] text-muted-foreground">{product.categ3 || "-"}</div>
                     </div>
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
