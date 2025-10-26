@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,17 +40,19 @@ export function AppSidebar() {
       className={collapsed ? "w-14" : "w-60"}
       collapsible="icon"
     >
-      <SidebarContent>
-        <div className="p-4">
-          <div className="flex items-center gap-2">
+      <div className="p-2 border-b border-sidebar-border flex items-center justify-between">
+        <SidebarTrigger className="h-11 w-11 md:h-10 md:w-10" />
+        {!collapsed && (
+          <div className="flex items-center gap-2 ml-2">
             <Package className="h-6 w-6 text-sidebar-primary" />
-            {!collapsed && (
-              <span className="text-lg font-bold text-sidebar-foreground">
-                Admin Panel
-              </span>
-            )}
+            <span className="text-lg font-bold text-sidebar-foreground">
+              Admin Panel
+            </span>
           </div>
-        </div>
+        )}
+      </div>
+      
+      <SidebarContent>
 
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>

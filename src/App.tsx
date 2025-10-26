@@ -34,14 +34,9 @@ const App = () => (
                   <SidebarProvider defaultOpen={false}>
                     <div className="flex min-h-screen w-full">
                       <AppSidebar />
-                      <div className="flex-1 flex flex-col">
-                        <header className="h-14 md:h-14 border-b flex items-center px-3 md:px-4 bg-background sticky top-0 z-10">
-                          <SidebarTrigger className="h-11 w-11 md:h-10 md:w-10" />
-                        </header>
-                        <main className="flex-1">
-                          <Products />
-                        </main>
-                      </div>
+                      <main className="flex-1">
+                        <Products />
+                      </main>
                     </div>
                     <ChatWidget />
                   </SidebarProvider>
@@ -55,14 +50,9 @@ const App = () => (
                   <SidebarProvider defaultOpen={false}>
                     <div className="flex min-h-screen w-full">
                       <AppSidebar />
-                      <div className="flex-1 flex flex-col">
-                        <header className="h-14 md:h-14 border-b flex items-center px-3 md:px-4 bg-background sticky top-0 z-10">
-                          <SidebarTrigger className="h-11 w-11 md:h-10 md:w-10" />
-                        </header>
-                        <main className="flex-1">
-                          <DatabaseManager />
-                        </main>
-                      </div>
+                      <main className="flex-1">
+                        <DatabaseManager />
+                      </main>
                     </div>
                     <ChatWidget />
                   </SidebarProvider>
@@ -76,14 +66,9 @@ const App = () => (
                   <SidebarProvider defaultOpen={false}>
                     <div className="flex min-h-screen w-full">
                       <AppSidebar />
-                      <div className="flex-1 flex flex-col">
-                        <header className="h-14 md:h-14 border-b flex items-center px-3 md:px-4 bg-background sticky top-0 z-10">
-                          <SidebarTrigger className="h-11 w-11 md:h-10 md:w-10" />
-                        </header>
-                        <main className="flex-1">
-                          <UserManagement />
-                        </main>
-                      </div>
+                      <main className="flex-1">
+                        <UserManagement />
+                      </main>
                     </div>
                     <ChatWidget />
                   </SidebarProvider>
