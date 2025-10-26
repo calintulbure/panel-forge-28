@@ -46,9 +46,11 @@ export const ProductUpsertItem = z.object({
   // never updated on conflict, only used on insert
   articol_id: z.number().int().nullable().optional(),
   erp_product_code: z.string().min(1).max(128),
+  producator: z.string().nullable().optional(),
   erp_product_description: z.string().nullable().optional(),
   stare_oferta: z.string().nullable().optional(),
   stare_stoc: z.string().nullable().optional(),
+  stare_oferta_secundara: z.string().nullable().optional(),
   senior_erp_link: z.string().nullable().optional(),
   site_ro_product_id: z.number().int().nullable().optional(),
   site_hu_product_id: z.number().int().nullable().optional(),
