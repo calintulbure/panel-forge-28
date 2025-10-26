@@ -75,18 +75,10 @@ export function ProductFilters({
   onClearFilters,
   onRefresh,
 }: ProductFiltersProps) {
-  const [isOpen, setIsOpen] = useState(true);
-
-  // Auto-collapse on mobile devices
-  useEffect(() => {
-    const handleResize = () => {
-      setIsOpen(window.innerWidth >= 768);
-    };
-    
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [isOpen, setIsOpen] = useState(() => {
+    // Set initial state based on screen size
+    return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
+  });
 
   return (
     <div className="sticky top-0 z-10 bg-background pb-4">

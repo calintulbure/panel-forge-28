@@ -50,7 +50,11 @@ export function MultiSelect({ options, value, onChange, placeholder = "Select...
       backgroundColor: 'hsl(var(--popover))',
       border: '1px solid hsl(var(--border))',
       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-      zIndex: 50,
+      zIndex: 9999,
+    }),
+    menuPortal: (base) => ({
+      ...base,
+      zIndex: 9999,
     }),
     menuList: (base) => ({
       ...base,
@@ -126,6 +130,8 @@ export function MultiSelect({ options, value, onChange, placeholder = "Select...
       classNamePrefix="react-select"
       isClearable
       closeMenuOnSelect={false}
+      menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+      menuPosition="fixed"
     />
   );
 }
