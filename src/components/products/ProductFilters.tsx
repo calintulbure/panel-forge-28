@@ -39,6 +39,10 @@ interface ProductFiltersProps {
   setYliRoSkuFilter: (value: string) => void;
   yliHuSkuFilter: string;
   setYliHuSkuFilter: (value: string) => void;
+  yliRoProdIdFilter: string;
+  setYliRoProdIdFilter: (value: string) => void;
+  yliHuProdIdFilter: string;
+  setYliHuProdIdFilter: (value: string) => void;
   categories: {
     categ1: string[];
     categ2: string[];
@@ -75,6 +79,10 @@ export function ProductFilters({
   setYliRoSkuFilter,
   yliHuSkuFilter,
   setYliHuSkuFilter,
+  yliRoProdIdFilter,
+  setYliRoProdIdFilter,
+  yliHuProdIdFilter,
+  setYliHuProdIdFilter,
   categories,
   availableCateg2,
   availableCateg3,
@@ -145,6 +153,8 @@ export function ProductFilters({
     if (validationFilter !== 'all') filters.push(`Validation: ${validationFilter}`);
     if (yliRoSkuFilter !== 'all') filters.push(`RO SKU: ${yliRoSkuFilter}`);
     if (yliHuSkuFilter !== 'all') filters.push(`HU SKU: ${yliHuSkuFilter}`);
+    if (yliRoProdIdFilter !== 'all') filters.push(`YLIRO PROD ID: ${yliRoProdIdFilter}`);
+    if (yliHuProdIdFilter !== 'all') filters.push(`YLIHU PROD ID: ${yliHuProdIdFilter}`);
     return filters;
   };
 
@@ -316,6 +326,34 @@ export function ProductFilters({
                   <Label htmlFor="yliHuSkuFilter" className="text-xs">HU SKU</Label>
                   <Select value={yliHuSkuFilter} onValueChange={setYliHuSkuFilter}>
                     <SelectTrigger id="yliHuSkuFilter" className="h-9 text-sm">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="blank">Blank</SelectItem>
+                      <SelectItem value="not_blank">Not blank</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="yliRoProdIdFilter" className="text-xs">YLIRO PROD ID</Label>
+                  <Select value={yliRoProdIdFilter} onValueChange={setYliRoProdIdFilter}>
+                    <SelectTrigger id="yliRoProdIdFilter" className="h-9 text-sm">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="blank">Blank</SelectItem>
+                      <SelectItem value="not_blank">Not blank</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="yliHuProdIdFilter" className="text-xs">YLIHU PROD ID</Label>
+                  <Select value={yliHuProdIdFilter} onValueChange={setYliHuProdIdFilter}>
+                    <SelectTrigger id="yliHuProdIdFilter" className="h-9 text-sm">
                       <SelectValue placeholder="All" />
                     </SelectTrigger>
                     <SelectContent>

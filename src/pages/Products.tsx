@@ -47,6 +47,12 @@ export default function Products() {
   const [yliHuSkuFilter, setYliHuSkuFilter] = useState(
     searchParams.get("huSku") || "all"
   );
+  const [yliRoProdIdFilter, setYliRoProdIdFilter] = useState(
+    searchParams.get("roProdId") || "all"
+  );
+  const [yliHuProdIdFilter, setYliHuProdIdFilter] = useState(
+    searchParams.get("huProdId") || "all"
+  );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
@@ -64,9 +70,11 @@ export default function Products() {
     if (validationFilter !== "all") params.set("validation", validationFilter);
     if (yliRoSkuFilter !== "all") params.set("roSku", yliRoSkuFilter);
     if (yliHuSkuFilter !== "all") params.set("huSku", yliHuSkuFilter);
+    if (yliRoProdIdFilter !== "all") params.set("roProdId", yliRoProdIdFilter);
+    if (yliHuProdIdFilter !== "all") params.set("huProdId", yliHuProdIdFilter);
     
     setSearchParams(params, { replace: true });
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
+  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter]);
 
   // Fetch filter options (categories and statuses)
   const { data: filterOptions } = useQuery({
@@ -160,7 +168,7 @@ export default function Products() {
 
   // Fetch total count with filters
   const { data: totalCount } = useQuery({
-    queryKey: ["products-count", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
+    queryKey: ["products-count", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter],
     queryFn: async () => {
       let query = supabase
         .from("products")
@@ -203,6 +211,16 @@ export default function Products() {
       } else if (yliHuSkuFilter === "not_blank") {
         query = query.not("ylihu_sku", "is", null);
       }
+      if (yliRoProdIdFilter === "blank") {
+        query = query.is("site_ro_product_id", null);
+      } else if (yliRoProdIdFilter === "not_blank") {
+        query = query.not("site_ro_product_id", "is", null);
+      }
+      if (yliHuProdIdFilter === "blank") {
+        query = query.is("site_hu_product_id", null);
+      } else if (yliHuProdIdFilter === "not_blank") {
+        query = query.not("site_hu_product_id", "is", null);
+      }
 
       const { count, error } = await query;
       if (error) throw error;
@@ -212,7 +230,7 @@ export default function Products() {
 
   // Fetch paginated products with filters
   const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
+    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter],
     queryFn: async () => {
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
@@ -259,6 +277,16 @@ export default function Products() {
         query = query.is("ylihu_sku", null);
       } else if (yliHuSkuFilter === "not_blank") {
         query = query.not("ylihu_sku", "is", null);
+      }
+      if (yliRoProdIdFilter === "blank") {
+        query = query.is("site_ro_product_id", null);
+      } else if (yliRoProdIdFilter === "not_blank") {
+        query = query.not("site_ro_product_id", "is", null);
+      }
+      if (yliHuProdIdFilter === "blank") {
+        query = query.is("site_hu_product_id", null);
+      } else if (yliHuProdIdFilter === "not_blank") {
+        query = query.not("site_hu_product_id", "is", null);
       }
 
       const { data, error } = await query;
@@ -386,7 +414,7 @@ export default function Products() {
   // Reset to page 1 when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
+  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter]);
 
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(Number(value));
@@ -404,6 +432,8 @@ export default function Products() {
     setValidationFilter("all");
     setYliRoSkuFilter("all");
     setYliHuSkuFilter("all");
+    setYliRoProdIdFilter("all");
+    setYliHuProdIdFilter("all");
     setSearchParams(new URLSearchParams(), { replace: true });
   };
 
@@ -445,6 +475,10 @@ export default function Products() {
         setYliRoSkuFilter={setYliRoSkuFilter}
         yliHuSkuFilter={yliHuSkuFilter}
         setYliHuSkuFilter={setYliHuSkuFilter}
+        yliRoProdIdFilter={yliRoProdIdFilter}
+        setYliRoProdIdFilter={setYliRoProdIdFilter}
+        yliHuProdIdFilter={yliHuProdIdFilter}
+        setYliHuProdIdFilter={setYliHuProdIdFilter}
         categories={categories}
         availableCateg2={availableCateg2}
         availableCateg3={availableCateg3}
