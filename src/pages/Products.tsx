@@ -84,14 +84,30 @@ export default function Products() {
       const offerSet = new Set<string>();
       const offerSecondarySet = new Set<string>();
       const stockSet = new Set<string>();
+      const offerRelationMap = new Map<string, Set<string>>();
 
       data?.forEach((p) => {
         if (p.categ1) categ1Set.add(p.categ1);
         if (p.categ2) categ2Set.add(p.categ2);
         if (p.categ3) categ3Set.add(p.categ3);
-        if (p.stare_oferta) offerSet.add(p.stare_oferta);
+        if (p.stare_oferta) {
+          offerSet.add(p.stare_oferta);
+          // Build relationship map
+          if (!offerRelationMap.has(p.stare_oferta)) {
+            offerRelationMap.set(p.stare_oferta, new Set<string>());
+          }
+          if (p.stare_oferta_secundara) {
+            offerRelationMap.get(p.stare_oferta)!.add(p.stare_oferta_secundara);
+          }
+        }
         if (p.stare_oferta_secundara) offerSecondarySet.add(p.stare_oferta_secundara);
         if (p.stare_stoc) stockSet.add(p.stare_stoc);
+      });
+
+      // Convert map to object with sorted arrays
+      const offerRelations: Record<string, string[]> = {};
+      offerRelationMap.forEach((secondaries, primary) => {
+        offerRelations[primary] = Array.from(secondaries).sort();
       });
 
       return {
@@ -101,6 +117,7 @@ export default function Products() {
         offerStatuses: Array.from(offerSet).sort(),
         offerStatusesSecondary: Array.from(offerSecondarySet).sort(),
         stockStatuses: Array.from(stockSet).sort(),
+        offerRelations,
       };
     },
     staleTime: 60000, // Cache for 1 minute
@@ -217,12 +234,41 @@ export default function Products() {
   });
 
   const categories = useMemo(() => {
-    return filterOptions || { categ1: [], categ2: [], categ3: [], offerStatuses: [], offerStatusesSecondary: [], stockStatuses: [] };
+    return filterOptions || { categ1: [], categ2: [], categ3: [], offerStatuses: [], offerStatusesSecondary: [], stockStatuses: [], offerRelations: {} };
   }, [filterOptions]);
 
   // Use all categories for filters (no dynamic filtering for simplicity)
   const availableCateg2 = categories.categ2;
   const availableCateg3 = categories.categ3;
+
+  // Filter secondary offer statuses based on selected primary offer status
+  const availableOfferStatusSecondary = useMemo(() => {
+    if (offerStatus.length === 0) {
+      // No primary status selected, show all secondary statuses
+      return categories.offerStatusesSecondary;
+    }
+    
+    // Collect all secondary statuses for selected primary statuses
+    const secondarySet = new Set<string>();
+    offerStatus.forEach(primary => {
+      const secondaries = categories.offerRelations[primary] || [];
+      secondaries.forEach(sec => secondarySet.add(sec));
+    });
+    
+    return Array.from(secondarySet).sort();
+  }, [offerStatus, categories.offerStatusesSecondary, categories.offerRelations]);
+
+  // Clear invalid secondary offer statuses when primary offer status changes
+  useEffect(() => {
+    if (offerStatusSecondary.length > 0 && availableOfferStatusSecondary.length > 0) {
+      const validSecondaries = offerStatusSecondary.filter(sec => 
+        availableOfferStatusSecondary.includes(sec)
+      );
+      if (validSecondaries.length !== offerStatusSecondary.length) {
+        setOfferStatusSecondary(validSecondaries);
+      }
+    }
+  }, [availableOfferStatusSecondary]);
 
   // Pagination calculations
   const filteredCount = totalCount || 0;
@@ -295,6 +341,7 @@ export default function Products() {
         categories={categories}
         availableCateg2={availableCateg2}
         availableCateg3={availableCateg3}
+        availableOfferStatusSecondary={availableOfferStatusSecondary}
         onClearFilters={handleClearFilters}
         onRefresh={() => refetch()}
       />

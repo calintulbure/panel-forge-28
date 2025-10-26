@@ -49,6 +49,7 @@ interface ProductFiltersProps {
   };
   availableCateg2: string[];
   availableCateg3: string[];
+  availableOfferStatusSecondary: string[];
   onClearFilters: () => void;
   onRefresh: () => void;
 }
@@ -77,6 +78,7 @@ export function ProductFilters({
   categories,
   availableCateg2,
   availableCateg3,
+  availableOfferStatusSecondary,
   onClearFilters,
   onRefresh,
 }: ProductFiltersProps) {
@@ -244,7 +246,7 @@ export function ProductFilters({
                 <div className="space-y-0.5 md:space-y-1">
                   <Label htmlFor="offerStatusSecondary" className="text-xs">Offer Status 2</Label>
                   <MultiSelect
-                    options={categories.offerStatusesSecondary.map(status => ({ value: status, label: status }))}
+                    options={availableOfferStatusSecondary.map(status => ({ value: status, label: status }))}
                     value={offerStatusSecondary}
                     onChange={setOfferStatusSecondary}
                     placeholder="All statuses"
