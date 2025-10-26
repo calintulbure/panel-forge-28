@@ -3,7 +3,7 @@ import { ArrowUpDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { Check, X, Trash2, CheckCircle2, XCircle, Copy } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { PublishCell } from "./PublishCell";
 import { useToast } from "@/hooks/use-toast";
@@ -184,9 +184,23 @@ export function ProductsTable({
               </TableRow> : sortedProducts.map(product => <TableRow key={product.erp_product_code} className="cursor-pointer hover:bg-muted/50 group">
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
-                      {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline block truncate" onClick={e => e.stopPropagation()}>
-                          {product.erp_product_code}
-                        </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
+                      <div className="flex items-center gap-1">
+                        {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline truncate" onClick={e => e.stopPropagation()}>
+                            {product.erp_product_code}
+                          </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(product.erp_product_code);
+                            toast({ description: "Code copied to clipboard" });
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
                       <div className="text-xs text-muted-foreground truncate">
                         {product.erp_product_description || "-"}
                       </div>
@@ -243,9 +257,23 @@ export function ProductsTable({
           </div> : sortedProducts.map(product => <div key={product.erp_product_code} className="border rounded-lg p-4 space-y-3 bg-card" onClick={() => setSelectedProduct(product)}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline block truncate" onClick={e => e.stopPropagation()}>
-                      {product.erp_product_code}
-                    </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
+                  <div className="flex items-center gap-1">
+                    {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline truncate" onClick={e => e.stopPropagation()}>
+                        {product.erp_product_code}
+                      </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 flex-shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(product.erp_product_code);
+                        toast({ description: "Code copied to clipboard" });
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
                   <div className="text-xs text-muted-foreground line-clamp-2">
                     {product.erp_product_description || "-"}
                   </div>

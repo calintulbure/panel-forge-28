@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, Save, Check, Lock, ExternalLink, CheckCircle2, Trash2 } from "lucide-react";
+import { RefreshCw, Save, Check, Lock, ExternalLink, CheckCircle2, Trash2, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -260,18 +260,31 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
               <div className="pr-32">
                 <div className="space-y-3">
                   {/* ERP Code - 50% larger with link styling */}
-                  {currentProduct.senior_erp_link ? (
-                    <a 
-                      href={currentProduct.senior_erp_link} 
-                      className="font-bold text-3xl hover:underline hover:text-primary block transition-colors"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  <div className="flex items-center gap-2">
+                    {currentProduct.senior_erp_link ? (
+                      <a 
+                        href={currentProduct.senior_erp_link} 
+                        className="font-bold text-3xl hover:underline hover:text-primary transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {currentProduct.erp_product_code || "-"}
+                      </a>
+                    ) : (
+                      <p className="font-bold text-3xl text-foreground">{currentProduct.erp_product_code || "-"}</p>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentProduct.erp_product_code);
+                        toast.success("Code copied to clipboard");
+                      }}
                     >
-                      {currentProduct.erp_product_code || "-"}
-                    </a>
-                  ) : (
-                    <p className="font-bold text-3xl text-foreground">{currentProduct.erp_product_code || "-"}</p>
-                  )}
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                   
                   {/* Description */}
                   <p className="text-base text-muted-foreground leading-relaxed">
