@@ -139,7 +139,7 @@ export function ProductsTable({
       {/* Desktop Table View */}
       <div className="hidden md:block rounded-md border overflow-visible">
         <Table>
-          <TableHeader className="sticky top-0 z-20 bg-background">
+          <TableHeader className="sticky top-[120px] z-20 bg-background border-b">
             <TableRow>
               <TableHead className="w-[400px]">
                 <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
