@@ -80,10 +80,18 @@ export function ProductFilters({
   onClearFilters,
   onRefresh,
 }: ProductFiltersProps) {
+  const [searchInput, setSearchInput] = useState(search);
   const [isOpen, setIsOpen] = useState(() => {
     // Set initial state based on screen size
     return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
   });
+
+  // Sync local input with prop when cleared externally
+  useEffect(() => {
+    if (search === '') {
+      setSearchInput('');
+    }
+  }, [search]);
 
   // Auto-collapse on scroll down
   useEffect(() => {
@@ -178,12 +186,17 @@ export function ProductFilters({
             <CardContent className="pt-3 pb-3 md:pt-4 md:pb-4">
               <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 <div className="space-y-0.5 md:space-y-1 sm:col-span-2">
-                  <Label htmlFor="search" className="text-xs">Search</Label>
+                  <Label htmlFor="search" className="text-xs">Search (press Enter)</Label>
                   <Input
                     id="search"
                     placeholder="ERP code or description..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setSearch(searchInput);
+                      }
+                    }}
                     className="h-9 text-sm"
                   />
                 </div>
