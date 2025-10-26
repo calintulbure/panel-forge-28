@@ -10,6 +10,7 @@ const CONFLICT_KEY = "articol_id";
 
 // Fields that are allowed to be UPDATED on existing rows (user-specified)
 const ALLOWED_UPDATE_FIELDS = new Set([
+  "articol_id",
   "erp_product_code",
   "producator",
   "erp_product_description",
