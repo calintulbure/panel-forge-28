@@ -32,9 +32,6 @@ export default function Products() {
   const [offerStatus, setOfferStatus] = useState<string[]>(
     searchParams.get("offer")?.split(",").filter(Boolean) || []
   );
-  const [offerStatusSecondary, setOfferStatusSecondary] = useState<string[]>(
-    searchParams.get("offer2")?.split(",").filter(Boolean) || []
-  );
   const [stockStatus, setStockStatus] = useState<string[]>(
     searchParams.get("stock")?.split(",").filter(Boolean) || []
   );
@@ -59,14 +56,13 @@ export default function Products() {
     if (category2.length > 0) params.set("cat2", category2.join(","));
     if (category3.length > 0) params.set("cat3", category3.join(","));
     if (offerStatus.length > 0) params.set("offer", offerStatus.join(","));
-    if (offerStatusSecondary.length > 0) params.set("offer2", offerStatusSecondary.join(","));
     if (stockStatus.length > 0) params.set("stock", stockStatus.join(","));
     if (validationFilter !== "all") params.set("validation", validationFilter);
     if (yliRoSkuFilter !== "all") params.set("roSku", yliRoSkuFilter);
     if (yliHuSkuFilter !== "all") params.set("huSku", yliHuSkuFilter);
     
     setSearchParams(params, { replace: true });
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
+  }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
 
   // Fetch filter options (categories and statuses)
   const { data: filterOptions } = useQuery({
@@ -74,7 +70,7 @@ export default function Products() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("categ1,categ2,categ3,stare_oferta,stare_oferta_secundara,stare_stoc");
+        .select("categ1,categ2,categ3,stare_oferta,stare_stoc");
 
       if (error) throw error;
 
@@ -82,7 +78,6 @@ export default function Products() {
       const categ2Set = new Set<string>();
       const categ3Set = new Set<string>();
       const offerSet = new Set<string>();
-      const offerSecondarySet = new Set<string>();
       const stockSet = new Set<string>();
 
       data?.forEach((p) => {
@@ -90,7 +85,6 @@ export default function Products() {
         if (p.categ2) categ2Set.add(p.categ2);
         if (p.categ3) categ3Set.add(p.categ3);
         if (p.stare_oferta) offerSet.add(p.stare_oferta);
-        if (p.stare_oferta_secundara) offerSecondarySet.add(p.stare_oferta_secundara);
         if (p.stare_stoc) stockSet.add(p.stare_stoc);
       });
 
@@ -99,7 +93,6 @@ export default function Products() {
         categ2: Array.from(categ2Set).sort(),
         categ3: Array.from(categ3Set).sort(),
         offerStatuses: Array.from(offerSet).sort(),
-        offerStatusesSecondary: Array.from(offerSecondarySet).sort(),
         stockStatuses: Array.from(stockSet).sort(),
       };
     },
@@ -108,7 +101,7 @@ export default function Products() {
 
   // Fetch total count with filters
   const { data: totalCount } = useQuery({
-    queryKey: ["products-count", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
+    queryKey: ["products-count", search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
     queryFn: async () => {
       let query = supabase
         .from("products")
@@ -129,9 +122,6 @@ export default function Products() {
       }
       if (offerStatus.length > 0) {
         query = query.in("stare_oferta", offerStatus);
-      }
-      if (offerStatusSecondary.length > 0) {
-        query = query.in("stare_oferta_secundara", offerStatusSecondary);
       }
       if (stockStatus.length > 0) {
         query = query.in("stare_stoc", stockStatus);
@@ -160,7 +150,7 @@ export default function Products() {
 
   // Fetch paginated products with filters
   const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
+    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter],
     queryFn: async () => {
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
@@ -186,9 +176,6 @@ export default function Products() {
       }
       if (offerStatus.length > 0) {
         query = query.in("stare_oferta", offerStatus);
-      }
-      if (offerStatusSecondary.length > 0) {
-        query = query.in("stare_oferta_secundara", offerStatusSecondary);
       }
       if (stockStatus.length > 0) {
         query = query.in("stare_stoc", stockStatus);
@@ -217,7 +204,7 @@ export default function Products() {
   });
 
   const categories = useMemo(() => {
-    return filterOptions || { categ1: [], categ2: [], categ3: [], offerStatuses: [], offerStatusesSecondary: [], stockStatuses: [] };
+    return filterOptions || { categ1: [], categ2: [], categ3: [], offerStatuses: [], stockStatuses: [] };
   }, [filterOptions]);
 
   // Use all categories for filters (no dynamic filtering for simplicity)
@@ -233,7 +220,7 @@ export default function Products() {
   // Reset to page 1 when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
+  }, [search, category1, category2, category3, offerStatus, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter]);
 
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(Number(value));
@@ -246,7 +233,6 @@ export default function Products() {
     setCategory2([]);
     setCategory3([]);
     setOfferStatus([]);
-    setOfferStatusSecondary([]);
     setStockStatus([]);
     setValidationFilter("all");
     setYliRoSkuFilter("all");
@@ -282,8 +268,6 @@ export default function Products() {
         setCategory3={setCategory3}
         offerStatus={offerStatus}
         setOfferStatus={setOfferStatus}
-        offerStatusSecondary={offerStatusSecondary}
-        setOfferStatusSecondary={setOfferStatusSecondary}
         stockStatus={stockStatus}
         setStockStatus={setStockStatus}
         validationFilter={validationFilter}
