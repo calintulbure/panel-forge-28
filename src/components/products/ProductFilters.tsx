@@ -80,16 +80,64 @@ export function ProductFilters({
     return typeof window !== 'undefined' ? window.innerWidth >= 768 : true;
   });
 
+  // Auto-collapse on scroll down
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // If scrolling down and past a threshold, collapse
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsOpen(false);
+      }
+      
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Calculate active filters count and labels
+  const getActiveFilters = () => {
+    const filters = [];
+    if (search) filters.push(`Search: ${search}`);
+    if (category1.length > 0) filters.push(`Cat1: ${category1.length}`);
+    if (category2.length > 0) filters.push(`Cat2: ${category2.length}`);
+    if (category3.length > 0) filters.push(`Cat3: ${category3.length}`);
+    if (offerStatus.length > 0) filters.push(`Offer: ${offerStatus.length}`);
+    if (stockStatus.length > 0) filters.push(`Stock: ${stockStatus.length}`);
+    if (validationFilter !== 'all') filters.push(`Validation: ${validationFilter}`);
+    if (yliRoSkuFilter !== 'all') filters.push(`RO SKU: ${yliRoSkuFilter}`);
+    if (yliHuSkuFilter !== 'all') filters.push(`HU SKU: ${yliHuSkuFilter}`);
+    return filters;
+  };
+
+  const activeFilters = getActiveFilters();
+
   return (
     <div className="sticky top-0 z-10 bg-background pb-4">
       <Card>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <div className="flex items-center justify-between pt-3 px-4">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">Filters</span>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Filter className="h-4 w-4 flex-shrink-0" />
+              <span className="text-sm font-medium flex-shrink-0">Filters</span>
+              {!isOpen && activeFilters.length > 0 && (
+                <div className="flex items-center gap-1 ml-2 overflow-x-auto flex-1 min-w-0">
+                  <span className="text-xs text-muted-foreground flex-shrink-0">({activeFilters.length})</span>
+                  <div className="flex gap-1 flex-wrap">
+                    {activeFilters.map((filter, idx) => (
+                      <span key={idx} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded whitespace-nowrap">
+                        {filter}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-shrink-0">
               <Button 
                 variant="ghost" 
                 size="sm" 
