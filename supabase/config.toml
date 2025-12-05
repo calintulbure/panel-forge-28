@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.bulk-upsert-products]
 verify_jwt = false
+
+[functions.export-products]
+verify_jwt = false
