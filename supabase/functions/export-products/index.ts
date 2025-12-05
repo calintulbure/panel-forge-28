@@ -19,39 +19,36 @@ serve(async (req) => {
     const limit = Math.min(parseInt(url.searchParams.get("limit") || String(PAGE_SIZE)), PAGE_SIZE);
     const offset = (page - 1) * limit;
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     console.log(`Fetching products page ${page}, limit ${limit}, offset ${offset}`);
 
     // Get total count
-    const { count, error: countError } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true });
+    const { count, error: countError } = await supabase.from("products").select("*", { count: "exact", head: true });
 
     if (countError) {
       console.error("Error counting products:", countError);
-      return new Response(
-        JSON.stringify({ error: "Failed to count products", details: countError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Failed to count products", details: countError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Fetch paginated data
     const { data, error } = await supabase
       .from("products")
-      .select("*")
+      .select(
+        "erp_product_code, articol_id, producator, erp_product_description, categ1, categ2, categ3, stare_oferta, stare_stoc, senior_erp_link, site_ro_product_id, site_ro_url, site_ro_snapshot_url, yliro_sku, yliro_descriere, ro_stock, ro_stoc_detailed, site_hu_product_id , site_hu_url , site_hu_snapshot_url , ylihu_sku , ylihu_descriere , hu_stock , hu_stock_detailed, validated",
+      )
       .order("erp_product_code", { ascending: true })
       .range(offset, offset + limit - 1);
 
     if (error) {
       console.error("Error fetching products:", error);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch products", details: error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Failed to fetch products", details: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const totalPages = Math.ceil((count || 0) / limit);
@@ -74,14 +71,14 @@ serve(async (req) => {
           ...corsHeaders,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   } catch (err) {
     console.error("Export error:", err);
     const msg = err instanceof Error ? err.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: "Internal server error", details: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Internal server error", details: msg }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
