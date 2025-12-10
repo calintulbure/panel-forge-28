@@ -38,7 +38,7 @@ serve(async (req) => {
     const { data, error } = await supabase
       .from("products")
       .select(
-        "erp_product_code, articol_id, producator, erp_product_description, categ1, categ2, categ3, stare_oferta, stare_stoc, senior_erp_link, site_ro_product_id, site_ro_url, site_ro_snapshot_url, yliro_sku, yliro_descriere, ro_stock, ro_stoc_detailed, site_hu_product_id , site_hu_url , site_hu_snapshot_url , ylihu_sku , ylihu_descriere , hu_stock , hu_stock_detailed, validated",
+        "erp_product_code, articol_id, producator, erp_product_description, erp_product_description_detailed, categ1, categ2, categ3, stare_oferta, stare_stoc, senior_erp_link, site_ro_product_id, site_ro_url, site_ro_snapshot_url, yliro_sku, yliro_descriere, ro_stock, ro_stoc_detailed, site_hu_product_id , site_hu_url , site_hu_snapshot_url , ylihu_sku , ylihu_descriere , hu_stock , hu_stock_detailed, validated",
       )
       .order("erp_product_code", { ascending: true })
       .range(offset, offset + limit - 1);
