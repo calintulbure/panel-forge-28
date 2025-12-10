@@ -35,7 +35,8 @@ const BATCH_UPSERT = 300;
 
 serve(async (req) => {
   try {
-    console.log("Bulk upsert request received");
+    console.log("Bulk upsert request received - v2025-12-10");
+    console.log("ALLOWED_UPDATE_FIELDS:", Array.from(ALLOWED_UPDATE_FIELDS));
     const body = await req.json().catch(() => ({}));
     console.log(`Payload size: ${Array.isArray(body?.payload) ? body.payload.length : 0} items`);
     const parsed = BulkUpsertRequest.safeParse(body);
