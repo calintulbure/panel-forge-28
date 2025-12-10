@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN erp_product_description_detailed text;
