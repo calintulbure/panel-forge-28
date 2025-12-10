@@ -48,6 +48,7 @@ export const ProductUpsertItem = z.object({
   erp_product_code: z.string().min(1).max(128),
   producator: z.string().nullable().optional(),
   erp_product_description: z.string().nullable().optional(),
+  erp_product_description_detailed: z.string().nullable().optional(),
   stare_oferta: z.string().nullable().optional(),
   stare_stoc: z.string().nullable().optional(),
   stare_oferta_secundara: z.string().nullable().optional(),
