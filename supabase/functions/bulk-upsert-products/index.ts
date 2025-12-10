@@ -105,14 +105,12 @@ serve(async (req) => {
             upd[f] = row[f];
           }
         }
-        // Log if stare_oferta_secundara is in the update
+        // Log first update details
         if (updates.length === 0) {
+          console.log("First row keys:", Object.keys(row));
+          console.log("erp_product_description_detailed in row?", Object.prototype.hasOwnProperty.call(row, "erp_product_description_detailed"));
+          console.log("erp_product_description_detailed value:", row.erp_product_description_detailed);
           console.log("First update object fields:", Object.keys(upd));
-          console.log(
-            "stare_oferta_secundara in update?",
-            Object.prototype.hasOwnProperty.call(upd, "stare_oferta_secundara"),
-          );
-          console.log("stare_oferta_secundara value:", upd.stare_oferta_secundara);
         }
         // Only push if there's at least one allowed field to update (besides key)
         if (Object.keys(upd).length > 1) updates.push(upd);
