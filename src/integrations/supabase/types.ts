@@ -102,6 +102,7 @@ export type Database = {
           created_at: string | null
           erp_product_code: string
           erp_product_description: string | null
+          erp_product_description_detailed: string | null
           hu_stock: number | null
           hu_stock_detailed: string | null
           producator: string | null
@@ -135,6 +136,7 @@ export type Database = {
           created_at?: string | null
           erp_product_code: string
           erp_product_description?: string | null
+          erp_product_description_detailed?: string | null
           hu_stock?: number | null
           hu_stock_detailed?: string | null
           producator?: string | null
@@ -168,6 +170,7 @@ export type Database = {
           created_at?: string | null
           erp_product_code?: string
           erp_product_description?: string | null
+          erp_product_description_detailed?: string | null
           hu_stock?: number | null
           hu_stock_detailed?: string | null
           producator?: string | null
