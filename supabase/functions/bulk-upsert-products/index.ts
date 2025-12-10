@@ -14,6 +14,7 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   "erp_product_code",
   "producator",
   "erp_product_description",
+  "erp_product_description_detailed",
   "categ1",
   "categ2",
   "categ3",
@@ -33,7 +34,7 @@ const BATCH_UPSERT = 300;
 
 serve(async (req) => {
   try {
-    console.log('Bulk upsert request received');
+    console.log("Bulk upsert request received");
     const body = await req.json().catch(() => ({}));
     console.log(`Payload size: ${Array.isArray(body?.payload) ? body.payload.length : 0} items`);
     const parsed = BulkUpsertRequest.safeParse(body);
@@ -52,7 +53,7 @@ serve(async (req) => {
     // Normalize and validate presence of conflict key in payload items
     const rows = payload.map((r: any) => {
       const row = typeof r === "object" && r ? r : {};
-      
+
       // Apply cascading logic for hierarchical fields
       // If parent is null, set children to null
       if (!row.categ1) {
@@ -61,11 +62,11 @@ serve(async (req) => {
       } else if (!row.categ2) {
         row.categ3 = null;
       }
-      
+
       if (!row.stare_oferta) {
         row.stare_oferta_secundara = null;
       }
-      
+
       return row;
     });
     const keys = Array.from(new Set(rows.map((r) => r[CONFLICT_KEY]).filter(Boolean)));
@@ -104,9 +105,12 @@ serve(async (req) => {
         }
         // Log if stare_oferta_secundara is in the update
         if (updates.length === 0) {
-          console.log('First update object fields:', Object.keys(upd));
-          console.log('stare_oferta_secundara in update?', Object.prototype.hasOwnProperty.call(upd, 'stare_oferta_secundara'));
-          console.log('stare_oferta_secundara value:', upd.stare_oferta_secundara);
+          console.log("First update object fields:", Object.keys(upd));
+          console.log(
+            "stare_oferta_secundara in update?",
+            Object.prototype.hasOwnProperty.call(upd, "stare_oferta_secundara"),
+          );
+          console.log("stare_oferta_secundara value:", upd.stare_oferta_secundara);
         }
         // Only push if there's at least one allowed field to update (besides key)
         if (Object.keys(upd).length > 1) updates.push(upd);
