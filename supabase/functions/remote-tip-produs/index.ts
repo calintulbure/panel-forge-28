@@ -28,28 +28,32 @@ serve(async (req) => {
     // GET: List tip_produs entries
     if (req.method === "GET") {
       const search = url.searchParams.get("search") || "";
-      const limit = parseInt(url.searchParams.get("limit") || "100");
+      const limit = parseInt(url.searchParams.get("limit") || "200");
+      const level = url.searchParams.get("level") || ""; // "main", "sub", or "" for all
+      const mainId = url.searchParams.get("mainId") || "";
 
-      // First, try to get the table structure
       let query = srcClient
         .from("tip_produs")
-        .select("*")
-        .order("denumire", { ascending: true })
+        .select("tipprodus_id, tipprodus_cod, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr, countproduse")
+        .order("tipprodus_descriere", { ascending: true })
         .limit(limit);
 
       if (search) {
-        query = query.ilike("denumire", `%${search}%`);
+        query = query.ilike("tipprodus_descriere", `%${search}%`);
+      }
+
+      if (level) {
+        query = query.eq("tipprodus_level", level);
+      }
+
+      if (mainId) {
+        query = query.eq("tipprodusmain_id", parseInt(mainId));
       }
 
       const { data, error } = await query;
       if (error) {
         console.error("Error fetching tip_produs:", error);
         return json({ error: error.message }, 500);
-      }
-
-      // Log the structure to understand the columns
-      if (data && data.length > 0) {
-        console.log("[remote-tip-produs] Sample row columns:", Object.keys(data[0]));
       }
 
       console.log(`[remote-tip-produs] Found ${data?.length || 0} entries`);
@@ -62,15 +66,39 @@ serve(async (req) => {
 
       if (action === "create-type") {
         // Create new tip_produs
-        const { denumire } = body;
-        if (!denumire || typeof denumire !== "string" || denumire.trim().length === 0) {
-          return json({ error: "denumire is required" }, 400);
+        const { tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr } = body;
+        
+        if (!tipprodus_descriere || typeof tipprodus_descriere !== "string" || tipprodus_descriere.trim().length === 0) {
+          return json({ error: "tipprodus_descriere is required" }, 400);
+        }
+
+        // Get max id to generate new one
+        const { data: maxData } = await srcClient
+          .from("tip_produs")
+          .select("tipprodus_id")
+          .order("tipprodus_id", { ascending: false })
+          .limit(1);
+
+        const newId = (maxData?.[0]?.tipprodus_id || 0) + 1;
+        const tipprodus_cod = `TP${newId.toString().padStart(4, '0')}`;
+
+        const insertData: Record<string, unknown> = {
+          tipprodus_id: newId,
+          tipprodus_cod,
+          tipprodus_descriere: tipprodus_descriere.trim(),
+          tipprodus_level: tipprodus_level || "main",
+          countproduse: 0,
+        };
+
+        if (tipprodus_level === "sub" && tipprodusmain_id) {
+          insertData.tipprodusmain_id = tipprodusmain_id;
+          insertData.tipprodusmain_descr = tipprodusmain_descr || null;
         }
 
         const { data, error } = await srcClient
           .from("tip_produs")
-          .insert({ denumire: denumire.trim() })
-          .select("id, denumire")
+          .insert(insertData)
+          .select()
           .single();
 
         if (error) {
@@ -78,7 +106,7 @@ serve(async (req) => {
           return json({ error: error.message }, 500);
         }
 
-        console.log(`[remote-tip-produs] Created new type: ${data.id} - ${data.denumire}`);
+        console.log(`[remote-tip-produs] Created new type: ${data.tipprodus_id} - ${data.tipprodus_descriere}`);
         return json({ data });
       }
 
@@ -111,20 +139,32 @@ serve(async (req) => {
     // PUT: Update existing tip_produs
     if (req.method === "PUT") {
       const body = await req.json();
-      const { id, denumire } = body;
+      const { tipprodus_id, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr } = body;
 
-      if (!id) {
-        return json({ error: "id is required" }, 400);
+      if (!tipprodus_id) {
+        return json({ error: "tipprodus_id is required" }, 400);
       }
-      if (!denumire || typeof denumire !== "string" || denumire.trim().length === 0) {
-        return json({ error: "denumire is required" }, 400);
+
+      const updateData: Record<string, unknown> = {};
+      
+      if (tipprodus_descriere !== undefined) {
+        updateData.tipprodus_descriere = tipprodus_descriere.trim();
+      }
+      if (tipprodus_level !== undefined) {
+        updateData.tipprodus_level = tipprodus_level;
+      }
+      if (tipprodusmain_id !== undefined) {
+        updateData.tipprodusmain_id = tipprodusmain_id;
+      }
+      if (tipprodusmain_descr !== undefined) {
+        updateData.tipprodusmain_descr = tipprodusmain_descr;
       }
 
       const { data, error } = await srcClient
         .from("tip_produs")
-        .update({ denumire: denumire.trim() })
-        .eq("id", id)
-        .select("id, denumire")
+        .update(updateData)
+        .eq("tipprodus_id", tipprodus_id)
+        .select()
         .single();
 
       if (error) {
@@ -132,7 +172,7 @@ serve(async (req) => {
         return json({ error: error.message }, 500);
       }
 
-      console.log(`[remote-tip-produs] Updated type: ${data.id} - ${data.denumire}`);
+      console.log(`[remote-tip-produs] Updated type: ${data.tipprodus_id} - ${data.tipprodus_descriere}`);
       return json({ data });
     }
 
@@ -146,7 +186,7 @@ serve(async (req) => {
       const { error } = await srcClient
         .from("tip_produs")
         .delete()
-        .eq("id", id);
+        .eq("tipprodus_id", parseInt(id));
 
       if (error) {
         console.error("Error deleting tip_produs:", error);
