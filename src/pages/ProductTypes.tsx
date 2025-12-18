@@ -302,38 +302,38 @@ export default function ProductTypes() {
                 </TableRow>
               ) : (
                 sortedTypes.map((type) => (
-                  <TableRow key={type.tipprodus_id}>
-                    <TableCell className="font-mono text-sm">{type.tipprodus_id}</TableCell>
-                    <TableCell className="font-mono text-sm text-muted-foreground">{type.tipprodus_cod || "-"}</TableCell>
-                    <TableCell className="font-medium">{type.tipprodus_descriere}</TableCell>
-                    <TableCell>
+                  <TableRow key={type.tipprodus_id} className="h-10">
+                    <TableCell className="font-mono text-sm py-1">{type.tipprodus_id}</TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground py-1">{type.tipprodus_cod || "-"}</TableCell>
+                    <TableCell className="font-medium py-1">{type.tipprodus_descriere}</TableCell>
+                    <TableCell className="py-1">
                       <Badge variant={type.tipprodus_level === "main" ? "default" : "secondary"}>
                         {type.tipprodus_level}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground py-1">
                       {type.tipprodusmain_descr || "-"}
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right font-mono py-1">
                       {type.countproduse}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right py-1">
                       <div className="flex gap-1 justify-end">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-7 w-7"
                           onClick={() => openEditDialog(type)}
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() => setDeleteConfirm(type)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </TableCell>
