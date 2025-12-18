@@ -212,18 +212,49 @@ export function useProductTypes() {
     }
   }, [toast, fetchTypes]);
 
-  // Update product's tip_produs_id_sub (local only, synced via bulk-upsert)
-  const updateProductType = useCallback(async (erp_product_code: string, tip_produs_id_sub: number | null) => {
+  // Update product's tip_produs_id_sub (local + sync to remote)
+  const updateProductType = useCallback(async (erp_product_code: string, tip_produs_id_sub: number | null, tip_produs_id_main?: number | null) => {
     try {
+      // Update local first
+      const updateData: Record<string, unknown> = { tip_produs_id_sub };
+      if (tip_produs_id_main !== undefined) {
+        updateData.tip_produs_id_main = tip_produs_id_main;
+      }
+
       const { data, error } = await supabase
         .from("products")
-        .update({ tip_produs_id_sub })
+        .update(updateData)
         .eq("erp_product_code", erp_product_code)
-        .select("erp_product_code, tip_produs_id_sub")
+        .select("erp_product_code, tip_produs_id_sub, tip_produs_id_main")
         .single();
 
       if (error) {
         throw error;
+      }
+
+      // Sync to remote via edge function
+      const syncUrl = new URL(SYNC_API_BASE);
+      syncUrl.searchParams.set("action", "sync-product");
+
+      const syncResponse = await fetch(syncUrl.toString(), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
+          erp_product_code,
+          tip_produs_id_sub,
+          tip_produs_id_main: tip_produs_id_main !== undefined ? tip_produs_id_main : data.tip_produs_id_main,
+        }),
+      });
+
+      const syncResult = await syncResponse.json();
+      if (syncResult.error) {
+        console.warn("Remote sync failed (local updated):", syncResult.error);
+        // Don't throw - local was successful
+      } else {
+        console.log("Product type synced to remote:", erp_product_code);
       }
 
       return data;

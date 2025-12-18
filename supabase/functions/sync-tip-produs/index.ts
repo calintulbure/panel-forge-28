@@ -255,6 +255,40 @@ serve(async (req) => {
       return json({ success: true });
     }
 
+    // PATCH action=sync-product: Sync product's tip_produs_id to remote products table
+    if (req.method === "PATCH" && action === "sync-product") {
+      const body = await req.json();
+      const { erp_product_code, tip_produs_id_sub, tip_produs_id_main } = body;
+
+      if (!erp_product_code) {
+        return json({ error: "erp_product_code is required" }, 400);
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (tip_produs_id_sub !== undefined) {
+        updateData.tip_produs_id_sub = tip_produs_id_sub;
+      }
+      if (tip_produs_id_main !== undefined) {
+        updateData.tip_produs_id_main = tip_produs_id_main;
+      }
+
+      // Update remote products table
+      const { data: remoteResult, error: remoteError } = await remoteClient
+        .from("products")
+        .update(updateData)
+        .eq("erp_product_code", erp_product_code)
+        .select("erp_product_code, tip_produs_id_sub, tip_produs_id_main")
+        .single();
+
+      if (remoteError) {
+        console.error("Error syncing product type to remote:", remoteError);
+        return json({ error: remoteError.message }, 500);
+      }
+
+      console.log(`[sync-tip-produs] Synced product ${erp_product_code} type to remote: sub=${tip_produs_id_sub}, main=${tip_produs_id_main}`);
+      return json({ data: remoteResult, success: true });
+    }
+
     return json({ error: "Method not allowed" }, 405);
   } catch (err) {
     console.error("Edge function error:", err);
