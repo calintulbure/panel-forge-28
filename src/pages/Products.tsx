@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { useProductTypes, ProductType } from "@/hooks/useProductTypes";
 
 export default function Products() {
   const { userRole } = useAuth();
@@ -53,9 +54,19 @@ export default function Products() {
   const [yliHuProdIdFilter, setYliHuProdIdFilter] = useState(
     searchParams.get("huProdId") || "all"
   );
+  const [tipProdusFilter, setTipProdusFilter] = useState(
+    searchParams.get("tipProdus") || "all"
+  );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
+
+  // Fetch product types for the filter
+  const { types: productTypes, fetchTypes } = useProductTypes();
+  
+  useEffect(() => {
+    fetchTypes();
+  }, [fetchTypes]);
 
   // Sync filters to URL
   useEffect(() => {
@@ -72,9 +83,10 @@ export default function Products() {
     if (yliHuSkuFilter !== "all") params.set("huSku", yliHuSkuFilter);
     if (yliRoProdIdFilter !== "all") params.set("roProdId", yliRoProdIdFilter);
     if (yliHuProdIdFilter !== "all") params.set("huProdId", yliHuProdIdFilter);
+    if (tipProdusFilter !== "all") params.set("tipProdus", tipProdusFilter);
     
     setSearchParams(params, { replace: true });
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter]);
+  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter]);
 
   // Fetch filter options (categories and statuses)
   const { data: filterOptions } = useQuery({
@@ -168,7 +180,7 @@ export default function Products() {
 
   // Fetch total count with filters
   const { data: totalCount } = useQuery({
-    queryKey: ["products-count", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter],
+    queryKey: ["products-count", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter],
     queryFn: async () => {
       let query = supabase
         .from("products")
@@ -229,6 +241,13 @@ export default function Products() {
           query = query.gt("site_hu_product_id", 0);
         }
       }
+      if (tipProdusFilter !== "all") {
+        if (tipProdusFilter === "null") {
+          query = query.is("tip_produs_id_sub", null);
+        } else {
+          query = query.eq("tip_produs_id_sub", parseInt(tipProdusFilter));
+        }
+      }
 
       const { count, error } = await query;
       if (error) throw error;
@@ -238,7 +257,7 @@ export default function Products() {
 
   // Fetch paginated products with filters
   const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter],
+    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter],
     queryFn: async () => {
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
@@ -302,6 +321,13 @@ export default function Products() {
           query = query.eq("site_hu_product_id", 0);
         } else if (yliHuProdIdFilter === ">0") {
           query = query.gt("site_hu_product_id", 0);
+        }
+      }
+      if (tipProdusFilter !== "all") {
+        if (tipProdusFilter === "null") {
+          query = query.is("tip_produs_id_sub", null);
+        } else {
+          query = query.eq("tip_produs_id_sub", parseInt(tipProdusFilter));
         }
       }
 
@@ -430,7 +456,7 @@ export default function Products() {
   // Reset to page 1 when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter]);
+  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter]);
 
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(Number(value));
@@ -450,6 +476,7 @@ export default function Products() {
     setYliHuSkuFilter("all");
     setYliRoProdIdFilter("all");
     setYliHuProdIdFilter("all");
+    setTipProdusFilter("all");
     setSearchParams(new URLSearchParams(), { replace: true });
   };
 
@@ -495,6 +522,9 @@ export default function Products() {
         setYliRoProdIdFilter={setYliRoProdIdFilter}
         yliHuProdIdFilter={yliHuProdIdFilter}
         setYliHuProdIdFilter={setYliHuProdIdFilter}
+        tipProdusFilter={tipProdusFilter}
+        setTipProdusFilter={setTipProdusFilter}
+        productTypes={productTypes}
         categories={categories}
         availableCateg2={availableCateg2}
         availableCateg3={availableCateg3}

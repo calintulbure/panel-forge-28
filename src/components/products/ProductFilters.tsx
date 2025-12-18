@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProductType } from "@/hooks/useProductTypes";
 
 interface ProductFiltersProps {
   search: string;
@@ -43,6 +44,9 @@ interface ProductFiltersProps {
   setYliRoProdIdFilter: (value: string) => void;
   yliHuProdIdFilter: string;
   setYliHuProdIdFilter: (value: string) => void;
+  tipProdusFilter: string;
+  setTipProdusFilter: (value: string) => void;
+  productTypes: ProductType[];
   categories: {
     categ1: string[];
     categ2: string[];
@@ -83,6 +87,9 @@ export function ProductFilters({
   setYliRoProdIdFilter,
   yliHuProdIdFilter,
   setYliHuProdIdFilter,
+  tipProdusFilter,
+  setTipProdusFilter,
+  productTypes,
   categories,
   availableCateg2,
   availableCateg3,
@@ -155,6 +162,10 @@ export function ProductFilters({
     if (yliHuSkuFilter !== 'all') filters.push(`HU SKU: ${yliHuSkuFilter}`);
     if (yliRoProdIdFilter !== 'all') filters.push(`YLIRO PROD ID: ${yliRoProdIdFilter}`);
     if (yliHuProdIdFilter !== 'all') filters.push(`YLIHU PROD ID: ${yliHuProdIdFilter}`);
+    if (tipProdusFilter !== 'all') {
+      const typeName = tipProdusFilter === 'null' ? 'null' : productTypes.find(t => t.tipprodus_id.toString() === tipProdusFilter)?.tipprodus_descriere || tipProdusFilter;
+      filters.push(`Tip Produs: ${typeName}`);
+    }
     return filters;
   };
 
@@ -362,6 +373,24 @@ export function ProductFilters({
                       <SelectItem value="null">null</SelectItem>
                       <SelectItem value="0">0</SelectItem>
                       <SelectItem value=">0">&gt;0</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="tipProdusFilter" className="text-xs">Tip Produs</Label>
+                  <Select value={tipProdusFilter} onValueChange={setTipProdusFilter}>
+                    <SelectTrigger id="tipProdusFilter" className="h-9 text-sm">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="null">null (not assigned)</SelectItem>
+                      {productTypes.map(type => (
+                        <SelectItem key={type.tipprodus_id} value={type.tipprodus_id.toString()}>
+                          {type.tipprodus_descriere}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
