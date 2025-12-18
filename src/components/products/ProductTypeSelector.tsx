@@ -48,7 +48,26 @@ export function ProductTypeSelector({
   const [selectedMainType, setSelectedMainType] = useState<ProductType | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [mainTypes, setMainTypes] = useState<ProductType[]>([]);
+  const [initialTypeName, setInitialTypeName] = useState<string>("");
   const { types, loading, fetchTypes, createType } = useProductTypes();
+
+  // Fetch the selected type's name on mount if value exists
+  useEffect(() => {
+    if (value && !initialTypeName) {
+      import("@/integrations/supabase/client").then(({ supabase }) => {
+        supabase
+          .from("tip_produs")
+          .select("tipprodus_descriere")
+          .eq("tipprodus_id", value)
+          .single()
+          .then(({ data }) => {
+            if (data?.tipprodus_descriere) {
+              setInitialTypeName(data.tipprodus_descriere);
+            }
+          });
+      });
+    }
+  }, [value, initialTypeName]);
 
   // Fetch types when popover opens
   useEffect(() => {
@@ -69,7 +88,7 @@ export function ProductTypeSelector({
   }, [search, open, fetchTypes]);
 
   const selectedType = types.find((t) => t.tipprodus_id === value);
-  const displayName = selectedType?.tipprodus_descriere || currentTypeName || "";
+  const displayName = selectedType?.tipprodus_descriere || currentTypeName || initialTypeName || "";
 
   const handleSelect = (type: ProductType) => {
     onChange(type.tipprodus_id, type.tipprodus_descriere);
