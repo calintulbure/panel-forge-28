@@ -48,21 +48,20 @@ export function useProductTypes() {
         throw typesError;
       }
 
-      // Fetch product counts per type
+      // Fetch product counts using RPC function (avoids 1000 row limit)
       const { data: countData, error: countError } = await supabase
-        .from("products")
-        .select("tip_produs_id_sub");
+        .rpc("get_product_type_counts");
 
       if (countError) {
         console.warn("Failed to fetch product counts:", countError);
       }
 
-      // Build count map
+      // Build count map from RPC result
       const countMap = new Map<number, number>();
       if (countData) {
         for (const row of countData) {
           if (row.tip_produs_id_sub != null) {
-            countMap.set(row.tip_produs_id_sub, (countMap.get(row.tip_produs_id_sub) || 0) + 1);
+            countMap.set(row.tip_produs_id_sub, Number(row.product_count) || 0);
           }
         }
       }

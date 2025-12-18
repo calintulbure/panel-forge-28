@@ -639,6 +639,13 @@ export type Database = {
     }
     Functions: {
       bulk_upsert_products: { Args: { payload: Json }; Returns: number }
+      get_product_type_counts: {
+        Args: never
+        Returns: {
+          product_count: number
+          tip_produs_id_sub: number
+        }[]
+      }
       get_user_approval_status: {
         Args: { _user_id: string }
         Returns: {
