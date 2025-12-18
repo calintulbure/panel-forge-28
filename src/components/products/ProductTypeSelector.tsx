@@ -184,8 +184,8 @@ export function ProductTypeSelector({
             onKeyDown={handleKeyDown}
             disabled={disabled}
             placeholder="Type to search..."
-            className="text-lg pr-7 min-h-[3.5rem] h-[3.5rem] w-[220px] resize-none py-1 leading-tight"
-            rows={2}
+            className="text-lg pr-7 min-h-[5rem] h-[5rem] w-[220px] resize-none py-1 leading-tight"
+            rows={3}
           />
           {inputValue && !disabled && (
             <button
