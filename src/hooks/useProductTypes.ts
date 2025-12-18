@@ -31,7 +31,7 @@ export function useProductTypes() {
         .limit(500);
 
       if (search) {
-        query = query.ilike("tipprodus_descriere", `%${search}%`);
+        query = query.or(`tipprodus_descriere.ilike.%${search}%,tipprodusmain_descr.ilike.%${search}%`);
       }
 
       if (level) {
