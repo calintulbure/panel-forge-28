@@ -1,4 +1,4 @@
-import { Package, LogOut, Users, Upload } from "lucide-react";
+import { Package, LogOut, Users, Upload, Tags } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -24,6 +24,7 @@ export function AppSidebar() {
 
   const navItems = [
     { title: "Product Catalog", url: "/", icon: Package },
+    { title: "Product Types", url: "/product-types", icon: Tags },
     ...(userRole === 'admin' ? [
       { title: "Database Manager", url: "/database", icon: Upload },
       { title: "User Management", url: "/users", icon: Users }
