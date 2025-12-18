@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Check, X, Trash2, CheckCircle2, XCircle, Copy } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { PublishCell } from "./PublishCell";
+import { ProductTypeSelector } from "./ProductTypeSelector";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useProductTypes } from "@/hooks/useProductTypes";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 interface Product {
   erp_product_code: string;
@@ -33,6 +35,8 @@ interface Product {
   senior_erp_link: string | null;
   ro_stock: number | null;
   ro_stoc_detailed: string | null;
+  tip_produs_id?: number | null;
+  tip_produs_denumire?: string | null;
 }
 interface ProductsTableProps {
   products: Product[];
@@ -59,6 +63,18 @@ export function ProductsTable({
   const {
     toast
   } = useToast();
+  const { updateProductType } = useProductTypes();
+
+  const handleProductTypeChange = async (productCode: string, typeId: number | null, typeName: string | null) => {
+    const result = await updateProductType(productCode, typeId);
+    if (result) {
+      toast({
+        title: "Product type updated",
+        description: typeName ? `Set to: ${typeName}` : "Type cleared",
+      });
+      onRefresh();
+    }
+  };
   const sortedProducts = [...products].sort((a, b) => {
     if (!sortConfig.key) return 0;
     const aValue = a[sortConfig.key];
@@ -147,12 +163,13 @@ export function ProductsTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[220px]">
+              <TableHead className="w-[200px]">
                 <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
                   Categories
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
+              <TableHead className="w-[150px]">Product Type</TableHead>
               <TableHead className="w-[120px]">
                 <Button variant="ghost" onClick={() => handleSort('stare_stoc')} className="h-8 px-2">
                   Stock Status
@@ -178,7 +195,7 @@ export function ProductsTable({
           </TableHeader>
           <TableBody>
             {sortedProducts.length === 0 ? <TableRow>
-                <TableCell colSpan={isAdmin ? 8 : 7} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? 9 : 8} className="h-24 text-center">
                   No products found.
                 </TableCell>
               </TableRow> : sortedProducts.map(product => <TableRow key={product.erp_product_code} className="cursor-pointer hover:bg-muted/50 group">
@@ -215,6 +232,13 @@ export function ProductsTable({
                       <div className="truncate text-muted-foreground">{product.categ2 || "-"}</div>
                       <div className="truncate text-muted-foreground">{product.categ3 || "-"}</div>
                     </div>
+                  </TableCell>
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <ProductTypeSelector
+                      value={product.tip_produs_id || null}
+                      currentTypeName={product.tip_produs_denumire || undefined}
+                      onChange={(typeId, typeName) => handleProductTypeChange(product.erp_product_code, typeId, typeName)}
+                    />
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <Badge variant={getStockBadgeVariant(product.stare_stoc)}>

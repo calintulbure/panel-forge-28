@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.export-products]
 verify_jwt = false
+
+[functions.remote-tip-produs]
+verify_jwt = false
