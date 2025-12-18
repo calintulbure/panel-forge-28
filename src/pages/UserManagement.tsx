@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, Users, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Users, Loader2, Circle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -22,7 +22,8 @@ export default function UserManagement() {
   const [users, setUsers] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const { userRole } = useAuth();
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  const { userRole, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,6 +33,32 @@ export default function UserManagement() {
     }
     fetchUsers();
   }, [userRole, navigate]);
+
+  // Track online users via Realtime Presence
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase.channel('online-users', {
+      config: { presence: { key: user.id } }
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const online = new Set<string>();
+        Object.keys(state).forEach(userId => online.add(userId));
+        setOnlineUsers(online);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ user_id: user.id, online_at: new Date().toISOString() });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -158,7 +185,12 @@ export default function UserManagement() {
                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border rounded-lg"
                 >
                   <div className="space-y-1">
-                    <p className="font-medium">{user.user_email}</p>
+                    <div className="flex items-center gap-2">
+                      <Circle 
+                        className={`h-2.5 w-2.5 ${onlineUsers.has(user.user_id) ? 'fill-green-500 text-green-500' : 'fill-muted text-muted'}`} 
+                      />
+                      <p className="font-medium">{user.user_email}</p>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="capitalize">
                         {user.role}
@@ -228,7 +260,12 @@ export default function UserManagement() {
                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border rounded-lg"
                 >
                   <div className="space-y-1 flex-1">
-                    <p className="font-medium text-sm">{user.user_email}</p>
+                    <div className="flex items-center gap-2">
+                      <Circle 
+                        className={`h-2.5 w-2.5 ${onlineUsers.has(user.user_id) ? 'fill-green-500 text-green-500' : 'fill-muted text-muted'}`} 
+                      />
+                      <p className="font-medium text-sm">{user.user_email}</p>
+                    </div>
                     <Badge variant="default" className="text-xs">Approved</Badge>
                   </div>
                   <div className="flex items-center gap-2">
