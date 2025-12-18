@@ -112,17 +112,17 @@ serve(async (req) => {
       }
 
       if (action === "update-product") {
-        // Update product's tip_produs_id
-        const { erp_product_code, tip_produs_id } = body;
+        // Update product's tip_produs_id_sub
+        const { erp_product_code, tip_produs_id_sub } = body;
         if (!erp_product_code) {
           return json({ error: "erp_product_code is required" }, 400);
         }
 
         const { data, error } = await srcClient
           .from("products")
-          .update({ tip_produs_id })
+          .update({ tip_produs_id_sub })
           .eq("erp_product_code", erp_product_code)
-          .select("erp_product_code, tip_produs_id")
+          .select("erp_product_code, tip_produs_id_sub")
           .single();
 
         if (error) {
@@ -130,7 +130,7 @@ serve(async (req) => {
           return json({ error: error.message }, 500);
         }
 
-        console.log(`[remote-tip-produs] Updated product ${erp_product_code} with tip_produs_id: ${tip_produs_id}`);
+        console.log(`[remote-tip-produs] Updated product ${erp_product_code} with tip_produs_id_sub: ${tip_produs_id_sub}`);
         return json({ data });
       }
 

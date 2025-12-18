@@ -120,6 +120,8 @@ export type Database = {
           stare_oferta: string | null
           stare_oferta_secundara: string | null
           stare_stoc: string | null
+          tip_produs_id_main: number | null
+          tip_produs_id_sub: number | null
           tosync: number | null
           updated_at: string | null
           validated: boolean | null
@@ -154,6 +156,8 @@ export type Database = {
           stare_oferta?: string | null
           stare_oferta_secundara?: string | null
           stare_stoc?: string | null
+          tip_produs_id_main?: number | null
+          tip_produs_id_sub?: number | null
           tosync?: number | null
           updated_at?: string | null
           validated?: boolean | null
@@ -188,6 +192,8 @@ export type Database = {
           stare_oferta?: string | null
           stare_oferta_secundara?: string | null
           stare_stoc?: string | null
+          tip_produs_id_main?: number | null
+          tip_produs_id_sub?: number | null
           tosync?: number | null
           updated_at?: string | null
           validated?: boolean | null

@@ -152,7 +152,7 @@ export function useProductTypes() {
     }
   }, [toast, fetchTypes]);
 
-  const updateProductType = useCallback(async (erp_product_code: string, tip_produs_id: number | null) => {
+  const updateProductType = useCallback(async (erp_product_code: string, tip_produs_id_sub: number | null) => {
     try {
       const url = new URL(API_BASE);
       url.searchParams.set("action", "update-product");
@@ -163,7 +163,7 @@ export function useProductTypes() {
           "Content-Type": "application/json",
           "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ erp_product_code, tip_produs_id }),
+        body: JSON.stringify({ erp_product_code, tip_produs_id_sub }),
       });
 
       const result = await response.json();

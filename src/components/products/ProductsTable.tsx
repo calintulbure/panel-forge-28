@@ -35,8 +35,8 @@ interface Product {
   senior_erp_link: string | null;
   ro_stock: number | null;
   ro_stoc_detailed: string | null;
-  tip_produs_id?: number | null;
-  tip_produs_denumire?: string | null;
+  tip_produs_id_sub: number | null;
+  tip_produs_id_main: number | null;
 }
 interface ProductsTableProps {
   products: Product[];
@@ -235,8 +235,7 @@ export function ProductsTable({
                   </TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
                     <ProductTypeSelector
-                      value={product.tip_produs_id || null}
-                      currentTypeName={product.tip_produs_denumire || undefined}
+                      value={product.tip_produs_id_sub || null}
                       onChange={(typeId, typeName) => handleProductTypeChange(product.erp_product_code, typeId, typeName)}
                     />
                   </TableCell>

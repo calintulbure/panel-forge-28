@@ -45,6 +45,8 @@ interface Product {
   senior_erp_link: string | null;
   ro_stock: number | null;
   ro_stoc_detailed: string | null;
+  tip_produs_id_sub: number | null;
+  tip_produs_id_main: number | null;
 }
 
 interface ProductDetailPanelProps {
