@@ -1,0 +1,1 @@
+CREATE TABLE public.products_bak_202512181100 AS SELECT * FROM public.products;
