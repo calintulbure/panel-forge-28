@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
-import { Check, ChevronsUpDown, Plus, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Check, Plus, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
   CommandSeparator,
@@ -14,7 +13,7 @@ import {
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
+  PopoverAnchor,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +40,7 @@ export function ProductTypeSelector({
   disabled,
 }: ProductTypeSelectorProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [showAddNew, setShowAddNew] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
   const [newTypeLevel, setNewTypeLevel] = useState<"main" | "sub">("sub");
@@ -49,6 +48,7 @@ export function ProductTypeSelector({
   const [isCreating, setIsCreating] = useState(false);
   const [mainTypes, setMainTypes] = useState<ProductType[]>([]);
   const [initialTypeName, setInitialTypeName] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const { types, loading, fetchTypes, createType } = useProductTypes();
 
   // Fetch the selected type's name on mount if value exists
@@ -63,43 +63,50 @@ export function ProductTypeSelector({
           .then(({ data }) => {
             if (data?.tipprodus_descriere) {
               setInitialTypeName(data.tipprodus_descriere);
+              setInputValue(data.tipprodus_descriere);
             }
           });
       });
     }
   }, [value, initialTypeName]);
 
+  // Update input value when external value changes
+  useEffect(() => {
+    const selectedType = types.find((t) => t.tipprodus_id === value);
+    const displayName = selectedType?.tipprodus_descriere || currentTypeName || initialTypeName || "";
+    if (displayName && !open) {
+      setInputValue(displayName);
+    }
+  }, [value, types, currentTypeName, initialTypeName, open]);
+
   // Fetch types when popover opens
   useEffect(() => {
     if (open) {
-      fetchTypes();
+      fetchTypes(inputValue);
       // Also fetch main types for the add new form
       fetchTypes("", "main").then(setMainTypes);
     }
   }, [open, fetchTypes]);
 
-  // Search with debounce
+  // Search with debounce when input changes
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => {
-      fetchTypes(search);
+      fetchTypes(inputValue);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, open, fetchTypes]);
-
-  const selectedType = types.find((t) => t.tipprodus_id === value);
-  const displayName = selectedType?.tipprodus_descriere || currentTypeName || initialTypeName || "";
+  }, [inputValue, open, fetchTypes]);
 
   const handleSelect = (type: ProductType) => {
     onChange(type.tipprodus_id, type.tipprodus_descriere);
+    setInputValue(type.tipprodus_descriere);
     setOpen(false);
-    setSearch("");
   };
 
   const handleClear = () => {
     onChange(null, null);
+    setInputValue("");
     setOpen(false);
-    setSearch("");
   };
 
   const handleAddNew = async () => {
@@ -116,11 +123,23 @@ export function ProductTypeSelector({
 
     if (created) {
       onChange(created.tipprodus_id, created.tipprodus_descriere);
+      setInputValue(created.tipprodus_descriere);
       setShowAddNew(false);
       setNewTypeName("");
       setNewTypeLevel("sub");
       setSelectedMainType(null);
       setOpen(false);
+    }
+  };
+
+  const handleInputFocus = () => {
+    setOpen(true);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+    if (!open) {
+      setOpen(true);
     }
   };
 
@@ -130,30 +149,37 @@ export function ProductTypeSelector({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={cn(
-            "w-full justify-between h-8 text-xs font-normal",
-            !displayName && "text-muted-foreground"
-          )}
-        >
-          <span className="truncate">
-            {displayName || "Select type..."}
-          </span>
-          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0 z-50" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Search types..."
-            value={search}
-            onValueChange={setSearch}
+      <PopoverAnchor asChild>
+        <div className="relative">
+          <Input
+            ref={inputRef}
+            value={inputValue}
+            onChange={handleInputChange}
+            onFocus={handleInputFocus}
+            disabled={disabled}
+            placeholder="Type to search..."
+            className="h-8 text-xs pr-7"
           />
+          {inputValue && !disabled && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClear();
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      </PopoverAnchor>
+      <PopoverContent 
+        className="w-[300px] p-0 z-50" 
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <Command shouldFilter={false}>
           <CommandList className="max-h-[300px]">
             {loading ? (
               <div className="flex items-center justify-center py-4">
@@ -167,14 +193,6 @@ export function ProductTypeSelector({
                       No type found.
                     </div>
                   </CommandEmpty>
-                )}
-                
-                {value && (
-                  <CommandGroup>
-                    <CommandItem onSelect={handleClear} className="text-muted-foreground">
-                      <span>Clear selection</span>
-                    </CommandItem>
-                  </CommandGroup>
                 )}
 
                 {mainTypesDisplay.length > 0 && (
@@ -327,7 +345,7 @@ export function ProductTypeSelector({
                 <CommandItem
                   onSelect={() => {
                     setShowAddNew(true);
-                    setNewTypeName(search);
+                    setNewTypeName(inputValue);
                   }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
