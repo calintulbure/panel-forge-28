@@ -25,7 +25,7 @@ export function useProductTypes() {
     try {
       let query = supabase
         .from("tip_produs")
-        .select("tipprodus_id, tipprodus_descriere, tipprodus_level, tipprodusmain_id")
+        .select("tipprodus_id, tipprodus_cod, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr, countproduse")
         .order("tipprodus_descriere", { ascending: true })
         .limit(200);
 
@@ -48,8 +48,13 @@ export function useProductTypes() {
       }
 
       const normalized: ProductType[] = (data || []).map((t) => ({
-        ...t,
+        tipprodus_id: t.tipprodus_id,
+        tipprodus_cod: t.tipprodus_cod,
+        tipprodus_descriere: t.tipprodus_descriere,
         tipprodus_level: (t.tipprodus_level || "").toLowerCase(),
+        tipprodusmain_id: t.tipprodusmain_id,
+        tipprodusmain_descr: t.tipprodusmain_descr,
+        countproduse: t.countproduse,
       }));
 
       setTypes(normalized);
