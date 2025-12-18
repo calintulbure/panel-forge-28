@@ -144,14 +144,27 @@ export function ProductTypeSelector({
     }
   };
 
-  const handleInputFocus = () => {
+  const handleInputFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => {
     setOpen(true);
+    // Select all text on focus for easy replacement
+    e.target.select();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
     if (!open) {
       setOpen(true);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Select the first available type from the dropdown
+      const firstType = types[0];
+      if (firstType) {
+        handleSelect(firstType);
+      }
     }
   };
 
@@ -168,6 +181,7 @@ export function ProductTypeSelector({
             value={inputValue}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
+            onKeyDown={handleKeyDown}
             disabled={disabled}
             placeholder="Type to search..."
             className="text-lg pr-7 min-h-[3.5rem] h-[3.5rem] w-[220px] resize-none py-1 leading-tight"
