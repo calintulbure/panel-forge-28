@@ -58,7 +58,9 @@ export const ProductUpsertItem = z.object({
   ro_stock: z.number().int().nullable().optional(),
   ro_stoc_detailed: z.string().nullable().optional(),
   hu_stock: z.number().int().nullable().optional(),
-  hu_stock_detailed: z.string().nullable().optional()
+  hu_stock_detailed: z.string().nullable().optional(),
+  tip_produs_id_sub: z.number().int().nullable().optional(),
+  tip_produs_id_main: z.number().int().nullable().optional()
 });
 export type ProductUpsertItem = z.infer<typeof ProductUpsertItem>;
 

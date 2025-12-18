@@ -27,6 +27,8 @@ const ALLOWED_UPDATE_FIELDS = new Set([
   "ro_stoc_detailed",
   "hu_stock",
   "hu_stock_detailed",
+  "tip_produs_id_sub",
+  "tip_produs_id_main",
 ]);
 
 // Batch sizes
