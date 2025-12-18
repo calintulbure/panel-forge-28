@@ -43,7 +43,8 @@ serve(async (req) => {
       }
 
       if (level) {
-        query = query.eq("tipprodus_level", level);
+        // Case-insensitive match for level (database has "Main"/"Sub", UI sends "main"/"sub")
+        query = query.ilike("tipprodus_level", level);
       }
 
       if (mainId) {
