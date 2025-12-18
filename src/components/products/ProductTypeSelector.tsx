@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Check, ChevronsUpDown, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useProductTypes, ProductType } from "@/hooks/useProductTypes";
-import { useToast } from "@/hooks/use-toast";
 
 interface ProductTypeSelectorProps {
   value: number | null;
@@ -37,15 +44,18 @@ export function ProductTypeSelector({
   const [search, setSearch] = useState("");
   const [showAddNew, setShowAddNew] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeLevel, setNewTypeLevel] = useState<"main" | "sub">("sub");
+  const [selectedMainType, setSelectedMainType] = useState<ProductType | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [mainTypes, setMainTypes] = useState<ProductType[]>([]);
   const { types, loading, fetchTypes, createType } = useProductTypes();
-  const { toast } = useToast();
-  const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch types when popover opens
   useEffect(() => {
     if (open) {
       fetchTypes();
+      // Also fetch main types for the add new form
+      fetchTypes("", "main").then(setMainTypes);
     }
   }, [open, fetchTypes]);
 
@@ -58,11 +68,11 @@ export function ProductTypeSelector({
     return () => clearTimeout(timer);
   }, [search, open, fetchTypes]);
 
-  const selectedType = types.find((t) => t.id === value);
-  const displayName = selectedType?.denumire || currentTypeName || "";
+  const selectedType = types.find((t) => t.tipprodus_id === value);
+  const displayName = selectedType?.tipprodus_descriere || currentTypeName || "";
 
   const handleSelect = (type: ProductType) => {
-    onChange(type.id, type.denumire);
+    onChange(type.tipprodus_id, type.tipprodus_descriere);
     setOpen(false);
     setSearch("");
   };
@@ -77,16 +87,27 @@ export function ProductTypeSelector({
     if (!newTypeName.trim()) return;
     
     setIsCreating(true);
-    const created = await createType(newTypeName.trim());
+    const created = await createType(
+      newTypeName.trim(),
+      newTypeLevel,
+      newTypeLevel === "sub" ? selectedMainType?.tipprodus_id : undefined,
+      newTypeLevel === "sub" ? selectedMainType?.tipprodus_descriere : undefined
+    );
     setIsCreating(false);
 
     if (created) {
-      onChange(created.id, created.denumire);
+      onChange(created.tipprodus_id, created.tipprodus_descriere);
       setShowAddNew(false);
       setNewTypeName("");
+      setNewTypeLevel("sub");
+      setSelectedMainType(null);
       setOpen(false);
     }
   };
+
+  // Group types by main/sub for display
+  const mainTypesDisplay = types.filter(t => t.tipprodus_level === "main");
+  const subTypesDisplay = types.filter(t => t.tipprodus_level === "sub");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -107,93 +128,181 @@ export function ProductTypeSelector({
           <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[250px] p-0 z-50" align="start">
+      <PopoverContent className="w-[300px] p-0 z-50" align="start">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search types..."
             value={search}
             onValueChange={setSearch}
           />
-          <CommandList>
+          <CommandList className="max-h-[300px]">
             {loading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             ) : (
               <>
-                <CommandEmpty>
-                  <div className="py-2 text-center text-sm">
-                    No type found.
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto ml-1"
-                      onClick={() => {
-                        setNewTypeName(search);
-                        setShowAddNew(true);
-                      }}
-                    >
-                      Add "{search}"?
-                    </Button>
-                  </div>
-                </CommandEmpty>
-                <CommandGroup>
-                  {value && (
+                {types.length === 0 && (
+                  <CommandEmpty>
+                    <div className="py-2 text-center text-sm">
+                      No type found.
+                    </div>
+                  </CommandEmpty>
+                )}
+                
+                {value && (
+                  <CommandGroup>
                     <CommandItem onSelect={handleClear} className="text-muted-foreground">
                       <span>Clear selection</span>
                     </CommandItem>
-                  )}
-                  {types.map((type) => (
-                    <CommandItem
-                      key={type.id}
-                      value={type.denumire}
-                      onSelect={() => handleSelect(type)}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value === type.id ? "opacity-100" : "opacity-0"
+                  </CommandGroup>
+                )}
+
+                {mainTypesDisplay.length > 0 && (
+                  <CommandGroup heading="Main Types">
+                    {mainTypesDisplay.map((type) => (
+                      <CommandItem
+                        key={type.tipprodus_id}
+                        value={type.tipprodus_descriere}
+                        onSelect={() => handleSelect(type)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            value === type.tipprodus_id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <span className="font-medium">{type.tipprodus_descriere}</span>
+                        {type.countproduse !== null && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            ({type.countproduse})
+                          </span>
                         )}
-                      />
-                      {type.denumire}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+
+                {subTypesDisplay.length > 0 && (
+                  <CommandGroup heading="Sub Types">
+                    {subTypesDisplay.map((type) => (
+                      <CommandItem
+                        key={type.tipprodus_id}
+                        value={type.tipprodus_descriere}
+                        onSelect={() => handleSelect(type)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            value === type.tipprodus_id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span>{type.tipprodus_descriere}</span>
+                          {type.tipprodusmain_descr && (
+                            <span className="text-xs text-muted-foreground">
+                              ↳ {type.tipprodusmain_descr}
+                            </span>
+                          )}
+                        </div>
+                        {type.countproduse !== null && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            ({type.countproduse})
+                          </span>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
               </>
             )}
             <CommandSeparator />
             <CommandGroup>
               {showAddNew ? (
-                <div className="flex items-center gap-2 p-2">
-                  <Input
-                    ref={inputRef}
-                    value={newTypeName}
-                    onChange={(e) => setNewTypeName(e.target.value)}
-                    placeholder="New type name..."
-                    className="h-8 text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddNew();
-                      }
-                      if (e.key === "Escape") {
+                <div className="p-2 space-y-3">
+                  <div>
+                    <Label className="text-xs">Name</Label>
+                    <Input
+                      value={newTypeName}
+                      onChange={(e) => setNewTypeName(e.target.value)}
+                      placeholder="Type name..."
+                      className="h-8 text-sm mt-1"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newTypeLevel === "main") {
+                          e.preventDefault();
+                          handleAddNew();
+                        }
+                        if (e.key === "Escape") {
+                          setShowAddNew(false);
+                          setNewTypeName("");
+                        }
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Level</Label>
+                    <Select 
+                      value={newTypeLevel} 
+                      onValueChange={(v) => setNewTypeLevel(v as "main" | "sub")}
+                    >
+                      <SelectTrigger className="h-8 text-sm mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="main">Main</SelectItem>
+                        <SelectItem value="sub">Sub</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {newTypeLevel === "sub" && (
+                    <div>
+                      <Label className="text-xs">Parent Main Type</Label>
+                      <Select 
+                        value={selectedMainType?.tipprodus_id?.toString() || ""} 
+                        onValueChange={(v) => {
+                          const mt = mainTypes.find(t => t.tipprodus_id.toString() === v);
+                          setSelectedMainType(mt || null);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-sm mt-1">
+                          <SelectValue placeholder="Select main type..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {mainTypes.map((mt) => (
+                            <SelectItem key={mt.tipprodus_id} value={mt.tipprodus_id.toString()}>
+                              {mt.tipprodus_descriere}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 flex-1"
+                      onClick={() => {
                         setShowAddNew(false);
                         setNewTypeName("");
-                      }
-                    }}
-                    autoFocus
-                  />
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    onClick={handleAddNew}
-                    disabled={!newTypeName.trim() || isCreating}
-                  >
-                    {isCreating ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      "Add"
-                    )}
-                  </Button>
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 flex-1"
+                      onClick={handleAddNew}
+                      disabled={!newTypeName.trim() || isCreating || (newTypeLevel === "sub" && !selectedMainType)}
+                    >
+                      {isCreating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        "Add"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <CommandItem

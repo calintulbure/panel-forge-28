@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useProductTypes, ProductType } from "@/hooks/useProductTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -27,19 +28,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Pencil, Trash2, Search } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 export default function ProductTypes() {
   const { types, loading, fetchTypes, createType, updateType, deleteType } = useProductTypes();
   const [search, setSearch] = useState("");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
   const [editingType, setEditingType] = useState<ProductType | null>(null);
   const [editName, setEditName] = useState("");
+  const [editLevel, setEditLevel] = useState<"main" | "sub">("main");
+  const [editMainType, setEditMainType] = useState<ProductType | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
+  const [newTypeLevel, setNewTypeLevel] = useState<"main" | "sub">("main");
+  const [newMainType, setNewMainType] = useState<ProductType | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ProductType | null>(null);
   const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchTypes();
@@ -48,26 +60,44 @@ export default function ProductTypes() {
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchTypes(search);
+      fetchTypes(search, levelFilter === "all" ? undefined : levelFilter);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, fetchTypes]);
+  }, [search, levelFilter, fetchTypes]);
+
+  const mainTypes = useMemo(() => 
+    types.filter(t => t.tipprodus_level === "main"),
+    [types]
+  );
 
   const handleCreate = async () => {
     if (!newTypeName.trim()) return;
     setSaving(true);
-    const result = await createType(newTypeName.trim());
+    const result = await createType(
+      newTypeName.trim(),
+      newTypeLevel,
+      newTypeLevel === "sub" ? newMainType?.tipprodus_id : undefined,
+      newTypeLevel === "sub" ? newMainType?.tipprodus_descriere : undefined
+    );
     setSaving(false);
     if (result) {
       setIsAddDialogOpen(false);
       setNewTypeName("");
+      setNewTypeLevel("main");
+      setNewMainType(null);
     }
   };
 
   const handleUpdate = async () => {
     if (!editingType || !editName.trim()) return;
     setSaving(true);
-    const result = await updateType(editingType.id, editName.trim());
+    const result = await updateType(
+      editingType.tipprodus_id, 
+      editName.trim(),
+      editLevel,
+      editLevel === "sub" ? editMainType?.tipprodus_id : null,
+      editLevel === "sub" ? editMainType?.tipprodus_descriere : null
+    );
     setSaving(false);
     if (result) {
       setEditingType(null);
@@ -77,9 +107,21 @@ export default function ProductTypes() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
-    const result = await deleteType(deleteConfirm.id);
+    const result = await deleteType(deleteConfirm.tipprodus_id);
     if (result) {
       setDeleteConfirm(null);
+    }
+  };
+
+  const openEditDialog = (type: ProductType) => {
+    setEditingType(type);
+    setEditName(type.tipprodus_descriere);
+    setEditLevel(type.tipprodus_level as "main" | "sub");
+    if (type.tipprodusmain_id) {
+      const parent = mainTypes.find(t => t.tipprodus_id === type.tipprodusmain_id);
+      setEditMainType(parent || null);
+    } else {
+      setEditMainType(null);
     }
   };
 
@@ -93,8 +135,8 @@ export default function ProductTypes() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 max-w-md">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search types..."
@@ -103,6 +145,16 @@ export default function ProductTypes() {
             className="pl-9"
           />
         </div>
+        <Select value={levelFilter} onValueChange={setLevelFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Filter by level" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Levels</SelectItem>
+            <SelectItem value="main">Main Only</SelectItem>
+            <SelectItem value="sub">Sub Only</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
@@ -115,32 +167,45 @@ export default function ProductTypes() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-20">ID</TableHead>
-                <TableHead>Denumire</TableHead>
+                <TableHead className="w-28">Code</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="w-24">Level</TableHead>
+                <TableHead>Parent</TableHead>
+                <TableHead className="w-24 text-right">Products</TableHead>
                 <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {types.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No product types found
                   </TableCell>
                 </TableRow>
               ) : (
                 types.map((type) => (
-                  <TableRow key={type.id}>
-                    <TableCell className="font-mono text-sm">{type.id}</TableCell>
-                    <TableCell>{type.denumire}</TableCell>
+                  <TableRow key={type.tipprodus_id}>
+                    <TableCell className="font-mono text-sm">{type.tipprodus_id}</TableCell>
+                    <TableCell className="font-mono text-sm">{type.tipprodus_cod}</TableCell>
+                    <TableCell className="font-medium">{type.tipprodus_descriere}</TableCell>
+                    <TableCell>
+                      <Badge variant={type.tipprodus_level === "main" ? "default" : "secondary"}>
+                        {type.tipprodus_level}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {type.tipprodusmain_descr || "-"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {type.countproduse ?? 0}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => {
-                            setEditingType(type);
-                            setEditName(type.denumire);
-                          }}
+                          onClick={() => openEditDialog(type)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -168,24 +233,61 @@ export default function ProductTypes() {
           <DialogHeader>
             <DialogTitle>Add Product Type</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Type name..."
-              value={newTypeName}
-              onChange={(e) => setNewTypeName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreate();
-                }
-              }}
-              autoFocus
-            />
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Description</Label>
+              <Input
+                placeholder="Type description..."
+                value={newTypeName}
+                onChange={(e) => setNewTypeName(e.target.value)}
+                className="mt-1"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label>Level</Label>
+              <Select value={newTypeLevel} onValueChange={(v) => setNewTypeLevel(v as "main" | "sub")}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="main">Main</SelectItem>
+                  <SelectItem value="sub">Sub</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {newTypeLevel === "sub" && (
+              <div>
+                <Label>Parent Main Type</Label>
+                <Select 
+                  value={newMainType?.tipprodus_id?.toString() || ""} 
+                  onValueChange={(v) => {
+                    const mt = mainTypes.find(t => t.tipprodus_id.toString() === v);
+                    setNewMainType(mt || null);
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select parent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mainTypes.map((mt) => (
+                      <SelectItem key={mt.tipprodus_id} value={mt.tipprodus_id.toString()}>
+                        {mt.tipprodus_descriere}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={!newTypeName.trim() || saving}>
+            <Button 
+              onClick={handleCreate} 
+              disabled={!newTypeName.trim() || saving || (newTypeLevel === "sub" && !newMainType)}
+            >
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Create
             </Button>
@@ -199,24 +301,61 @@ export default function ProductTypes() {
           <DialogHeader>
             <DialogTitle>Edit Product Type</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <Input
-              placeholder="Type name..."
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleUpdate();
-                }
-              }}
-              autoFocus
-            />
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Description</Label>
+              <Input
+                placeholder="Type description..."
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="mt-1"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label>Level</Label>
+              <Select value={editLevel} onValueChange={(v) => setEditLevel(v as "main" | "sub")}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="main">Main</SelectItem>
+                  <SelectItem value="sub">Sub</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {editLevel === "sub" && (
+              <div>
+                <Label>Parent Main Type</Label>
+                <Select 
+                  value={editMainType?.tipprodus_id?.toString() || ""} 
+                  onValueChange={(v) => {
+                    const mt = mainTypes.find(t => t.tipprodus_id.toString() === v);
+                    setEditMainType(mt || null);
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select parent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mainTypes.map((mt) => (
+                      <SelectItem key={mt.tipprodus_id} value={mt.tipprodus_id.toString()}>
+                        {mt.tipprodus_descriere}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingType(null)}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate} disabled={!editName.trim() || saving}>
+            <Button 
+              onClick={handleUpdate} 
+              disabled={!editName.trim() || saving || (editLevel === "sub" && !editMainType)}
+            >
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save
             </Button>
@@ -230,7 +369,7 @@ export default function ProductTypes() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Product Type</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteConfirm?.denumire}"? 
+              Are you sure you want to delete "{deleteConfirm?.tipprodus_descriere}"? 
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
