@@ -49,8 +49,16 @@ export function ProductTypeSelector({
   const [isCreating, setIsCreating] = useState(false);
   const [mainTypes, setMainTypes] = useState<ProductType[]>([]);
   const [initialTypeName, setInitialTypeName] = useState<string>("");
+  const [userCleared, setUserCleared] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { types, loading, fetchTypes, createType } = useProductTypes();
+
+  // Reset userCleared flag when a new value is selected (not when cleared)
+  useEffect(() => {
+    if (value !== null) {
+      setUserCleared(false);
+    }
+  }, [value]);
 
   // Fetch the selected type's name on mount if value exists
   useEffect(() => {
@@ -71,14 +79,15 @@ export function ProductTypeSelector({
     }
   }, [value, initialTypeName]);
 
-  // Update input value when external value changes
+  // Update input value when external value changes (but not if user just cleared it)
   useEffect(() => {
+    if (userCleared) return;
     const selectedType = types.find((t) => t.tipprodus_id === value);
     const displayName = selectedType?.tipprodus_descriere || currentTypeName || initialTypeName || "";
     if (displayName && !open) {
       setInputValue(displayName);
     }
-  }, [value, types, currentTypeName, initialTypeName, open]);
+  }, [value, types, currentTypeName, initialTypeName, open, userCleared]);
 
   // Fetch types when popover opens
   useEffect(() => {
@@ -99,12 +108,14 @@ export function ProductTypeSelector({
   }, [inputValue, open, fetchTypes]);
 
   const handleSelect = (type: ProductType) => {
+    setUserCleared(false);
     onChange(type.tipprodus_id, type.tipprodus_descriere);
     setInputValue(type.tipprodus_descriere);
     setOpen(false);
   };
 
   const handleClear = () => {
+    setUserCleared(true);
     onChange(null, null);
     setInputValue("");
     setOpen(false);
