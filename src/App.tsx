@@ -15,6 +15,7 @@ import PendingApproval from "./pages/PendingApproval";
 import UserManagement from "./pages/UserManagement";
 import DatabaseManager from "./pages/DatabaseManager";
 import ProductTypes from "./pages/ProductTypes";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
             <Route
               path="/"
