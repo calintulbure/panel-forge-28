@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 };
 
 serve(async (req) => {
@@ -15,7 +16,7 @@ serve(async (req) => {
     // Local (destination) Supabase
     const localUrl = Deno.env.get("SUPABASE_URL");
     const localKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
+
     // Remote (source) Supabase
     const remoteUrl = Deno.env.get("SRC_SUPABASE_URL");
     const remoteKey = Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY");
@@ -29,9 +30,20 @@ serve(async (req) => {
 
     const localClient = createClient(localUrl, localKey);
     const remoteClient = createClient(remoteUrl, remoteKey);
-    
+
     const url = new URL(req.url);
-    const action = url.searchParams.get("action") || "import";
+    const actionFromQuery = url.searchParams.get("action");
+
+    let body: any = null;
+    if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
+      try {
+        body = await req.json();
+      } catch {
+        body = null;
+      }
+    }
+
+    const action = actionFromQuery || body?.action || (req.method === "PUT" ? "sync-update" : "import");
 
     console.log(`[sync-tip-produs] Action: ${action}, Method: ${req.method}`);
 
@@ -81,8 +93,7 @@ serve(async (req) => {
 
     // POST action=sync-create: Create in both local and remote
     if (req.method === "POST" && action === "sync-create") {
-      const body = await req.json();
-      const { tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr } = body;
+      const { tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr } = (body ?? {});
 
       if (!tipprodus_descriere || typeof tipprodus_descriere !== "string" || tipprodus_descriere.trim().length === 0) {
         return json({ error: "tipprodus_descriere is required" }, 400);
@@ -165,8 +176,7 @@ serve(async (req) => {
 
     // PUT action=sync-update: Update in both local and remote
     if (req.method === "PUT") {
-      const body = await req.json();
-      const { tipprodus_id, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr } = body;
+      const { tipprodus_id, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr } = (body ?? {});
 
       if (!tipprodus_id) {
         return json({ error: "tipprodus_id is required" }, 400);
@@ -255,10 +265,9 @@ serve(async (req) => {
       return json({ success: true });
     }
 
-    // PATCH action=sync-product: Sync product's tip_produs_id to remote products table
-    if (req.method === "PATCH" && action === "sync-product") {
-      const body = await req.json();
-      const { erp_product_code, tip_produs_id_sub, tip_produs_id_main } = body;
+    // POST/PATCH action=sync-product: Sync product's tip_produs_id to remote products table
+    if ((req.method === "POST" || req.method === "PATCH") && action === "sync-product") {
+      const { erp_product_code, tip_produs_id_sub, tip_produs_id_main } = (body ?? {});
 
       if (!erp_product_code) {
         return json({ error: "erp_product_code is required" }, 400);
@@ -285,7 +294,9 @@ serve(async (req) => {
         return json({ error: remoteError.message }, 500);
       }
 
-      console.log(`[sync-tip-produs] Synced product ${erp_product_code} type to remote: sub=${tip_produs_id_sub}, main=${tip_produs_id_main}`);
+      console.log(
+        `[sync-tip-produs] Synced product ${erp_product_code} type to remote: sub=${tip_produs_id_sub}, main=${tip_produs_id_main}`
+      );
       return json({ data: remoteResult, success: true });
     }
 
