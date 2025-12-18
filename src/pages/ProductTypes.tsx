@@ -42,8 +42,9 @@ type SortField = "tipprodus_id" | "tipprodus_cod" | "tipprodus_descriere" | "tip
 type SortDirection = "asc" | "desc";
 
 export default function ProductTypes() {
-  const { types, loading, fetchTypes, createType, updateType, deleteType, importFromRemote } = useProductTypes();
+  const { types, loading, fetchTypes, createType, updateType, deleteType, importFromRemote, fetchAllMainTypes } = useProductTypes();
   const [importing, setImporting] = useState(false);
+  const [allMainTypes, setAllMainTypes] = useState<ProductType[]>([]);
 
   const handleImport = async () => {
     setImporting(true);
@@ -66,6 +67,15 @@ export default function ProductTypes() {
   const [sortField, setSortField] = useState<SortField>("tipprodus_descriere");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  // Fetch all main types for dialogs (independent of filters)
+  useEffect(() => {
+    const loadAllMainTypes = async () => {
+      const mainTypes = await fetchAllMainTypes();
+      setAllMainTypes(mainTypes);
+    };
+    loadAllMainTypes();
+  }, [fetchAllMainTypes]);
+
   useEffect(() => {
     fetchTypes();
   }, [fetchTypes]);
@@ -78,11 +88,6 @@ export default function ProductTypes() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search, levelFilter, parentFilter, fetchTypes]);
-
-  const mainTypes = useMemo(() => 
-    types.filter(t => t.tipprodus_level === "main"),
-    [types]
-  );
 
   // Sorted types
   const sortedTypes = useMemo(() => {
@@ -191,7 +196,7 @@ export default function ProductTypes() {
     setEditName(type.tipprodus_descriere);
     setEditLevel(type.tipprodus_level as "main" | "sub");
     if (type.tipprodusmain_id) {
-      const parent = mainTypes.find(t => t.tipprodus_id === type.tipprodusmain_id);
+      const parent = allMainTypes.find(t => t.tipprodus_id === type.tipprodusmain_id);
       setEditMainType(parent || null);
     } else {
       setEditMainType(null);
@@ -375,7 +380,7 @@ export default function ProductTypes() {
                 <Select 
                   value={newMainType?.tipprodus_id?.toString() || ""} 
                   onValueChange={(v) => {
-                    const mt = mainTypes.find(t => t.tipprodus_id.toString() === v);
+                    const mt = allMainTypes.find(t => t.tipprodus_id.toString() === v);
                     setNewMainType(mt || null);
                   }}
                 >
@@ -383,7 +388,7 @@ export default function ProductTypes() {
                     <SelectValue placeholder="Select parent..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {mainTypes.map((mt) => (
+                    {allMainTypes.map((mt) => (
                       <SelectItem key={mt.tipprodus_id} value={mt.tipprodus_id.toString()}>
                         {mt.tipprodus_descriere}
                       </SelectItem>
@@ -443,7 +448,7 @@ export default function ProductTypes() {
                 <Select 
                   value={editMainType?.tipprodus_id?.toString() || ""} 
                   onValueChange={(v) => {
-                    const mt = mainTypes.find(t => t.tipprodus_id.toString() === v);
+                    const mt = allMainTypes.find(t => t.tipprodus_id.toString() === v);
                     setEditMainType(mt || null);
                   }}
                 >
@@ -451,7 +456,7 @@ export default function ProductTypes() {
                     <SelectValue placeholder="Select parent..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {mainTypes.map((mt) => (
+                    {allMainTypes.map((mt) => (
                       <SelectItem key={mt.tipprodus_id} value={mt.tipprodus_id.toString()}>
                         {mt.tipprodus_descriere}
                       </SelectItem>
