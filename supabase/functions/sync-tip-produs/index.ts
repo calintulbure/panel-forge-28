@@ -54,12 +54,15 @@ serve(async (req) => {
         return json({ imported: 0, message: "No data to import" });
       }
 
-      // Transform data to match local schema
+      // Transform data to match local schema (all fields now match)
       const localData = remoteData.map(row => ({
         tipprodus_id: row.tipprodus_id,
+        tipprodus_cod: row.tipprodus_cod,
         tipprodus_descriere: row.tipprodus_descriere,
         tipprodus_level: row.tipprodus_level,
         tipprodusmain_id: row.tipprodusmain_id,
+        tipprodusmain_descr: row.tipprodusmain_descr,
+        countproduse: row.countproduse,
       }));
 
       // Upsert to local, ignoring conflicts
@@ -93,7 +96,20 @@ serve(async (req) => {
         .limit(1);
 
       const newId = (maxData?.[0]?.tipprodus_id || 0) + 1;
-      const tipprodus_cod = `TP${newId.toString().padStart(4, '0')}`;
+      
+      // Generate snake_case tipprodus_cod based on main type + sub type
+      const toSnakeCase = (str: string) => 
+        str.toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove diacritics
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_|_$/g, "");
+      
+      let tipprodus_cod: string;
+      if (tipprodus_level?.toLowerCase() === "sub" && tipprodusmain_descr) {
+        tipprodus_cod = `${toSnakeCase(tipprodusmain_descr)}_${toSnakeCase(tipprodus_descriere.trim())}`;
+      } else {
+        tipprodus_cod = toSnakeCase(tipprodus_descriere.trim());
+      }
 
       // Insert into remote first
       const remoteInsertData: Record<string, unknown> = {
@@ -120,12 +136,15 @@ serve(async (req) => {
         return json({ error: remoteError.message }, 500);
       }
 
-      // Insert into local
+      // Insert into local (include all fields)
       const localInsertData = {
         tipprodus_id: newId,
+        tipprodus_cod,
         tipprodus_descriere: tipprodus_descriere.trim(),
         tipprodus_level: tipprodus_level || "Main",
         tipprodusmain_id: tipprodusmain_id || null,
+        tipprodusmain_descr: tipprodusmain_descr || null,
+        countproduse: 0,
       };
 
       const { error: localError } = await localClient
@@ -179,10 +198,15 @@ serve(async (req) => {
         return json({ error: remoteError.message }, 500);
       }
 
-      // Update local
+      // Update local (include tipprodusmain_descr)
+      const localUpdateData = { ...updateData };
+      if (tipprodusmain_descr !== undefined) {
+        localUpdateData.tipprodusmain_descr = tipprodusmain_descr;
+      }
+
       const { error: localError } = await localClient
         .from("tip_produs")
-        .update(updateData)
+        .update(localUpdateData)
         .eq("tipprodus_id", tipprodus_id);
 
       if (localError) {

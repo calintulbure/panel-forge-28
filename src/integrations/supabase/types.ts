@@ -521,26 +521,35 @@ export type Database = {
       }
       tip_produs: {
         Row: {
+          countproduse: number | null
           created_at: string | null
+          tipprodus_cod: string | null
           tipprodus_descriere: string
           tipprodus_id: number
-          tipprodus_level: string | null
+          tipprodus_level: string
+          tipprodusmain_descr: string | null
           tipprodusmain_id: number | null
           updated_at: string | null
         }
         Insert: {
+          countproduse?: number | null
           created_at?: string | null
+          tipprodus_cod?: string | null
           tipprodus_descriere: string
           tipprodus_id?: number
-          tipprodus_level?: string | null
+          tipprodus_level?: string
+          tipprodusmain_descr?: string | null
           tipprodusmain_id?: number | null
           updated_at?: string | null
         }
         Update: {
+          countproduse?: number | null
           created_at?: string | null
+          tipprodus_cod?: string | null
           tipprodus_descriere?: string
           tipprodus_id?: number
-          tipprodus_level?: string | null
+          tipprodus_level?: string
+          tipprodusmain_descr?: string | null
           tipprodusmain_id?: number | null
           updated_at?: string | null
         }
