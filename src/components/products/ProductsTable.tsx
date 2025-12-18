@@ -63,14 +63,15 @@ export function ProductsTable({
   const {
     toast
   } = useToast();
-  const { updateProductType } = useProductTypes();
-
+  const {
+    updateProductType
+  } = useProductTypes();
   const handleProductTypeChange = async (productCode: string, typeId: number | null, typeName: string | null) => {
     const result = await updateProductType(productCode, typeId);
     if (result) {
       toast({
         title: "Product type updated",
-        description: typeName ? `Set to: ${typeName}` : "Type cleared",
+        description: typeName ? `Set to: ${typeName}` : "Type cleared"
       });
       onRefresh();
     }
@@ -202,23 +203,20 @@ export function ProductsTable({
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1">
-                        {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline truncate" onClick={e => e.stopPropagation()}>
+                        {product.senior_erp_link ? <a href={product.senior_erp_link} onClick={e => e.stopPropagation()} className="font-bold hover:underline truncate text-xl">
                             {product.erp_product_code}
                           </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(product.erp_product_code);
-                            toast({ description: "Code copied to clipboard" });
-                          }}
-                        >
+                        <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(product.erp_product_code);
+                    toast({
+                      description: "Code copied to clipboard"
+                    });
+                  }}>
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">
+                      <div className="text text-muted-foreground truncate ">
                         {product.erp_product_description || "-"}
                       </div>
                       {product.ro_stock !== null && <div className="text-xs text-muted-foreground">
@@ -234,10 +232,7 @@ export function ProductsTable({
                     </div>
                   </TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
-                    <ProductTypeSelector
-                      value={product.tip_produs_id_sub || null}
-                      onChange={(typeId, typeName) => handleProductTypeChange(product.erp_product_code, typeId, typeName)}
-                    />
+                    <ProductTypeSelector value={product.tip_produs_id_sub || null} onChange={(typeId, typeName) => handleProductTypeChange(product.erp_product_code, typeId, typeName)} />
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <Badge variant={getStockBadgeVariant(product.stare_stoc)}>
@@ -249,11 +244,9 @@ export function ProductsTable({
                       <Badge variant={getOfferBadgeVariant(product.stare_oferta)}>
                         {product.stare_oferta || "Unknown"}
                       </Badge>
-                      {product.stare_oferta_secundara && (
-                        <Badge variant="outline" className="text-xs">
+                      {product.stare_oferta_secundara && <Badge variant="outline" className="text-xs">
                           {product.stare_oferta_secundara}
-                        </Badge>
-                      )}
+                        </Badge>}
                     </div>
                   </TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
@@ -284,16 +277,13 @@ export function ProductsTable({
                     {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline truncate" onClick={e => e.stopPropagation()}>
                         {product.erp_product_code}
                       </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 flex-shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(product.erp_product_code);
-                        toast({ description: "Code copied to clipboard" });
-                      }}
-                    >
+                    <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={e => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(product.erp_product_code);
+                toast({
+                  description: "Code copied to clipboard"
+                });
+              }}>
                       <Copy className="h-3 w-3" />
                     </Button>
                   </div>
@@ -340,11 +330,9 @@ export function ProductsTable({
                 <Badge variant={getOfferBadgeVariant(product.stare_oferta)} className="text-xs">
                   {product.stare_oferta || "Unknown"}
                 </Badge>
-                {product.stare_oferta_secundara && (
-                  <Badge variant="outline" className="text-xs">
+                {product.stare_oferta_secundara && <Badge variant="outline" className="text-xs">
                     {product.stare_oferta_secundara}
-                  </Badge>
-                )}
+                  </Badge>}
               </div>
 
               <div className="flex items-center gap-3 pt-2 border-t" onClick={e => e.stopPropagation()}>
