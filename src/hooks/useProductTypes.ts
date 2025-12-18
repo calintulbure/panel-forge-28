@@ -213,61 +213,65 @@ export function useProductTypes() {
   }, [toast, fetchTypes]);
 
   // Update product's tip_produs_id_sub (local + sync to remote)
-  const updateProductType = useCallback(async (erp_product_code: string, tip_produs_id_sub: number | null, tip_produs_id_main?: number | null) => {
-    try {
-      // Update local first
-      const updateData: Record<string, unknown> = { tip_produs_id_sub };
-      if (tip_produs_id_main !== undefined) {
-        updateData.tip_produs_id_main = tip_produs_id_main;
+  const updateProductType = useCallback(
+    async (erp_product_code: string, tip_produs_id_sub: number | null, tip_produs_id_main?: number | null) => {
+      try {
+        // Update local first
+        const updateData: Record<string, unknown> = { tip_produs_id_sub };
+        if (tip_produs_id_main !== undefined) {
+          updateData.tip_produs_id_main = tip_produs_id_main;
+        }
+
+        const { data, error } = await supabase
+          .from("products")
+          .update(updateData)
+          .eq("erp_product_code", erp_product_code)
+          .select("erp_product_code, tip_produs_id_sub, tip_produs_id_main")
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        // Sync to remote (non-blocking for UX)
+        try {
+          const syncBody: Record<string, unknown> = {
+            action: "sync-product",
+            erp_product_code,
+            tip_produs_id_sub,
+          };
+
+          // Only sync main type if the caller explicitly provided it
+          if (tip_produs_id_main !== undefined) {
+            syncBody.tip_produs_id_main = tip_produs_id_main;
+          }
+
+          const { data: syncData, error: syncError } = await supabase.functions.invoke("sync-tip-produs", {
+            body: syncBody,
+          });
+
+          if (syncError) {
+            console.warn("Remote sync failed (local updated):", syncError.message);
+          } else if ((syncData as any)?.error) {
+            console.warn("Remote sync failed (local updated):", (syncData as any).error);
+          }
+        } catch (syncErr) {
+          console.warn("Remote sync failed (local updated):", syncErr);
+        }
+
+        return data;
+      } catch (err) {
+        console.error("Error updating product type:", err);
+        toast({
+          title: "Error",
+          description: "Failed to update product type",
+          variant: "destructive",
+        });
+        return null;
       }
-
-      const { data, error } = await supabase
-        .from("products")
-        .update(updateData)
-        .eq("erp_product_code", erp_product_code)
-        .select("erp_product_code, tip_produs_id_sub, tip_produs_id_main")
-        .single();
-
-      if (error) {
-        throw error;
-      }
-
-      // Sync to remote via edge function
-      const syncUrl = new URL(SYNC_API_BASE);
-      syncUrl.searchParams.set("action", "sync-product");
-
-      const syncResponse = await fetch(syncUrl.toString(), {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: JSON.stringify({
-          erp_product_code,
-          tip_produs_id_sub,
-          tip_produs_id_main: tip_produs_id_main !== undefined ? tip_produs_id_main : data.tip_produs_id_main,
-        }),
-      });
-
-      const syncResult = await syncResponse.json();
-      if (syncResult.error) {
-        console.warn("Remote sync failed (local updated):", syncResult.error);
-        // Don't throw - local was successful
-      } else {
-        console.log("Product type synced to remote:", erp_product_code);
-      }
-
-      return data;
-    } catch (err) {
-      console.error("Error updating product type:", err);
-      toast({
-        title: "Error",
-        description: "Failed to update product type",
-        variant: "destructive",
-      });
-      return null;
-    }
-  }, [toast]);
+    },
+    [toast]
+  );
 
   // Delete via sync edge function (deletes from both local and remote)
   const deleteType = useCallback(async (tipprodus_id: number) => {
