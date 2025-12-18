@@ -216,7 +216,7 @@ export function ProductsTable({
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
-                      <div className="text text-muted-foreground truncate ">
+                      <div className="text-sm text-muted-foreground truncate">
                         {product.erp_product_description || "-"}
                       </div>
                       {product.ro_stock !== null && <div className="text-xs text-muted-foreground">
