@@ -159,10 +159,16 @@ export function ProductsTable({
           <TableHeader className="bg-background border-b">
             <TableRow>
               <TableHead className="w-[160px]">
-                <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-8 px-2">
-                  Product Info
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
+                <div className="flex flex-col gap-0.5">
+                  <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-7 px-2 text-xs">
+                    Code
+                    <ArrowUpDown className="ml-1 h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" onClick={() => handleSort('erp_product_description')} className="h-7 px-2 text-xs">
+                    Description
+                    <ArrowUpDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </div>
               </TableHead>
               <TableHead className="w-[200px]">
                 <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
