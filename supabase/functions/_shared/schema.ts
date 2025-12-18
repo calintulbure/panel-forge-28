@@ -55,9 +55,9 @@ export const ProductUpsertItem = z.object({
   senior_erp_link: z.string().nullable().optional(),
   site_ro_product_id: z.number().int().nullable().optional(),
   site_hu_product_id: z.number().int().nullable().optional(),
-  ro_stock: z.number().int().nullable().optional(),
+  ro_stock: z.number().nullable().optional(),
   ro_stoc_detailed: z.string().nullable().optional(),
-  hu_stock: z.number().int().nullable().optional(),
+  hu_stock: z.number().nullable().optional(),
   hu_stock_detailed: z.string().nullable().optional(),
   tip_produs_id_sub: z.number().int().nullable().optional(),
   tip_produs_id_main: z.number().int().nullable().optional()
