@@ -30,9 +30,10 @@ serve(async (req) => {
       const search = url.searchParams.get("search") || "";
       const limit = parseInt(url.searchParams.get("limit") || "100");
 
+      // First, try to get the table structure
       let query = srcClient
         .from("tip_produs")
-        .select("id, denumire")
+        .select("*")
         .order("denumire", { ascending: true })
         .limit(limit);
 
@@ -44,6 +45,11 @@ serve(async (req) => {
       if (error) {
         console.error("Error fetching tip_produs:", error);
         return json({ error: error.message }, 500);
+      }
+
+      // Log the structure to understand the columns
+      if (data && data.length > 0) {
+        console.log("[remote-tip-produs] Sample row columns:", Object.keys(data[0]));
       }
 
       console.log(`[remote-tip-produs] Found ${data?.length || 0} entries`);
