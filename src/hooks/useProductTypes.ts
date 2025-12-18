@@ -91,6 +91,32 @@ export function useProductTypes() {
     }
   }, [toast]);
 
+  // Fetch all main types (unfiltered, for dialogs)
+  const fetchAllMainTypes = useCallback(async (): Promise<ProductType[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("tip_produs")
+        .select("tipprodus_id, tipprodus_cod, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr")
+        .ilike("tipprodus_level", "main")
+        .order("tipprodus_descriere", { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map((t) => ({
+        tipprodus_id: t.tipprodus_id,
+        tipprodus_cod: t.tipprodus_cod,
+        tipprodus_descriere: t.tipprodus_descriere,
+        tipprodus_level: (t.tipprodus_level || "").toLowerCase(),
+        tipprodusmain_id: t.tipprodusmain_id,
+        tipprodusmain_descr: t.tipprodusmain_descr,
+        countproduse: 0,
+      }));
+    } catch (err) {
+      console.error("Error fetching main types:", err);
+      return [];
+    }
+  }, []);
+
   // Create via sync edge function (creates in both local and remote)
   const createType = useCallback(async (
     tipprodus_descriere: string, 
@@ -290,6 +316,7 @@ export function useProductTypes() {
     types,
     loading,
     fetchTypes,
+    fetchAllMainTypes,
     createType,
     updateType,
     updateProductType,
