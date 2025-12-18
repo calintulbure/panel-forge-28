@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverAnchor,
 } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,7 +49,7 @@ export function ProductTypeSelector({
   const [isCreating, setIsCreating] = useState(false);
   const [mainTypes, setMainTypes] = useState<ProductType[]>([]);
   const [initialTypeName, setInitialTypeName] = useState<string>("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { types, loading, fetchTypes, createType } = useProductTypes();
 
   // Fetch the selected type's name on mount if value exists
@@ -136,7 +137,7 @@ export function ProductTypeSelector({
     setOpen(true);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
     if (!open) {
       setOpen(true);
@@ -151,14 +152,15 @@ export function ProductTypeSelector({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
         <div className="relative">
-          <Input
+          <Textarea
             ref={inputRef}
             value={inputValue}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
             disabled={disabled}
             placeholder="Type to search..."
-            className="h-8 text-xs pr-7"
+            className="text-xs pr-7 min-h-[3rem] h-[3rem] resize-none py-1"
+            rows={2}
           />
           {inputValue && !disabled && (
             <button
