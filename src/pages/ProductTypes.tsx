@@ -36,7 +36,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Pencil, Trash2, Search, Download } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Search, Download, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+
+type SortField = "tipprodus_id" | "tipprodus_cod" | "tipprodus_descriere" | "tipprodus_level" | "tipprodusmain_descr" | "countproduse";
+type SortDirection = "asc" | "desc";
 
 export default function ProductTypes() {
   const { types, loading, fetchTypes, createType, updateType, deleteType, importFromRemote } = useProductTypes();
@@ -49,6 +52,7 @@ export default function ProductTypes() {
   };
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [parentFilter, setParentFilter] = useState<string>("all");
   const [editingType, setEditingType] = useState<ProductType | null>(null);
   const [editName, setEditName] = useState("");
   const [editLevel, setEditLevel] = useState<"main" | "sub">("main");
@@ -59,6 +63,8 @@ export default function ProductTypes() {
   const [newMainType, setNewMainType] = useState<ProductType | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ProductType | null>(null);
   const [saving, setSaving] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("tipprodus_descriere");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   useEffect(() => {
     fetchTypes();
@@ -67,15 +73,75 @@ export default function ProductTypes() {
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchTypes(search, levelFilter === "all" ? undefined : levelFilter);
+      const mainId = parentFilter !== "all" ? parseInt(parentFilter) : undefined;
+      fetchTypes(search, levelFilter === "all" ? undefined : levelFilter, mainId);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, levelFilter, fetchTypes]);
+  }, [search, levelFilter, parentFilter, fetchTypes]);
 
   const mainTypes = useMemo(() => 
     types.filter(t => t.tipprodus_level === "main"),
     [types]
   );
+
+  // Sorted types
+  const sortedTypes = useMemo(() => {
+    return [...types].sort((a, b) => {
+      let aVal: string | number | null = null;
+      let bVal: string | number | null = null;
+
+      switch (sortField) {
+        case "tipprodus_id":
+          aVal = a.tipprodus_id;
+          bVal = b.tipprodus_id;
+          break;
+        case "tipprodus_cod":
+          aVal = a.tipprodus_cod || "";
+          bVal = b.tipprodus_cod || "";
+          break;
+        case "tipprodus_descriere":
+          aVal = a.tipprodus_descriere;
+          bVal = b.tipprodus_descriere;
+          break;
+        case "tipprodus_level":
+          aVal = a.tipprodus_level;
+          bVal = b.tipprodus_level;
+          break;
+        case "tipprodusmain_descr":
+          aVal = a.tipprodusmain_descr || "";
+          bVal = b.tipprodusmain_descr || "";
+          break;
+        case "countproduse":
+          aVal = a.countproduse;
+          bVal = b.countproduse;
+          break;
+      }
+
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+
+      const strA = String(aVal || "").toLowerCase();
+      const strB = String(bVal || "").toLowerCase();
+      return sortDirection === "asc" ? strA.localeCompare(strB) : strB.localeCompare(strA);
+    });
+  }, [types, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
 
   const handleCreate = async () => {
     if (!newTypeName.trim()) return;
@@ -132,6 +198,17 @@ export default function ProductTypes() {
     }
   };
 
+  // Get unique parent types for filter dropdown
+  const parentOptions = useMemo(() => {
+    const parents = new Map<number, string>();
+    types.forEach(t => {
+      if (t.tipprodusmain_id && t.tipprodusmain_descr) {
+        parents.set(t.tipprodusmain_id, t.tipprodusmain_descr);
+      }
+    });
+    return Array.from(parents.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [types]);
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -148,7 +225,7 @@ export default function ProductTypes() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -168,6 +245,17 @@ export default function ProductTypes() {
             <SelectItem value="sub">Sub Only</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={parentFilter} onValueChange={setParentFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by parent" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Parents</SelectItem>
+            {parentOptions.map(([id, name]) => (
+              <SelectItem key={id} value={id.toString()}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (
@@ -179,27 +267,39 @@ export default function ProductTypes() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-20">ID</TableHead>
-                <TableHead className="w-28">Code</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-24">Level</TableHead>
-                <TableHead>Parent</TableHead>
-                <TableHead className="w-24 text-right">Products</TableHead>
+                <TableHead className="w-20 cursor-pointer" onClick={() => handleSort("tipprodus_id")}>
+                  <div className="flex items-center">ID<SortIcon field="tipprodus_id" /></div>
+                </TableHead>
+                <TableHead className="w-32 cursor-pointer" onClick={() => handleSort("tipprodus_cod")}>
+                  <div className="flex items-center">Code<SortIcon field="tipprodus_cod" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort("tipprodus_descriere")}>
+                  <div className="flex items-center">Description<SortIcon field="tipprodus_descriere" /></div>
+                </TableHead>
+                <TableHead className="w-24 cursor-pointer" onClick={() => handleSort("tipprodus_level")}>
+                  <div className="flex items-center">Level<SortIcon field="tipprodus_level" /></div>
+                </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort("tipprodusmain_descr")}>
+                  <div className="flex items-center">Parent<SortIcon field="tipprodusmain_descr" /></div>
+                </TableHead>
+                <TableHead className="w-24 text-right cursor-pointer" onClick={() => handleSort("countproduse")}>
+                  <div className="flex items-center justify-end">Products<SortIcon field="countproduse" /></div>
+                </TableHead>
                 <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {types.length === 0 ? (
+              {sortedTypes.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No product types found
                   </TableCell>
                 </TableRow>
               ) : (
-                types.map((type) => (
+                sortedTypes.map((type) => (
                   <TableRow key={type.tipprodus_id}>
                     <TableCell className="font-mono text-sm">{type.tipprodus_id}</TableCell>
-                    <TableCell className="font-mono text-sm">{type.tipprodus_cod}</TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">{type.tipprodus_cod || "-"}</TableCell>
                     <TableCell className="font-medium">{type.tipprodus_descriere}</TableCell>
                     <TableCell>
                       <Badge variant={type.tipprodus_level === "main" ? "default" : "secondary"}>
@@ -210,7 +310,7 @@ export default function ProductTypes() {
                       {type.tipprodusmain_descr || "-"}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {type.countproduse ?? 0}
+                      {type.countproduse}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
