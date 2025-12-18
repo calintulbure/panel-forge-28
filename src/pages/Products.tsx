@@ -66,7 +66,8 @@ export default function Products() {
   
   useEffect(() => {
     fetchTypes();
-  }, [fetchTypes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sync filters to URL
   useEffect(() => {
