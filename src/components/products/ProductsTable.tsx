@@ -264,7 +264,7 @@ export function ProductsTable({
                   </TableCell>
                   <TableCell className="text-center">
                     <Button variant="ghost" size="icon" onClick={e => handleValidationToggle(product, e)} className="h-24 w-24">
-                      {product.validated ? <CheckCircle2 className="h-14 w-14 text-green-600" /> : <XCircle className="h-14 w-14 text-muted-foreground" />}
+                      {product.validated ? <CheckCircle2 className="h-16 w-16 text-green-600" /> : <XCircle className="h-16 w-16 text-muted-foreground" />}
                     </Button>
                   </TableCell>
                   {isAdmin}
