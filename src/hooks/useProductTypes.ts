@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface ProductType {
   tipprodus_id: number;
-  tipprodus_cod?: string;
+  tipprodus_cod?: string | null;
   tipprodus_descriere: string;
   tipprodus_level: string;
   tipprodusmain_id: number | null;
   tipprodusmain_descr?: string | null;
-  countproduse?: number | null;
+  countproduse: number;
 }
 
 const SYNC_API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sync-tip-produs`;
@@ -19,15 +19,16 @@ export function useProductTypes() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Fetch from local table
+  // Fetch from local table with dynamic product count
   const fetchTypes = useCallback(async (search?: string, level?: string, mainId?: number) => {
     setLoading(true);
     try {
+      // Fetch types
       let query = supabase
         .from("tip_produs")
-        .select("tipprodus_id, tipprodus_cod, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr, countproduse")
+        .select("tipprodus_id, tipprodus_cod, tipprodus_descriere, tipprodus_level, tipprodusmain_id, tipprodusmain_descr")
         .order("tipprodus_descriere", { ascending: true })
-        .limit(200);
+        .limit(500);
 
       if (search) {
         query = query.ilike("tipprodus_descriere", `%${search}%`);
@@ -41,20 +42,39 @@ export function useProductTypes() {
         query = query.eq("tipprodusmain_id", mainId);
       }
 
-      const { data, error } = await query;
+      const { data: typesData, error: typesError } = await query;
 
-      if (error) {
-        throw error;
+      if (typesError) {
+        throw typesError;
       }
 
-      const normalized: ProductType[] = (data || []).map((t) => ({
+      // Fetch product counts per type
+      const { data: countData, error: countError } = await supabase
+        .from("products")
+        .select("tip_produs_id_sub");
+
+      if (countError) {
+        console.warn("Failed to fetch product counts:", countError);
+      }
+
+      // Build count map
+      const countMap = new Map<number, number>();
+      if (countData) {
+        for (const row of countData) {
+          if (row.tip_produs_id_sub != null) {
+            countMap.set(row.tip_produs_id_sub, (countMap.get(row.tip_produs_id_sub) || 0) + 1);
+          }
+        }
+      }
+
+      const normalized: ProductType[] = (typesData || []).map((t) => ({
         tipprodus_id: t.tipprodus_id,
         tipprodus_cod: t.tipprodus_cod,
         tipprodus_descriere: t.tipprodus_descriere,
         tipprodus_level: (t.tipprodus_level || "").toLowerCase(),
         tipprodusmain_id: t.tipprodusmain_id,
         tipprodusmain_descr: t.tipprodusmain_descr,
-        countproduse: t.countproduse,
+        countproduse: countMap.get(t.tipprodus_id) || 0,
       }));
 
       setTypes(normalized);
