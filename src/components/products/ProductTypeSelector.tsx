@@ -159,7 +159,7 @@ export function ProductTypeSelector({
             onFocus={handleInputFocus}
             disabled={disabled}
             placeholder="Type to search..."
-            className="text-lg pr-7 min-h-[3rem] h-[3rem] resize-none py-1"
+            className="text-lg pr-7 min-h-[3.5rem] h-[3.5rem] w-[220px] resize-none py-1 leading-tight"
             rows={2}
           />
           {inputValue && !disabled && (
