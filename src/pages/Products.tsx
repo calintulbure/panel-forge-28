@@ -544,6 +544,22 @@ export default function Products() {
     }
   }, [availableOfferStatusSecondary]);
 
+  // Reset tipProdusFilter when category filters change
+  useEffect(() => {
+    if (tipProdusFilter !== "all") {
+      // Check if current tipProdusFilter is still valid for filtered products
+      if (availableTipProdusIds) {
+        const isValidSelection = 
+          (tipProdusFilter === "null" && availableTipProdusIds.hasNull) ||
+          (tipProdusFilter !== "null" && availableTipProdusIds.ids.includes(parseInt(tipProdusFilter)));
+        
+        if (!isValidSelection) {
+          setTipProdusFilter("all");
+        }
+      }
+    }
+  }, [category1, category2, category3, availableTipProdusIds]);
+
   // Pagination calculations
   const filteredCount = totalCount || 0;
   const totalPages = Math.ceil(filteredCount / itemsPerPage);
