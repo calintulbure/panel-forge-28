@@ -13,7 +13,8 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const { signIn, signUp, resetPassword, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,6 +66,29 @@ export default function Auth() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const { error } = await resetPassword(email);
+      if (error) {
+        toast.error(error.message || "Failed to send reset email");
+      } else {
+        toast.success("Password reset email sent! Check your inbox.");
+        setShowForgotPassword(false);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -83,42 +107,87 @@ export default function Auth() {
             </TabsList>
 
             <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="email@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
+              {showForgotPassword ? (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      "Send Reset Email"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setShowForgotPassword(false)}
+                  >
+                    Back to Sign In
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-email">Email</Label>
+                    <Input
+                      id="signin-email"
+                      type="email"
+                      placeholder="email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-sm"
+                        onClick={() => setShowForgotPassword(true)}
+                      >
+                        Forgot password?
+                      </Button>
+                    </div>
+                    <Input
+                      id="signin-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </form>
+              )}
             </TabsContent>
 
             <TabsContent value="signup">
