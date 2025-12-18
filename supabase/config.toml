@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.remote-tip-produs]
 verify_jwt = false
+
+[functions.sync-tip-produs]
+verify_jwt = false

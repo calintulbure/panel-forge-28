@@ -519,6 +519,33 @@ export type Database = {
         }
         Relationships: []
       }
+      tip_produs: {
+        Row: {
+          created_at: string | null
+          tipprodus_descriere: string
+          tipprodus_id: number
+          tipprodus_level: string | null
+          tipprodusmain_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          tipprodus_descriere: string
+          tipprodus_id?: number
+          tipprodus_level?: string | null
+          tipprodusmain_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          tipprodus_descriere?: string
+          tipprodus_id?: number
+          tipprodus_level?: string | null
+          tipprodusmain_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           approved: boolean | null

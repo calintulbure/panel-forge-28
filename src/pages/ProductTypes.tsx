@@ -36,10 +36,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Search, Download } from "lucide-react";
 
 export default function ProductTypes() {
-  const { types, loading, fetchTypes, createType, updateType, deleteType } = useProductTypes();
+  const { types, loading, fetchTypes, createType, updateType, deleteType, importFromRemote } = useProductTypes();
+  const [importing, setImporting] = useState(false);
+
+  const handleImport = async () => {
+    setImporting(true);
+    await importFromRemote();
+    setImporting(false);
+  };
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [editingType, setEditingType] = useState<ProductType | null>(null);
@@ -129,10 +136,16 @@ export default function ProductTypes() {
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <h1 className="text-2xl font-bold text-foreground">Product Types</h1>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Type
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleImport} disabled={importing}>
+            {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Import from Remote
+          </Button>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Type
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
