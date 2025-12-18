@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -64,8 +64,15 @@ export function ProductsTable({
     toast
   } = useToast();
   const {
-    updateProductType
+    updateProductType,
+    types: productTypes,
+    fetchTypes
   } = useProductTypes();
+
+  // Fetch product types for sorting by name
+  useEffect(() => {
+    fetchTypes();
+  }, [fetchTypes]);
   const handleProductTypeChange = async (productCode: string, typeId: number | null, typeName: string | null) => {
     const result = await updateProductType(productCode, typeId);
     if (result) {
@@ -76,8 +83,24 @@ export function ProductsTable({
       onRefresh();
     }
   };
+  // Build a map of type IDs to type names for sorting
+  const typeNameMap = new Map<number, string>();
+  productTypes.forEach((t) => {
+    typeNameMap.set(t.tipprodus_id, t.tipprodus_descriere);
+  });
+
   const sortedProducts = [...products].sort((a, b) => {
     if (!sortConfig.key) return 0;
+    
+    // Special handling for product type sorting by name
+    if (sortConfig.key === 'tip_produs_id_sub') {
+      const aTypeName = a.tip_produs_id_sub ? typeNameMap.get(a.tip_produs_id_sub) || '' : '';
+      const bTypeName = b.tip_produs_id_sub ? typeNameMap.get(b.tip_produs_id_sub) || '' : '';
+      if (aTypeName < bTypeName) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aTypeName > bTypeName) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    }
+    
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
     if (aValue === null || aValue === undefined) return 1;
@@ -176,7 +199,12 @@ export function ProductsTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="w-[150px]">Product Type</TableHead>
+              <TableHead className="w-[150px]">
+                <Button variant="ghost" onClick={() => handleSort('tip_produs_id_sub')} className="h-8 px-2">
+                  Product Type
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
               <TableHead className="w-[120px]">
                 <Button variant="ghost" onClick={() => handleSort('stare_stoc')} className="h-8 px-2">
                   Stock Status
