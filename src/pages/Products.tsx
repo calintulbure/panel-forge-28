@@ -415,6 +415,102 @@ export default function Products() {
     return Array.from(secondarySet).sort();
   }, [offerStatus, categories.offerStatusesSecondary, categories.offerRelations]);
 
+  // Fetch available tip_produs_id_sub values based on current filters (excluding tipProdusFilter)
+  const { data: availableTipProdusIds } = useQuery({
+    queryKey: ["available-tip-produs", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("products")
+        .select("tip_produs_id_sub");
+
+      // Apply all filters except tipProdusFilter
+      if (search) {
+        query = query.or(`erp_product_code.ilike.%${search}%,erp_product_description.ilike.%${search}%`);
+      }
+      if (category1.length > 0) {
+        query = query.in("categ1", category1);
+      }
+      if (category2.length > 0) {
+        query = query.in("categ2", category2);
+      }
+      if (category3.length > 0) {
+        query = query.in("categ3", category3);
+      }
+      if (offerStatus.length > 0) {
+        query = query.in("stare_oferta", offerStatus);
+      }
+      if (offerStatusSecondary.length > 0) {
+        query = query.in("stare_oferta_secundara", offerStatusSecondary);
+      }
+      if (stockStatus.length > 0) {
+        query = query.in("stare_stoc", stockStatus);
+      }
+      if (validationFilter === "validated") {
+        query = query.eq("validated", true);
+      } else if (validationFilter === "not_validated") {
+        query = query.or("validated.is.null,validated.eq.false");
+      }
+      if (yliRoSkuFilter === "blank") {
+        query = query.is("yliro_sku", null);
+      } else if (yliRoSkuFilter === "not_blank") {
+        query = query.not("yliro_sku", "is", null);
+      }
+      if (yliHuSkuFilter === "blank") {
+        query = query.is("ylihu_sku", null);
+      } else if (yliHuSkuFilter === "not_blank") {
+        query = query.not("ylihu_sku", "is", null);
+      }
+      if (yliRoProdIdFilter !== "all") {
+        if (yliRoProdIdFilter === "null") {
+          query = query.is("site_ro_product_id", null);
+        } else if (yliRoProdIdFilter === "0") {
+          query = query.eq("site_ro_product_id", 0);
+        } else if (yliRoProdIdFilter === ">0") {
+          query = query.gt("site_ro_product_id", 0);
+        }
+      }
+      if (yliHuProdIdFilter !== "all") {
+        if (yliHuProdIdFilter === "null") {
+          query = query.is("site_hu_product_id", null);
+        } else if (yliHuProdIdFilter === "0") {
+          query = query.eq("site_hu_product_id", 0);
+        } else if (yliHuProdIdFilter === ">0") {
+          query = query.gt("site_hu_product_id", 0);
+        }
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Extract unique tip_produs_id_sub values
+      const idSet = new Set<number>();
+      let hasNull = false;
+      data?.forEach(p => {
+        if (p.tip_produs_id_sub === null) {
+          hasNull = true;
+        } else {
+          idSet.add(p.tip_produs_id_sub);
+        }
+      });
+
+      return { ids: Array.from(idSet), hasNull };
+    },
+    staleTime: 30000,
+  });
+
+  // Filter productTypes based on available IDs from current filters
+  const availableTipProdus = useMemo(() => {
+    if (!availableTipProdusIds) {
+      return productTypes; // Return all if query hasn't loaded yet
+    }
+    return productTypes.filter(type => 
+      availableTipProdusIds.ids.includes(type.tipprodus_id)
+    );
+  }, [productTypes, availableTipProdusIds]);
+
+  // Check if null option should be shown
+  const showTipProdusNullOption = availableTipProdusIds?.hasNull ?? true;
+
   // Clear invalid selections when parent selections change
   useEffect(() => {
     // Clear invalid category2 when category1 changes
@@ -525,7 +621,8 @@ export default function Products() {
         setYliHuProdIdFilter={setYliHuProdIdFilter}
         tipProdusFilter={tipProdusFilter}
         setTipProdusFilter={setTipProdusFilter}
-        productTypes={productTypes}
+        productTypes={availableTipProdus}
+        showTipProdusNullOption={showTipProdusNullOption}
         categories={categories}
         availableCateg2={availableCateg2}
         availableCateg3={availableCateg3}

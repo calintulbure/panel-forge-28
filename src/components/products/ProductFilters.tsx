@@ -47,6 +47,7 @@ interface ProductFiltersProps {
   tipProdusFilter: string;
   setTipProdusFilter: (value: string) => void;
   productTypes: ProductType[];
+  showTipProdusNullOption?: boolean;
   categories: {
     categ1: string[];
     categ2: string[];
@@ -90,6 +91,7 @@ export function ProductFilters({
   tipProdusFilter,
   setTipProdusFilter,
   productTypes,
+  showTipProdusNullOption = true,
   categories,
   availableCateg2,
   availableCateg3,
@@ -385,7 +387,9 @@ export function ProductFilters({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="null">null (not assigned)</SelectItem>
+                      {showTipProdusNullOption && (
+                        <SelectItem value="null">null (not assigned)</SelectItem>
+                      )}
                       {productTypes.map(type => (
                         <SelectItem key={type.tipprodus_id} value={type.tipprodus_id.toString()}>
                           {type.tipprodus_descriere}
