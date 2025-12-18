@@ -35,8 +35,32 @@ const ALLOWED_UPDATE_FIELDS = new Set([
 const BATCH_INSERT = 300;
 const BATCH_UPSERT = 300;
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
+    // Verify shared secret token for M2M authentication
+    const SECRET = Deno.env.get('BULK_UPSERT_SECRET_TOKEN');
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!SECRET) {
+      console.error("BULK_UPSERT_SECRET_TOKEN not configured");
+      return json({ success: false, affected: 0, error: 'Server configuration error' }, 500);
+    }
+    
+    if (!authHeader || authHeader !== `Bearer ${SECRET}`) {
+      console.log("Unauthorized request - invalid or missing token");
+      return json({ success: false, affected: 0, error: 'Unauthorized' }, 401);
+    }
+
     console.log("Bulk upsert request received - v2025-12-10");
     console.log("ALLOWED_UPDATE_FIELDS:", Array.from(ALLOWED_UPDATE_FIELDS));
     const body = await req.json().catch(() => ({}));
@@ -170,7 +194,10 @@ serve(async (req) => {
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      ...corsHeaders,
+      "Content-Type": "application/json" 
+    },
   });
 }
 
