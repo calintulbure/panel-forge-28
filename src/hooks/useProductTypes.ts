@@ -39,8 +39,13 @@ export function useProductTypes() {
         throw new Error(result.error);
       }
 
-      setTypes(result.data || []);
-      return result.data || [];
+      const normalized: ProductType[] = (result.data || []).map((t: ProductType) => ({
+        ...t,
+        tipprodus_level: (t.tipprodus_level || "").toLowerCase(),
+      }));
+
+      setTypes(normalized);
+      return normalized;
     } catch (err) {
       console.error("Error fetching product types:", err);
       toast({
