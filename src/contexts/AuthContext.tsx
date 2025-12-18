@@ -117,11 +117,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUserRole(null);
-    setIsApproved(false);
-    setIsPending(false);
-    navigate("/auth");
+    try {
+      // Local scope ensures the UI can sign out even if the server session is already gone.
+      await supabase.auth.signOut({ scope: "local" });
+    } catch {
+      // Intentionally ignore sign-out errors; we still clear local state.
+    } finally {
+      setSession(null);
+      setUser(null);
+      setUserRole(null);
+      setIsApproved(false);
+      setIsPending(false);
+      navigate("/auth", { replace: true });
+    }
   };
 
   const resetPassword = async (email: string) => {

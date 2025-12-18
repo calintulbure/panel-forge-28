@@ -36,25 +36,15 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      const { data, error } = await supabase.functions.invoke("get-users-with-roles");
+      if (error) throw error;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-users-with-roles`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to fetch users");
-
-      const { users: usersWithEmails } = await response.json();
+      const usersWithEmails = (data as { users?: UserRole[] } | null)?.users ?? [];
       setUsers(usersWithEmails);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
+      setUsers([]);
     } finally {
       setLoading(false);
     }
