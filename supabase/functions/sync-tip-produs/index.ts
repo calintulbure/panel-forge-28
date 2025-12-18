@@ -104,8 +104,11 @@ serve(async (req) => {
           .replace(/[^a-z0-9]+/g, "_")
           .replace(/^_|_$/g, "");
       
+      // Normalize level to proper casing (remote DB expects 'Main' or 'Sub')
+      const normalizedLevel = tipprodus_level?.toLowerCase() === "sub" ? "Sub" : "Main";
+      
       let tipprodus_cod: string;
-      if (tipprodus_level?.toLowerCase() === "sub" && tipprodusmain_descr) {
+      if (normalizedLevel === "Sub" && tipprodusmain_descr) {
         tipprodus_cod = `${toSnakeCase(tipprodusmain_descr)}_${toSnakeCase(tipprodus_descriere.trim())}`;
       } else {
         tipprodus_cod = toSnakeCase(tipprodus_descriere.trim());
@@ -116,11 +119,11 @@ serve(async (req) => {
         tipprodus_id: newId,
         tipprodus_cod,
         tipprodus_descriere: tipprodus_descriere.trim(),
-        tipprodus_level: tipprodus_level || "Main",
+        tipprodus_level: normalizedLevel,
         countproduse: 0,
       };
 
-      if (tipprodus_level?.toLowerCase() === "sub" && tipprodusmain_id) {
+      if (normalizedLevel === "Sub" && tipprodusmain_id) {
         remoteInsertData.tipprodusmain_id = tipprodusmain_id;
         remoteInsertData.tipprodusmain_descr = tipprodusmain_descr || null;
       }
@@ -141,7 +144,7 @@ serve(async (req) => {
         tipprodus_id: newId,
         tipprodus_cod,
         tipprodus_descriere: tipprodus_descriere.trim(),
-        tipprodus_level: tipprodus_level || "Main",
+        tipprodus_level: normalizedLevel,
         tipprodusmain_id: tipprodusmain_id || null,
         tipprodusmain_descr: tipprodusmain_descr || null,
         countproduse: 0,
@@ -174,7 +177,8 @@ serve(async (req) => {
         updateData.tipprodus_descriere = tipprodus_descriere.trim();
       }
       if (tipprodus_level !== undefined) {
-        updateData.tipprodus_level = tipprodus_level;
+        // Normalize level to proper casing (remote DB expects 'Main' or 'Sub')
+        updateData.tipprodus_level = tipprodus_level.toLowerCase() === "sub" ? "Sub" : "Main";
       }
       if (tipprodusmain_id !== undefined) {
         updateData.tipprodusmain_id = tipprodusmain_id;
