@@ -118,13 +118,14 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
           .maybeSingle();
 
         if (existing) {
-          // Update existing resource
+          // Update existing resource - reset processed to trigger sync
           const { error: updateError } = await supabase
             .from("products_resources")
             .update({
               url,
               server: serverDomain,
               resource_content: "webpage",
+              processed: false,
               updated_at: new Date().toISOString(),
             })
             .eq("resource_id", existing.resource_id);
