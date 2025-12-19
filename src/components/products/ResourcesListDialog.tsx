@@ -184,8 +184,8 @@ export function ResourcesListDialog({
                       )}
 
                       {resource.url && (
-                        <div className="flex items-center gap-1 overflow-hidden">
-                          <span className="text-xs text-muted-foreground truncate min-w-0 flex-1">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <span className="text-xs text-muted-foreground break-all whitespace-normal min-w-0 flex-1">
                             {resource.url}
                           </span>
                           <Button
@@ -193,6 +193,7 @@ export function ResourcesListDialog({
                             size="icon"
                             className="h-5 w-5 flex-shrink-0"
                             onClick={() => window.open(resource.url!, "_blank")}
+                            aria-label="Open resource link"
                           >
                             <ExternalLink className="h-3 w-3" />
                           </Button>
