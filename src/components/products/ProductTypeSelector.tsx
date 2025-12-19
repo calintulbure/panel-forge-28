@@ -175,46 +175,34 @@ export function ProductTypeSelector({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
-        <div 
-          className={cn(
-            "relative min-h-[5rem] w-[220px] border rounded-md bg-background p-1.5 cursor-text flex flex-wrap gap-1 items-start content-start",
-            disabled && "opacity-50 cursor-not-allowed"
-          )}
-          onClick={() => !disabled && inputRef.current?.focus()}
-        >
-          {/* Display selected value as a badge/label */}
-          {inputValue && !open && (
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted text-foreground text-sm rounded border border-border max-w-full">
-              <span className="truncate">{inputValue}</span>
-              {!disabled && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleClear();
-                  }}
-                  className="text-muted-foreground hover:text-foreground flex-shrink-0"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          )}
-          {/* Input for searching - only visible when popover is open or no value */}
+        <div className="relative">
           <Textarea
             ref={inputRef}
-            value={open ? inputValue : (inputValue ? "" : "")}
+            value={inputValue}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
             onKeyDown={handleKeyDown}
             disabled={disabled}
-            placeholder={inputValue && !open ? "" : "Type to search..."}
+            placeholder="Type to search..."
             className={cn(
-              "border-0 shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none text-sm bg-transparent",
-              inputValue && !open ? "hidden" : "flex-1 min-w-[100px]"
+              "min-h-[5rem] h-[5rem] w-[220px] resize-none py-1.5 px-2 leading-tight text-sm",
+              "bg-muted border-border rounded-md",
+              inputValue && "font-medium"
             )}
-            rows={1}
+            rows={3}
           />
+          {inputValue && !disabled && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClear();
+              }}
+              className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
         </div>
       </PopoverAnchor>
       <PopoverContent 
