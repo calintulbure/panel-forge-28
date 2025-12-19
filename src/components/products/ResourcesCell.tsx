@@ -4,6 +4,35 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ResourcesListDialog } from "./ResourcesListDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const RESOURCE_CONTENT_TYPES = [
+  { value: "datasheet", label: "Datasheet" },
+  { value: "manual", label: "Manual" },
+  { value: "certificate", label: "Certificate" },
+  { value: "quickstart", label: "Quick Start Guide" },
+  { value: "brochure", label: "Brochure" },
+  { value: "software", label: "Software" },
+  { value: "specs", label: "Specifications" },
+  { value: "application", label: "Application Note" },
+  { value: "image", label: "Image" },
+  { value: "other", label: "Other" },
+];
 
 interface ResourcesCellProps {
   productCode: string;
@@ -17,6 +46,8 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showResourcesList, setShowResourcesList] = useState(false);
+  const [pendingFileUrl, setPendingFileUrl] = useState<string | null>(null);
+  const [selectedContentType, setSelectedContentType] = useState<string>("other");
   const lastDropTime = useRef<number>(0);
   const dragLeaveTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
@@ -164,87 +195,91 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
         return;
       }
 
-      setIsLoading(true);
+      // Guess initial type from URL
+      const pathname = url.toLowerCase();
+      let guessedType = "other";
+      if (pathname.includes("datasheet")) guessedType = "datasheet";
+      else if (pathname.includes("manual")) guessedType = "manual";
+      else if (pathname.includes("certificate")) guessedType = "certificate";
+      else if (pathname.includes("brochure")) guessedType = "brochure";
+      else if (pathname.includes("spec")) guessedType = "specs";
+      else if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)/)) guessedType = "image";
+      else if (pathname.match(/\.(exe|zip|rar|msi)/)) guessedType = "software";
 
-      try {
-        const urlObj = new URL(url);
-        const pathname = urlObj.pathname.toLowerCase();
-        
-        // Determine file type from extension
-        let resourceType = "file";
-        let resourceContent: string | null = "other";
-        
-        if (pathname.endsWith(".pdf")) {
-          resourceType = "pdf";
-          // Try to guess content type from filename
-          if (pathname.includes("datasheet")) resourceContent = "datasheet";
-          else if (pathname.includes("manual")) resourceContent = "manual";
-          else if (pathname.includes("certificate")) resourceContent = "certificate";
-          else if (pathname.includes("brochure")) resourceContent = "brochure";
-          else if (pathname.includes("spec")) resourceContent = "specs";
-        } else if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
-          resourceType = "image";
-          resourceContent = "image";
-        } else if (pathname.match(/\.(doc|docx)$/)) {
-          resourceType = "document";
-        } else if (pathname.match(/\.(xls|xlsx)$/)) {
-          resourceType = "spreadsheet";
-        } else if (pathname.match(/\.(exe|zip|rar|msi)$/)) {
-          resourceType = "software";
-          resourceContent = "software";
-        }
-
-        // Check if resource already exists
-        const { data: existing } = await supabase
-          .from("products_resources")
-          .select("resource_id")
-          .eq("articol_id", articolId)
-          .eq("url", url)
-          .maybeSingle();
-
-        if (existing) {
-          toast({
-            title: "Already exists",
-            description: "This file URL is already added",
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        const { error } = await supabase
-          .from("products_resources")
-          .insert({
-            articol_id: articolId,
-            erp_product_code: productCode,
-            resource_type: resourceType,
-            resource_content: resourceContent,
-            url: url,
-            server: urlObj.hostname,
-            processed: false,
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: "File URL added",
-          description: "Resource has been saved",
-        });
-
-        setResourceCount((prev) => prev + 1);
-        onUpdate();
-      } catch (error) {
-        console.error("Error adding file URL:", error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to add file URL",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
+      setSelectedContentType(guessedType);
+      setPendingFileUrl(url);
     },
-    [articolId, productCode, onUpdate, toast]
+    [articolId, toast]
   );
+
+  const confirmFileUrl = async () => {
+    if (!pendingFileUrl || !articolId) return;
+
+    setIsLoading(true);
+
+    try {
+      const urlObj = new URL(pendingFileUrl);
+      const pathname = urlObj.pathname.toLowerCase();
+      
+      // Determine file type from extension
+      let resourceType = "file";
+      if (pathname.endsWith(".pdf")) resourceType = "pdf";
+      else if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) resourceType = "image";
+      else if (pathname.match(/\.(doc|docx)$/)) resourceType = "document";
+      else if (pathname.match(/\.(xls|xlsx)$/)) resourceType = "spreadsheet";
+      else if (pathname.match(/\.(exe|zip|rar|msi)$/)) resourceType = "software";
+
+      // Check if resource already exists
+      const { data: existing } = await supabase
+        .from("products_resources")
+        .select("resource_id")
+        .eq("articol_id", articolId)
+        .eq("url", pendingFileUrl)
+        .maybeSingle();
+
+      if (existing) {
+        toast({
+          title: "Already exists",
+          description: "This file URL is already added",
+        });
+        setPendingFileUrl(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from("products_resources")
+        .insert({
+          articol_id: articolId,
+          erp_product_code: productCode,
+          resource_type: resourceType,
+          resource_content: selectedContentType,
+          url: pendingFileUrl,
+          server: urlObj.hostname,
+          processed: false,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "File URL added",
+        description: "Resource has been saved",
+      });
+
+      setResourceCount((prev) => prev + 1);
+      setPendingFileUrl(null);
+      onUpdate();
+    } catch (error) {
+      console.error("Error adding file URL:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add file URL",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleFileUpload = useCallback(
     async (files: FileList) => {
@@ -417,6 +452,43 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
           }}
         />
       )}
+
+      {/* File URL type selector dialog */}
+      <Dialog open={!!pendingFileUrl} onOpenChange={(open) => !open && setPendingFileUrl(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Resource Type</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="text-sm text-muted-foreground truncate">
+              {pendingFileUrl}
+            </div>
+            <div className="space-y-2">
+              <Label>Content Type</Label>
+              <Select value={selectedContentType} onValueChange={setSelectedContentType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RESOURCE_CONTENT_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingFileUrl(null)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmFileUrl} disabled={isLoading}>
+              {isLoading ? "Saving..." : "Add Resource"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
