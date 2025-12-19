@@ -10,7 +10,9 @@ import { ProductTypeSelector } from "./ProductTypeSelector";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useProductTypes } from "@/hooks/useProductTypes";
+import { ProductResourcesMap } from "@/hooks/useProductResources";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 interface Product {
   erp_product_code: string;
   articol_id: number | null;
@@ -38,14 +40,17 @@ interface Product {
   tip_produs_id_sub: number | null;
   tip_produs_id_main: number | null;
 }
+
 interface ProductsTableProps {
   products: Product[];
+  resources?: ProductResourcesMap;
   onRefresh: () => void;
   onUpdateProduct?: (updatedProduct: Product) => void;
   isAdmin: boolean;
 }
 export function ProductsTable({
   products,
+  resources = {},
   onRefresh,
   onUpdateProduct,
   isAdmin
@@ -284,10 +289,28 @@ export function ProductsTable({
                     </div>
                   </TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
-                    <PublishCell productCode={product.erp_product_code} productDescription={product.erp_product_description} snapshotBase64={product.site_ro_snapshot_base64} siteUrl={product.site_ro_url} sku={product.yliro_sku} skuClassName="font-bold text-black dark:text-white" site="ro" onUpdate={onRefresh} />
+                    <PublishCell 
+                      productCode={product.erp_product_code} 
+                      productDescription={product.erp_product_description} 
+                      snapshotBase64={product.articol_id ? resources[product.articol_id]?.ro?.resource_snapshot || null : product.site_ro_snapshot_base64} 
+                      siteUrl={product.articol_id ? resources[product.articol_id]?.ro?.url || null : product.site_ro_url} 
+                      sku={product.yliro_sku} 
+                      skuClassName="font-bold text-black dark:text-white" 
+                      site="ro" 
+                      onUpdate={onRefresh} 
+                    />
                   </TableCell>
                   <TableCell onClick={e => e.stopPropagation()}>
-                    <PublishCell productCode={product.erp_product_code} productDescription={product.erp_product_description} snapshotBase64={product.site_hu_snapshot_base64} siteUrl={product.site_hu_url} sku={product.ylihu_sku} skuClassName="font-bold text-black dark:text-white" site="hu" onUpdate={onRefresh} />
+                    <PublishCell 
+                      productCode={product.erp_product_code} 
+                      productDescription={product.erp_product_description} 
+                      snapshotBase64={product.articol_id ? resources[product.articol_id]?.hu?.resource_snapshot || null : product.site_hu_snapshot_base64} 
+                      siteUrl={product.articol_id ? resources[product.articol_id]?.hu?.url || null : product.site_hu_url} 
+                      sku={product.ylihu_sku} 
+                      skuClassName="font-bold text-black dark:text-white" 
+                      site="hu" 
+                      onUpdate={onRefresh} 
+                    />
                   </TableCell>
                   <TableCell className="text-center">
                     <Button variant="ghost" size="icon" onClick={e => handleValidationToggle(product, e)} className="h-24 w-24 [&_svg]:size-8">
@@ -372,11 +395,27 @@ export function ProductsTable({
               <div className="flex items-center gap-3 pt-2 border-t" onClick={e => e.stopPropagation()}>
                 <div className="flex-1">
                   <div className="text-xs text-muted-foreground mb-1">RO</div>
-                  <PublishCell productCode={product.erp_product_code} productDescription={product.erp_product_description} snapshotBase64={product.site_ro_snapshot_base64} siteUrl={product.site_ro_url} sku={product.yliro_sku} site="ro" onUpdate={onRefresh} />
+                  <PublishCell 
+                    productCode={product.erp_product_code} 
+                    productDescription={product.erp_product_description} 
+                    snapshotBase64={product.articol_id ? resources[product.articol_id]?.ro?.resource_snapshot || null : product.site_ro_snapshot_base64} 
+                    siteUrl={product.articol_id ? resources[product.articol_id]?.ro?.url || null : product.site_ro_url} 
+                    sku={product.yliro_sku} 
+                    site="ro" 
+                    onUpdate={onRefresh} 
+                  />
                 </div>
                 <div className="flex-1">
                   <div className="text-xs text-muted-foreground mb-1">HU</div>
-                  <PublishCell productCode={product.erp_product_code} productDescription={product.erp_product_description} snapshotBase64={product.site_hu_snapshot_base64} siteUrl={product.site_hu_url} sku={product.ylihu_sku} site="hu" onUpdate={onRefresh} />
+                  <PublishCell 
+                    productCode={product.erp_product_code} 
+                    productDescription={product.erp_product_description} 
+                    snapshotBase64={product.articol_id ? resources[product.articol_id]?.hu?.resource_snapshot || null : product.site_hu_snapshot_base64} 
+                    siteUrl={product.articol_id ? resources[product.articol_id]?.hu?.url || null : product.site_hu_url} 
+                    sku={product.ylihu_sku} 
+                    site="hu" 
+                    onUpdate={onRefresh} 
+                  />
                 </div>
               </div>
 

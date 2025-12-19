@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, Save, Check, Lock, ExternalLink, CheckCircle2, Trash2, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useProductResources, ProductResource } from "@/hooks/useProductResources";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,6 +66,11 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [clearSite, setClearSite] = useState<"ro" | "hu" | null>(null);
   const [currentProduct, setCurrentProduct] = useState(product);
+  
+  // Resource state from products_resources table
+  const { fetchResourceForProduct } = useProductResources();
+  const [roResource, setRoResource] = useState<ProductResource | undefined>(undefined);
+  const [huResource, setHuResource] = useState<ProductResource | undefined>(undefined);
 
   // Fetch fresh data from database when panel opens
   useEffect(() => {
@@ -78,14 +84,24 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
         
         if (data && !error) {
           setCurrentProduct(data);
-          setRoUrl(data.site_ro_url || "");
-          setHuUrl(data.site_hu_url || "");
           setValidated(data.validated || false);
+          
+          // Fetch resources from products_resources
+          if (data.articol_id) {
+            const resources = await fetchResourceForProduct(data.articol_id);
+            setRoResource(resources.ro);
+            setHuResource(resources.hu);
+            setRoUrl(resources.ro?.url || data.site_ro_url || "");
+            setHuUrl(resources.hu?.url || data.site_hu_url || "");
+          } else {
+            setRoUrl(data.site_ro_url || "");
+            setHuUrl(data.site_hu_url || "");
+          }
         }
       };
       fetchFreshData();
     }
-  }, [open, product.erp_product_code]);
+  }, [open, product.erp_product_code, fetchResourceForProduct]);
 
   // Sync state when product changes
   useEffect(() => {
@@ -395,17 +411,17 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
 
               <div>
                 <Label>Snapshot Preview</Label>
-                {currentProduct.site_ro_snapshot_base64 ? (
+                {(roResource?.resource_snapshot || currentProduct.site_ro_snapshot_base64) ? (
                   <div className="mt-2">
                     <a
-                      href={roUrl || currentProduct.site_ro_url || "#"}
+                      href={roUrl || roResource?.url || currentProduct.site_ro_url || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block"
                     >
                       <img
-                        key={currentProduct.site_ro_snapshot_base64.substring(0, 50)}
-                        src={`data:image/jpeg;base64,${currentProduct.site_ro_snapshot_base64}`}
+                        key={(roResource?.resource_snapshot || currentProduct.site_ro_snapshot_base64)?.substring(0, 50)}
+                        src={`data:image/jpeg;base64,${roResource?.resource_snapshot || currentProduct.site_ro_snapshot_base64}`}
                         alt="RO Site Snapshot"
                         loading="lazy"
                         decoding="async"
@@ -506,17 +522,17 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
 
               <div>
                 <Label>Snapshot Preview</Label>
-                {currentProduct.site_hu_snapshot_base64 ? (
+                {(huResource?.resource_snapshot || currentProduct.site_hu_snapshot_base64) ? (
                   <div className="mt-2">
                     <a
-                      href={huUrl || currentProduct.site_hu_url || "#"}
+                      href={huUrl || huResource?.url || currentProduct.site_hu_url || "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block"
                     >
                       <img
-                        key={currentProduct.site_hu_snapshot_base64.substring(0, 50)}
-                        src={`data:image/jpeg;base64,${currentProduct.site_hu_snapshot_base64}`}
+                        key={(huResource?.resource_snapshot || currentProduct.site_hu_snapshot_base64)?.substring(0, 50)}
+                        src={`data:image/jpeg;base64,${huResource?.resource_snapshot || currentProduct.site_hu_snapshot_base64}`}
                         alt="HU Site Snapshot"
                         loading="lazy"
                         decoding="async"
