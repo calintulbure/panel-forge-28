@@ -265,7 +265,7 @@ export function ProductsTable({
                       <div className="truncate text-muted-foreground">{product.categ3 || "-"}</div>
                     </div>
                   </TableCell>
-                  <TableCell onClick={e => e.stopPropagation()}>
+                  <TableCell onClick={e => e.stopPropagation()} className="text-center">
                     <ProductTypeSelector value={product.tip_produs_id_sub || null} onChange={(typeId, typeName) => handleProductTypeChange(product.erp_product_code, typeId, typeName)} />
                   </TableCell>
                   <TableCell onClick={() => setSelectedProduct(product)}>
