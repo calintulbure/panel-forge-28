@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-sync-token",
 };
 
 interface ProcessedPayload {
@@ -22,6 +22,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify sync token
+    const syncToken = req.headers.get("x-sync-token");
+    const expectedToken = Deno.env.get("REMOTE_SYNC_TOKEN");
+    
+    if (!syncToken || syncToken !== expectedToken) {
+      console.error("Invalid or missing sync token");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const payload: ProcessedPayload = await req.json();
     
     console.log("Received sync from remote:", {
