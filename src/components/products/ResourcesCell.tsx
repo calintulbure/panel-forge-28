@@ -172,10 +172,27 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
         
         // Determine file type from extension
         let resourceType = "file";
-        if (pathname.endsWith(".pdf")) resourceType = "pdf";
-        else if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) resourceType = "image";
-        else if (pathname.match(/\.(doc|docx)$/)) resourceType = "document";
-        else if (pathname.match(/\.(xls|xlsx)$/)) resourceType = "spreadsheet";
+        let resourceContent: string | null = "other";
+        
+        if (pathname.endsWith(".pdf")) {
+          resourceType = "pdf";
+          // Try to guess content type from filename
+          if (pathname.includes("datasheet")) resourceContent = "datasheet";
+          else if (pathname.includes("manual")) resourceContent = "manual";
+          else if (pathname.includes("certificate")) resourceContent = "certificate";
+          else if (pathname.includes("brochure")) resourceContent = "brochure";
+          else if (pathname.includes("spec")) resourceContent = "specs";
+        } else if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) {
+          resourceType = "image";
+          resourceContent = "image";
+        } else if (pathname.match(/\.(doc|docx)$/)) {
+          resourceType = "document";
+        } else if (pathname.match(/\.(xls|xlsx)$/)) {
+          resourceType = "spreadsheet";
+        } else if (pathname.match(/\.(exe|zip|rar|msi)$/)) {
+          resourceType = "software";
+          resourceContent = "software";
+        }
 
         // Check if resource already exists
         const { data: existing } = await supabase
@@ -200,7 +217,7 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
             articol_id: articolId,
             erp_product_code: productCode,
             resource_type: resourceType,
-            resource_content: "file_url",
+            resource_content: resourceContent,
             url: url,
             server: urlObj.hostname,
             processed: false,
