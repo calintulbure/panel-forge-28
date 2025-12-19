@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.get-users-with-roles]
 verify_jwt = false
+
+[functions.sync-processed-from-remote]
+verify_jwt = false
