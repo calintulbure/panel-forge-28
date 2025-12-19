@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
         .select(localSelect)
         .not("articol_id", "is", null)
         .not("url", "is", null)
+        .order("resource_id", { ascending: true })
         .range(from, to);
 
       if (localResp.error) {
@@ -134,32 +135,30 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          const { error: insertError } = await remoteSupabase
-            .from("products_resources")
-            .insert({
-              resource_id: localResource.resource_id,
-              articol_id: localResource.articol_id,
-              erp_product_code: localResource.erp_product_code,
-              resource_type: localResource.resource_type,
-              resource_content: localResource.resource_content,
-              url: localResource.url,
-              server: localResource.server,
-              language: localResource.language,
-              title: localResource.title,
-              description: localResource.description,
-              content_text: localResource.content_text,
-              meta_json: localResource.meta_json,
-              resource_snapshot: localResource.resource_snapshot,
-              snapshot_at: localResource.snapshot_at,
-              url_status: localResource.url_status,
-              url_status_code: localResource.url_status_code,
-              url_error: localResource.url_error,
-              url_checked_at: localResource.url_checked_at,
-              url_check_count: localResource.url_check_count,
-              processed: localResource.processed,
-              created_at: localResource.created_at,
-              updated_at: localResource.updated_at,
-            });
+          const { error: insertError } = await remoteSupabase.from("products_resources").insert({
+            resource_id: localResource.resource_id,
+            articol_id: localResource.articol_id,
+            erp_product_code: localResource.erp_product_code,
+            resource_type: localResource.resource_type,
+            resource_content: localResource.resource_content,
+            url: localResource.url,
+            server: localResource.server,
+            language: localResource.language,
+            title: localResource.title,
+            description: localResource.description,
+            content_text: localResource.content_text,
+            meta_json: localResource.meta_json,
+            resource_snapshot: localResource.resource_snapshot,
+            snapshot_at: localResource.snapshot_at,
+            url_status: localResource.url_status,
+            url_status_code: localResource.url_status_code,
+            url_error: localResource.url_error,
+            url_checked_at: localResource.url_checked_at,
+            url_check_count: localResource.url_check_count,
+            processed: localResource.processed,
+            created_at: localResource.created_at,
+            updated_at: localResource.updated_at,
+          });
 
           if (insertError) {
             console.error(`Error inserting resource ${localResource.resource_id}:`, insertError);
