@@ -184,8 +184,8 @@ export function ResourcesListDialog({
                       )}
 
                       {resource.url && (
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-muted-foreground truncate flex-1">
+                        <div className="flex items-center gap-1 overflow-hidden">
+                          <span className="text-xs text-muted-foreground truncate min-w-0 flex-1">
                             {resource.url}
                           </span>
                           <Button
