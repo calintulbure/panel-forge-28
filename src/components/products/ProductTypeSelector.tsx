@@ -175,7 +175,7 @@ export function ProductTypeSelector({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverAnchor asChild>
-        <div className="relative">
+        <div className="relative mx-auto">
           <Textarea
             ref={inputRef}
             value={inputValue}
