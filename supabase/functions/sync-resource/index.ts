@@ -175,12 +175,6 @@ Deno.serve(async (req) => {
       syncResult = { action: "inserted", remote_resource_id: insertedData?.resource_id };
     }
 
-    // Mark local record as processed
-    await localSupabase
-      .from("products_resources")
-      .update({ processed: true })
-      .eq("resource_id", record.resource_id);
-
     console.log(`Sync completed successfully:`, syncResult);
 
     return new Response(
