@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.sync-processed-from-remote]
 verify_jwt = false
+
+[functions.align-resource-ids]
+verify_jwt = false
