@@ -61,12 +61,13 @@ Deno.serve(async (req) => {
     let errors = 0;
     const errorDetails: string[] = [];
 
-    // Process in batches
-    const batchSize = 50;
+    // Process sequentially in small batches to avoid resource limits
+    const batchSize = 10;
     for (let i = 0; i < allLocalResources.length; i += batchSize) {
       const batch = allLocalResources.slice(i, i + batchSize);
       
-      const promises = batch.map(async (localResource) => {
+      // Process each item in the batch sequentially
+      for (const localResource of batch) {
         try {
           // Check if record exists on remote
           const { data: remoteRecord, error: findError } = await remoteSupabase
@@ -81,13 +82,12 @@ Deno.serve(async (req) => {
             console.error(`Error checking remote for ${localResource.resource_id}:`, findError);
             errors++;
             errorDetails.push(`Find error for ${localResource.resource_id}: ${findError.message}`);
-            return;
+            continue;
           }
 
           if (remoteRecord) {
-            // Record already exists
             alreadyExists++;
-            return;
+            continue;
           }
 
           // Insert new record to remote
@@ -122,20 +122,19 @@ Deno.serve(async (req) => {
             console.error(`Error inserting resource ${localResource.resource_id}:`, insertError);
             errors++;
             errorDetails.push(`Insert error for ${localResource.resource_id}: ${insertError.message}`);
-            return;
+            continue;
           }
 
-          console.log(`Inserted resource ${localResource.resource_id} to remote`);
+          console.log(`Inserted resource ${localResource.resource_id}`);
           inserted++;
         } catch (err) {
           console.error(`Unexpected error for resource ${localResource.resource_id}:`, err);
           errors++;
           errorDetails.push(`Unexpected error for ${localResource.resource_id}: ${err}`);
         }
-      });
-
-      await Promise.all(promises);
-      console.log(`Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(allLocalResources.length / batchSize)}`);
+      }
+      
+      console.log(`Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(allLocalResources.length / batchSize)} (inserted: ${inserted}, exists: ${alreadyExists}, errors: ${errors})`);
     }
 
     const summary = {
