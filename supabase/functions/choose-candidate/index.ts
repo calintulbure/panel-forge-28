@@ -127,6 +127,7 @@ serve(async (req) => {
         .from('products_resources')
         .update({ 
           url: candidate.url,
+          processed: false,
           updated_at: new Date().toISOString()
         })
         .eq('resource_id', existingResource.resource_id);
