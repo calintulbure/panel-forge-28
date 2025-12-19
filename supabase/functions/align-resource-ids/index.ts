@@ -26,18 +26,36 @@ Deno.serve(async (req) => {
     const localSupabase = createClient(localUrl, localServiceKey);
     const remoteSupabase = createClient(remoteUrl, remoteServiceKey);
 
-    // Fetch all local resources
-    const { data: localResources, error: localError } = await localSupabase
-      .from("products_resources")
-      .select("resource_id, articol_id, resource_type, url")
-      .not("articol_id", "is", null)
-      .not("url", "is", null);
+    // Fetch all local resources with pagination (Supabase default limit is 1000)
+    const pageSize = 1000;
+    let allLocalResources: any[] = [];
+    let page = 0;
+    let hasMore = true;
 
-    if (localError) {
-      throw new Error(`Failed to fetch local resources: ${localError.message}`);
+    while (hasMore) {
+      const { data: pageData, error: localError } = await localSupabase
+        .from("products_resources")
+        .select("resource_id, articol_id, resource_type, url")
+        .not("articol_id", "is", null)
+        .not("url", "is", null)
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (localError) {
+        throw new Error(`Failed to fetch local resources: ${localError.message}`);
+      }
+
+      if (pageData && pageData.length > 0) {
+        allLocalResources = allLocalResources.concat(pageData);
+        console.log(`Fetched page ${page + 1}: ${pageData.length} records (total: ${allLocalResources.length})`);
+        hasMore = pageData.length === pageSize;
+        page++;
+      } else {
+        hasMore = false;
+      }
     }
 
-    console.log(`Found ${localResources?.length || 0} local resources to align`);
+    const localResources = allLocalResources;
+    console.log(`Found ${localResources.length} total local resources to align`);
 
     let updated = 0;
     let notFound = 0;
