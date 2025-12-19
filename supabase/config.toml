@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.sync-local-to-remote]
 verify_jwt = false
+
+[functions.sync-resource-to-remote]
+verify_jwt = false
