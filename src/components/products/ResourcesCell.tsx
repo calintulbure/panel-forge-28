@@ -13,8 +13,10 @@ interface ResourcesCellProps {
 export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCellProps) {
   const [resourceCount, setResourceCount] = useState<number>(0);
   const [isDragOver, setIsDragOver] = useState<"webpage" | "file-url" | "file" | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const lastDropTime = useRef<number>(0);
+  const dragLeaveTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   // Fetch resource count
@@ -213,7 +215,32 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
   const handleDragOver = (e: React.DragEvent, zone: "webpage" | "file-url" | "file") => {
     e.preventDefault();
     e.stopPropagation();
+    if (dragLeaveTimeout.current) {
+      clearTimeout(dragLeaveTimeout.current);
+      dragLeaveTimeout.current = null;
+    }
+    setIsDragging(true);
     setIsDragOver(zone);
+  };
+
+  const handleContainerDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragLeaveTimeout.current) {
+      clearTimeout(dragLeaveTimeout.current);
+      dragLeaveTimeout.current = null;
+    }
+    setIsDragging(true);
+  };
+
+  const handleContainerDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Use timeout to prevent flickering when moving between zones
+    dragLeaveTimeout.current = setTimeout(() => {
+      setIsDragging(false);
+      setIsDragOver(null);
+    }, 50);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -226,6 +253,11 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(null);
+    setIsDragging(false);
+    if (dragLeaveTimeout.current) {
+      clearTimeout(dragLeaveTimeout.current);
+      dragLeaveTimeout.current = null;
+    }
 
     if (zone === "file") {
       const files = e.dataTransfer.files;
@@ -246,56 +278,67 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
   };
 
   return (
-    <div className="relative min-h-[120px] p-2 rounded border transition-colors">
+    <div 
+      className="relative min-h-[120px] p-2 rounded border transition-colors"
+      onDragEnter={handleContainerDragEnter}
+      onDragLeave={handleContainerDragLeave}
+      onDragOver={(e) => e.preventDefault()}
+    >
       <div className="flex flex-col items-center gap-2">
-        {/* Resource count */}
-        <div className="font-bold text-xl text-foreground">{resourceCount}</div>
-        <div className="text-xs text-muted-foreground">resources</div>
+        {/* Resource count - hidden when dragging */}
+        {!isDragging && (
+          <>
+            <div className="font-bold text-xl text-foreground">{resourceCount}</div>
+            <div className="text-xs text-muted-foreground">resources</div>
+          </>
+        )}
 
-        {/* Drop zones */}
-        <div className="flex flex-col gap-1 w-full">
-          {/* Webpage URL drop zone */}
-          <div
-            className={cn(
-              "flex items-center gap-1 p-1 rounded border border-dashed text-xs cursor-pointer transition-colors",
-              isDragOver === "webpage" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
-            )}
-            onDragOver={(e) => handleDragOver(e, "webpage")}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, "webpage")}
-          >
-            <Globe className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground truncate">Webpage</span>
-          </div>
+        {/* Drop zones - visible only when dragging */}
+        {isDragging && (
+          <div className="flex flex-col gap-1 w-full">
+            {/* Webpage URL drop zone */}
+            <div
+              className={cn(
+                "flex items-center gap-1 p-2 rounded border border-dashed text-xs cursor-pointer transition-colors",
+                isDragOver === "webpage" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
+              )}
+              onDragOver={(e) => handleDragOver(e, "webpage")}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, "webpage")}
+            >
+              <Globe className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground truncate">Webpage</span>
+            </div>
 
-          {/* File URL drop zone */}
-          <div
-            className={cn(
-              "flex items-center gap-1 p-1 rounded border border-dashed text-xs cursor-pointer transition-colors",
-              isDragOver === "file-url" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
-            )}
-            onDragOver={(e) => handleDragOver(e, "file-url")}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, "file-url")}
-          >
-            <Link className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground truncate">File URL</span>
-          </div>
+            {/* File URL drop zone */}
+            <div
+              className={cn(
+                "flex items-center gap-1 p-2 rounded border border-dashed text-xs cursor-pointer transition-colors",
+                isDragOver === "file-url" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
+              )}
+              onDragOver={(e) => handleDragOver(e, "file-url")}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, "file-url")}
+            >
+              <Link className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground truncate">File URL</span>
+            </div>
 
-          {/* File upload drop zone */}
-          <div
-            className={cn(
-              "flex items-center gap-1 p-1 rounded border border-dashed text-xs cursor-pointer transition-colors",
-              isDragOver === "file" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
-            )}
-            onDragOver={(e) => handleDragOver(e, "file")}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, "file")}
-          >
-            <Upload className="h-3 w-3 text-muted-foreground" />
-            <span className="text-muted-foreground truncate">File</span>
+            {/* File upload drop zone */}
+            <div
+              className={cn(
+                "flex items-center gap-1 p-2 rounded border border-dashed text-xs cursor-pointer transition-colors",
+                isDragOver === "file" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
+              )}
+              onDragOver={(e) => handleDragOver(e, "file")}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, "file")}
+            >
+              <Upload className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground truncate">File</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Loading indicator */}
         {isLoading && (
