@@ -114,45 +114,102 @@ Deno.serve(async (req) => {
     // Update the product with base64 data and SKU
     const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
-    // Prepare update fields based on site
-    const updateFields =
+    // First get the articol_id from products table
+    const { data: productData, error: productError } = await supabase
+      .from("products")
+      .select("articol_id")
+      .eq("erp_product_code", productCode)
+      .single();
+
+    if (productError || !productData) {
+      console.error("Failed to find product:", productError);
+      throw new Error(`Product not found: ${productCode}`);
+    }
+
+    // Prepare product update fields (SKU, description, product_id - but NOT snapshot)
+    const productUpdateFields =
       site === "ro"
         ? {
-            site_ro_snapshot_base64: n8nData.imageBase64,
             yliro_sku: n8nData.productCode,
             yliro_descriere: n8nData.productDescription,
             site_ro_product_id: n8nData.productId
           }
         : {
-            site_hu_snapshot_base64: n8nData.imageBase64,
             ylihu_sku: n8nData.productCode,
             ylihu_descriere: n8nData.productDescription,
             site_hu_product_id: n8nData.productId
           };
 
-    const { error: updateError } = await supabase
+    // Update product table (without snapshot)
+    const { error: productUpdateError } = await supabase
       .from("products")
-      .update(updateFields)
+      .update(productUpdateFields)
       .eq("erp_product_code", productCode);
 
-    if (updateError) {
-      console.error("Failed to update product:", updateError);
-      throw new Error(`Database update failed: ${updateError.message}`);
+    if (productUpdateError) {
+      console.error("Failed to update product:", productUpdateError);
+      throw new Error(`Product update failed: ${productUpdateError.message}`);
     }
 
-    console.log(`Successfully updated ${site.toUpperCase()} fields:`, Object.keys(updateFields));
+    // Check if resource already exists for this product and language
+    const { data: existingResource } = await supabase
+      .from("products_resources")
+      .select("resource_id")
+      .eq("erp_product_code", productCode)
+      .eq("language", site)
+      .eq("resource_type", "html")
+      .maybeSingle();
+
+    if (existingResource) {
+      // Update existing resource with snapshot
+      const { error: resourceUpdateError } = await supabase
+        .from("products_resources")
+        .update({
+          resource_snapshot: n8nData.imageBase64,
+          snapshot_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("resource_id", existingResource.resource_id);
+
+      if (resourceUpdateError) {
+        console.error("Failed to update resource:", resourceUpdateError);
+        throw new Error(`Resource update failed: ${resourceUpdateError.message}`);
+      }
+    } else {
+      // Insert new resource with snapshot
+      const { error: resourceInsertError } = await supabase
+        .from("products_resources")
+        .insert({
+          articol_id: productData.articol_id,
+          erp_product_code: productCode,
+          resource_type: "html",
+          language: site,
+          url: siteUrl,
+          server: new URL(siteUrl).hostname,
+          resource_snapshot: n8nData.imageBase64,
+          snapshot_at: new Date().toISOString(),
+        });
+
+      if (resourceInsertError) {
+        console.error("Failed to insert resource:", resourceInsertError);
+        throw new Error(`Resource insert failed: ${resourceInsertError.message}`);
+      }
+    }
+
+    console.log(`Successfully updated ${site.toUpperCase()} snapshot in products_resources and product fields:`, Object.keys(productUpdateFields));
 
     // Prepare response fields
     const responseFields =
       site === "ro"
-        ? { site_ro_snapshot_base64: true, yliro_sku: n8nData.productCode }
-        : { site_hu_snapshot_base64: true, ylihu_sku: n8nData.productCode };
+        ? { resource_snapshot: true, yliro_sku: n8nData.productCode }
+        : { resource_snapshot: true, ylihu_sku: n8nData.productCode };
 
     return new Response(
       JSON.stringify({
         success: true,
         site,
         updatedFields: responseFields,
+        storedIn: "products_resources",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
