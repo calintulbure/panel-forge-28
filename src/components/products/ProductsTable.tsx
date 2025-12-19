@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Check, X, Trash2, CheckCircle2, XCircle, Copy } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { PublishCell } from "./PublishCell";
+import { ResourcesCell } from "./ResourcesCell";
 import { ProductTypeSelector } from "./ProductTypeSelector";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -224,6 +225,7 @@ export function ProductsTable({
               </TableHead>
               <TableHead className="text-center w-[90px]">RO Publish</TableHead>
               <TableHead className="text-center w-[90px]">HU Publish</TableHead>
+              <TableHead className="text-center w-[100px]">Resources</TableHead>
               <TableHead className="text-center w-[60px]">
                 <Button variant="ghost" onClick={() => handleSort('validated')} className="h-8 px-2">
                   Validated
@@ -235,7 +237,7 @@ export function ProductsTable({
           </TableHeader>
           <TableBody>
             {sortedProducts.length === 0 ? <TableRow>
-                <TableCell colSpan={isAdmin ? 9 : 8} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? 10 : 9} className="h-24 text-center">
                   No products found.
                 </TableCell>
               </TableRow> : sortedProducts.map(product => <TableRow key={product.erp_product_code} className="cursor-pointer hover:bg-muted/50 group">
@@ -310,6 +312,13 @@ export function ProductsTable({
                       skuClassName="font-bold text-black dark:text-white" 
                       site="hu" 
                       onUpdate={onRefresh} 
+                    />
+                  </TableCell>
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <ResourcesCell
+                      productCode={product.erp_product_code}
+                      articolId={product.articol_id}
+                      onUpdate={onRefresh}
                     />
                   </TableCell>
                   <TableCell className="text-center">
