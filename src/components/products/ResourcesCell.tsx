@@ -82,6 +82,23 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
           language = "hu";
         }
 
+        // Check if resource already exists
+        const { data: existing } = await supabase
+          .from("products_resources")
+          .select("resource_id")
+          .eq("articol_id", articolId)
+          .eq("url", url)
+          .maybeSingle();
+
+        if (existing) {
+          toast({
+            title: "Already exists",
+            description: "This webpage is already added",
+          });
+          setIsLoading(false);
+          return;
+        }
+
         // Insert new resource
         const { error } = await supabase
           .from("products_resources")
@@ -157,6 +174,23 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
         else if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) resourceType = "image";
         else if (pathname.match(/\.(doc|docx)$/)) resourceType = "document";
         else if (pathname.match(/\.(xls|xlsx)$/)) resourceType = "spreadsheet";
+
+        // Check if resource already exists
+        const { data: existing } = await supabase
+          .from("products_resources")
+          .select("resource_id")
+          .eq("articol_id", articolId)
+          .eq("url", url)
+          .maybeSingle();
+
+        if (existing) {
+          toast({
+            title: "Already exists",
+            description: "This file URL is already added",
+          });
+          setIsLoading(false);
+          return;
+        }
 
         const { error } = await supabase
           .from("products_resources")
