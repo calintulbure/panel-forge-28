@@ -3,6 +3,7 @@ import { FileText, Globe, Upload, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { ResourcesListDialog } from "./ResourcesListDialog";
 
 interface ResourcesCellProps {
   productCode: string;
@@ -15,6 +16,7 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
   const [isDragOver, setIsDragOver] = useState<"webpage" | "file-url" | "file" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showResourcesList, setShowResourcesList] = useState(false);
   const lastDropTime = useRef<number>(0);
   const dragLeaveTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
@@ -319,12 +321,15 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
       onDragOver={(e) => e.preventDefault()}
     >
       <div className="flex flex-col items-center gap-2">
-        {/* Resource count - hidden when dragging */}
+        {/* Resource count - hidden when dragging, clickable to open list */}
         {!isDragging && (
-          <>
-            <div className="font-bold text-xl text-foreground">{resourceCount}</div>
-            <div className="text-xs text-muted-foreground">resources</div>
-          </>
+          <div 
+            className="cursor-pointer hover:bg-muted/50 rounded p-2 transition-colors"
+            onClick={() => articolId && setShowResourcesList(true)}
+          >
+            <div className="font-bold text-xl text-foreground text-center">{resourceCount}</div>
+            <div className="text-xs text-muted-foreground text-center">resources</div>
+          </div>
         )}
 
         {/* Drop zones - visible only when dragging */}
@@ -381,6 +386,20 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
           </div>
         )}
       </div>
+
+      {/* Resources list dialog */}
+      {articolId && (
+        <ResourcesListDialog
+          open={showResourcesList}
+          onOpenChange={setShowResourcesList}
+          articolId={articolId}
+          productCode={productCode}
+          onResourceDeleted={() => {
+            setResourceCount((prev) => Math.max(0, prev - 1));
+            onUpdate();
+          }}
+        />
+      )}
     </div>
   );
 }
