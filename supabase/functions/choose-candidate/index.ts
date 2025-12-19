@@ -54,27 +54,46 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Prepare update object based on site
-    const updateData: Record<string, any> = {};
+    // First, get the product to retrieve articol_id
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select('articol_id')
+      .eq('erp_product_code', erp_product_code)
+      .single();
+
+    if (productError || !product) {
+      console.error('Failed to find product:', productError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Product not found: ${erp_product_code}`
+        }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const articolId = product.articol_id;
+    const server = site === "ro" ? "yli.ro" : "yli.hu";
+
+    // Prepare update object for products table (SKU and product_id only)
+    const productUpdateData: Record<string, any> = {};
     
     if (site === "ro") {
-      updateData.yliro_sku = candidate.product_code;
-      updateData.site_ro_url = candidate.url;
+      productUpdateData.yliro_sku = candidate.product_code;
       if (candidate.product_id) {
-        updateData.site_ro_product_id = candidate.product_id;
+        productUpdateData.site_ro_product_id = candidate.product_id;
       }
     } else {
-      updateData.ylihu_sku = candidate.product_code;
-      updateData.site_hu_url = candidate.url;
+      productUpdateData.ylihu_sku = candidate.product_code;
       if (candidate.product_id) {
-        updateData.site_hu_product_id = candidate.product_id;
+        productUpdateData.site_hu_product_id = candidate.product_id;
       }
     }
 
-    // Update product record
+    // Update product record (SKU and product_id)
     const { error: updateError } = await supabase
       .from('products')
-      .update(updateData)
+      .update(productUpdateData)
       .eq('erp_product_code', erp_product_code);
 
     if (updateError) {
@@ -86,6 +105,55 @@ serve(async (req) => {
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Update or insert URL in products_resources table
+    const { data: existingResource, error: resourceFetchError } = await supabase
+      .from('products_resources')
+      .select('resource_id')
+      .eq('articol_id', articolId)
+      .eq('resource_type', 'html')
+      .eq('resource_content', 'webpage')
+      .eq('server', server)
+      .maybeSingle();
+
+    if (resourceFetchError) {
+      console.error('Failed to check existing resource:', resourceFetchError);
+    }
+
+    if (existingResource) {
+      // Update existing resource
+      const { error: resourceUpdateError } = await supabase
+        .from('products_resources')
+        .update({ 
+          url: candidate.url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('resource_id', existingResource.resource_id);
+
+      if (resourceUpdateError) {
+        console.error('Failed to update resource URL:', resourceUpdateError);
+      } else {
+        console.log(`Updated URL in products_resources for articol_id ${articolId}, server ${server}`);
+      }
+    } else {
+      // Insert new resource
+      const { error: resourceInsertError } = await supabase
+        .from('products_resources')
+        .insert({
+          articol_id: articolId,
+          erp_product_code: erp_product_code,
+          resource_type: 'html',
+          resource_content: 'webpage',
+          server: server,
+          url: candidate.url,
+        });
+
+      if (resourceInsertError) {
+        console.error('Failed to insert resource URL:', resourceInsertError);
+      } else {
+        console.log(`Inserted new URL in products_resources for articol_id ${articolId}, server ${server}`);
+      }
     }
 
     console.log(`Product ${erp_product_code} updated successfully`);
