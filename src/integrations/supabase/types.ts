@@ -531,8 +531,10 @@ export type Database = {
           processed: boolean | null
           resource_content: string | null
           resource_id: number
+          resource_snapshot: string | null
           resource_type: string
           server: string | null
+          snapshot_at: string | null
           title: string | null
           updated_at: string | null
           url: string | null
@@ -553,8 +555,10 @@ export type Database = {
           processed?: boolean | null
           resource_content?: string | null
           resource_id?: number
+          resource_snapshot?: string | null
           resource_type: string
           server?: string | null
+          snapshot_at?: string | null
           title?: string | null
           updated_at?: string | null
           url?: string | null
@@ -575,8 +579,10 @@ export type Database = {
           processed?: boolean | null
           resource_content?: string | null
           resource_id?: number
+          resource_snapshot?: string | null
           resource_type?: string
           server?: string | null
+          snapshot_at?: string | null
           title?: string | null
           updated_at?: string | null
           url?: string | null
