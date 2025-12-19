@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
 
   try {
     const payload: ResourcePayload = await req.json();
-    
+
     console.log(`Sync triggered: ${payload.type} on resource`, {
       resource_id: payload.record?.resource_id || payload.old_record?.resource_id,
       resource_type: payload.record?.resource_type,
@@ -43,10 +43,9 @@ Deno.serve(async (req) => {
     // Skip DELETE operations for now
     if (payload.type === "DELETE") {
       console.log("Delete operation - skipping sync");
-      return new Response(
-        JSON.stringify({ success: true, message: "Delete - no sync needed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, message: "Delete - no sync needed" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const record = payload.record;
@@ -57,18 +56,16 @@ Deno.serve(async (req) => {
     // Only sync html/webpage resources for yli.ro or yli.hu
     if (record.resource_type !== "html" || record.resource_content !== "webpage") {
       console.log("Not a webpage resource - skipping sync");
-      return new Response(
-        JSON.stringify({ success: true, message: "Not a webpage - no sync needed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, message: "Not a webpage - no sync needed" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!record.server || !["yli.ro", "yli.hu"].includes(record.server)) {
       console.log("Not yli.ro or yli.hu - skipping sync");
-      return new Response(
-        JSON.stringify({ success: true, message: "Not yli site - no sync needed" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, message: "Not yli site - no sync needed" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get remote database credentials
@@ -77,16 +74,15 @@ Deno.serve(async (req) => {
 
     if (!remoteUrl || !remoteServiceKey) {
       console.error("Missing remote database credentials (SRC_SUPABASE_URL or SRC_SUPABASE_SERVICE_ROLE_KEY)");
-      return new Response(
-        JSON.stringify({ success: false, message: "Remote database not configured" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: false, message: "Remote database not configured" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Create clients for local and remote databases
     const localSupabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
     const remoteSupabase = createClient(remoteUrl, remoteServiceKey);
@@ -162,6 +158,7 @@ Deno.serve(async (req) => {
       const { data: insertedData, error: insertError } = await remoteSupabase
         .from("products_resources")
         .insert({
+          resource_id: fullResource.resource_id, // ADD THIS LINE
           ...upsertData,
           created_at: new Date().toISOString(),
         })
@@ -178,20 +175,20 @@ Deno.serve(async (req) => {
     console.log(`Sync completed successfully:`, syncResult);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: "Sync completed",
         ...syncResult,
         local_resource_id: record.resource_id,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
     console.error("Error in sync-resource:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
