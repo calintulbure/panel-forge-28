@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.align-resource-ids]
 verify_jwt = false
+
+[functions.sync-local-to-remote]
+verify_jwt = false
