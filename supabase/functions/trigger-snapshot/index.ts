@@ -177,15 +177,17 @@ Deno.serve(async (req) => {
       }
     } else {
       // Insert new resource with snapshot
+      const serverDomain = new URL(siteUrl).hostname.replace(/^www\./, '');
       const { error: resourceInsertError } = await supabase
         .from("products_resources")
         .insert({
           articol_id: productData.articol_id,
           erp_product_code: productCode,
           resource_type: "html",
+          resource_content: "webpage",
           language: site,
           url: siteUrl,
-          server: new URL(siteUrl).hostname,
+          server: serverDomain,
           resource_snapshot: n8nData.imageBase64,
           snapshot_at: new Date().toISOString(),
         });
