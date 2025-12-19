@@ -96,14 +96,51 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
 
         setIsRefreshing(true);
 
-        // Update the site URL in the database
-        const updateField = site === "ro" ? "site_ro_url" : "site_hu_url";
-        const { error: updateError } = await supabase
+        // Get articol_id from products table
+        const { data: productData, error: productError } = await supabase
           .from("products")
-          .update({ [updateField]: url })
-          .eq("erp_product_code", productCode);
+          .select("articol_id")
+          .eq("erp_product_code", productCode)
+          .single();
 
-        if (updateError) throw updateError;
+        if (productError) throw productError;
+
+        // Check if resource already exists for this product and language
+        const { data: existing } = await supabase
+          .from("products_resources")
+          .select("resource_id")
+          .eq("erp_product_code", productCode)
+          .eq("language", site)
+          .eq("resource_type", "html")
+          .maybeSingle();
+
+        if (existing) {
+          // Update existing resource
+          const { error: updateError } = await supabase
+            .from("products_resources")
+            .update({
+              url,
+              server: urlObj.hostname,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("resource_id", existing.resource_id);
+
+          if (updateError) throw updateError;
+        } else {
+          // Insert new resource
+          const { error: insertError } = await supabase
+            .from("products_resources")
+            .insert({
+              articol_id: productData.articol_id,
+              erp_product_code: productCode,
+              resource_type: "html",
+              language: site,
+              url,
+              server: urlObj.hostname,
+            });
+
+          if (insertError) throw insertError;
+        }
 
         // Trigger snapshot capture
         const { error: snapshotError } = await supabase.functions.invoke("trigger-snapshot", {
