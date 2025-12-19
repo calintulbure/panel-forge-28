@@ -181,21 +181,21 @@ export function ProductsTable({
         <Table className="w-full table-fixed">
           <TableHeader className="bg-background border-b">
             <TableRow>
-              <TableHead className="w-[160px]">
+              <TableHead className="w-[180px]">
                 <div className="flex flex-col gap-0.5">
                   <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-7 px-2 text-xs">
                     Code
                     <ArrowUpDown className="ml-1 h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" onClick={() => handleSort('erp_product_description')} className="h-7 px-2 text-xs">
-                    Description
+                  <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-7 px-2 text-xs">
+                    Categories
                     <ArrowUpDown className="ml-1 h-3 w-3" />
                   </Button>
                 </div>
               </TableHead>
-              <TableHead className="w-[200px]">
-                <Button variant="ghost" onClick={() => handleSort('categ1')} className="h-8 px-2">
-                  Categories
+              <TableHead className="w-[250px]">
+                <Button variant="ghost" onClick={() => handleSort('erp_product_description')} className="h-8 px-2">
+                  Description
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
@@ -250,19 +250,19 @@ export function ProductsTable({
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {product.erp_product_description || "-"}
+                      <div className="text-xs text-muted-foreground flex flex-col gap-0.5">
+                        <div>{product.categ1 || "-"}</div>
+                        <div>{product.categ2 || "-"}</div>
+                        <div>{product.categ3 || "-"}</div>
                       </div>
                       {product.ro_stock !== null && <div className="text-xs text-muted-foreground">
                           Stoc: {product.ro_stock}
                         </div>}
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs" onClick={() => setSelectedProduct(product)}>
-                    <div className="flex flex-col gap-0.5">
-                      <div className="truncate">{product.categ1 || "-"}</div>
-                      <div className="truncate text-muted-foreground">{product.categ2 || "-"}</div>
-                      <div className="truncate text-muted-foreground">{product.categ3 || "-"}</div>
+                  <TableCell className="text-sm" onClick={() => setSelectedProduct(product)}>
+                    <div className="whitespace-normal">
+                      {product.erp_product_description || "-"}
                     </div>
                   </TableCell>
                   <TableCell onClick={e => e.stopPropagation()} className="text-center">
