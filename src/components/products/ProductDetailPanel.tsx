@@ -133,45 +133,78 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
       
       toast.success(`${site.toUpperCase()} snapshot refreshed successfully`);
       
-      // Fetch fresh data immediately after refresh
-      const { data, error: fetchError } = await supabase
-        .from("products")
-        .select("*")
-        .eq("erp_product_code", product.erp_product_code)
-        .single();
-      
-      if (data && !fetchError) {
-        setCurrentProduct(data);
-        setRoUrl(data.site_ro_url || "");
-        setHuUrl(data.site_hu_url || "");
-        setValidated(data.validated || false);
-        // Trigger a selective update with the fresh data
-        onUpdate(data);
-      } else {
+      // Wait a bit for snapshot to be processed, then refresh resources
+      setTimeout(async () => {
+        if (currentProduct.articol_id) {
+          const resources = await fetchResourceForProduct(currentProduct.articol_id);
+          setRoResource(resources.ro);
+          setHuResource(resources.hu);
+        }
         onUpdate();
-      }
+        setLoading(false);
+      }, 2000);
     } catch (error) {
       toast.error(`Failed to refresh ${site.toUpperCase()} snapshot`);
       console.error(error);
-    } finally {
       setLoading(false);
     }
   };
 
   const handleSaveUrl = async (field: "site_ro_url" | "site_hu_url", value: string) => {
     setLoading(true);
+    const site = field === "site_ro_url" ? "ro" : "hu";
+    
     try {
-      const { error } = await supabase
-        .from("products")
-        .update({ [field]: value })
-        .eq("erp_product_code", product.erp_product_code);
+      const urlObj = new URL(value);
+      
+      // Check if resource already exists for this product and language
+      const { data: existing } = await supabase
+        .from("products_resources")
+        .select("resource_id")
+        .eq("erp_product_code", product.erp_product_code)
+        .eq("language", site)
+        .eq("resource_type", "html")
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existing) {
+        // Update existing resource
+        const { error: updateError } = await supabase
+          .from("products_resources")
+          .update({
+            url: value,
+            server: urlObj.hostname,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("resource_id", existing.resource_id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Insert new resource
+        const { error: insertError } = await supabase
+          .from("products_resources")
+          .insert({
+            articol_id: currentProduct.articol_id,
+            erp_product_code: product.erp_product_code,
+            resource_type: "html",
+            language: site,
+            url: value,
+            server: urlObj.hostname,
+          });
+
+        if (insertError) throw insertError;
+      }
+
       toast.success("URL saved successfully");
       
       // Automatically trigger snapshot refresh after URL is saved
-      const site = field === "site_ro_url" ? "ro" : "hu";
       await handleRefreshSnapshot(site);
+      
+      // Refresh resources
+      if (currentProduct.articol_id) {
+        const resources = await fetchResourceForProduct(currentProduct.articol_id);
+        setRoResource(resources.ro);
+        setHuResource(resources.hu);
+      }
       
       onUpdate();
     } catch (error) {
@@ -207,33 +240,38 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
     
     setLoading(true);
     try {
+      // Delete resource from products_resources
+      const { error: deleteError } = await supabase
+        .from("products_resources")
+        .delete()
+        .eq("erp_product_code", product.erp_product_code)
+        .eq("language", clearSite)
+        .eq("resource_type", "html");
+
+      if (deleteError) throw deleteError;
+      
+      // Also update the products table to clear related fields and validation
       const updateData = clearSite === "ro" ? {
-        site_ro_url: null,
-        site_ro_snapshot_url: null,
-        site_ro_snapshot_base64: null,
         yliro_sku: null,
         yliro_descriere: null,
         validated: false
       } : {
-        site_hu_url: null,
-        site_hu_snapshot_url: null,
-        site_hu_snapshot_base64: null,
         ylihu_sku: null,
         ylihu_descriere: null,
         validated: false
       };
 
-      const { error } = await supabase
+      await supabase
         .from("products")
         .update(updateData)
         .eq("erp_product_code", product.erp_product_code);
-
-      if (error) throw error;
       
       if (clearSite === "ro") {
         setRoUrl("");
+        setRoResource(undefined);
       } else {
         setHuUrl("");
+        setHuResource(undefined);
       }
       setValidated(false);
       
