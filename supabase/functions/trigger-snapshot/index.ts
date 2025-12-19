@@ -21,6 +21,31 @@ Deno.serve(async (req) => {
       throw new Error('Invalid site parameter. Must be "ro" or "hu"');
     }
 
+    // Validate that the URL looks like a product page (must end with .html)
+    // This prevents category pages like /newproducts from being sent to n8n
+    try {
+      const parsedUrl = new URL(siteUrl);
+      const pathname = parsedUrl.pathname.toLowerCase();
+      
+      // Must be a .html page (product pages on yli.ro/yli.hu end with .html)
+      if (!pathname.endsWith('.html')) {
+        throw new Error(`Invalid product URL: "${siteUrl}" does not appear to be a product page. Product URLs must end with .html`);
+      }
+      
+      // Reject known category/listing pages
+      const invalidPaths = ['/newproducts', '/category', '/search', '/catalog', '/index'];
+      for (const invalid of invalidPaths) {
+        if (pathname.includes(invalid)) {
+          throw new Error(`Invalid product URL: "${siteUrl}" appears to be a category or listing page, not a product page`);
+        }
+      }
+    } catch (urlError) {
+      if (urlError instanceof Error && urlError.message.startsWith('Invalid product URL')) {
+        throw urlError;
+      }
+      throw new Error(`Invalid URL format: ${siteUrl}`);
+    }
+
     console.log(`Triggering snapshot capture for ${site.toUpperCase()} site:`, { productCode, siteUrl, });
 
     // Determine if running in production or dev mode
