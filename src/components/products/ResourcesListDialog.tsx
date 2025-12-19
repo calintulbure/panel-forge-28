@@ -168,7 +168,11 @@ export function ResourcesListDialog({
                           </Badge>
                         )}
                         {getStatusBadge(resource.url_status)}
-                        {resource.processed === false && (
+                        {resource.processed === true ? (
+                          <Badge variant="default" className="text-xs bg-green-600">
+                            Processed
+                          </Badge>
+                        ) : (
                           <Badge variant="outline" className="text-xs text-orange-500 border-orange-500">
                             Pending
                           </Badge>
