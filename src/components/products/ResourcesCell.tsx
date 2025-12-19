@@ -219,15 +219,6 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
 
     try {
       const urlObj = new URL(pendingFileUrl);
-      const pathname = urlObj.pathname.toLowerCase();
-      
-      // Determine file type from extension
-      let resourceType = "file";
-      if (pathname.endsWith(".pdf")) resourceType = "pdf";
-      else if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/)) resourceType = "image";
-      else if (pathname.match(/\.(doc|docx)$/)) resourceType = "document";
-      else if (pathname.match(/\.(xls|xlsx)$/)) resourceType = "spreadsheet";
-      else if (pathname.match(/\.(exe|zip|rar|msi)$/)) resourceType = "software";
 
       // Check if resource already exists
       const { data: existing } = await supabase
@@ -252,7 +243,7 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
         .insert({
           articol_id: articolId,
           erp_product_code: productCode,
-          resource_type: resourceType,
+          resource_type: "file_url",
           resource_content: selectedContentType,
           url: pendingFileUrl,
           server: urlObj.hostname,
