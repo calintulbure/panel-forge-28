@@ -302,10 +302,12 @@ async function syncOne(opts: {
       }
 
       // 6) Update-only: keep only rows whose key exists in target
-      //    (prevents accidental INSERTs and NOT NULL failures)
-      const existingKeys = await fetchExistingKeys(writer, writeTable, conflictTarget, writeFilters);
-      if (existingKeys && existingKeys.size) {
-        toWrite = toWrite.filter((r: any) => existingKeys.has(r[conflictTarget]));
+      //    (only when writeFilters is specified - for targeted updates)
+      if (writeFilters) {
+        const existingKeys = await fetchExistingKeys(writer, writeTable, conflictTarget, writeFilters);
+        if (existingKeys && existingKeys.size) {
+          toWrite = toWrite.filter((r: any) => existingKeys.has(r[conflictTarget]));
+        }
       }
 
       if (!toWrite.length) {
