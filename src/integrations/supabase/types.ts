@@ -519,6 +519,75 @@ export type Database = {
         }
         Relationships: []
       }
+      products_resources: {
+        Row: {
+          articol_id: number | null
+          content_text: string | null
+          created_at: string | null
+          description: string | null
+          erp_product_code: string | null
+          language: string | null
+          meta_json: Json | null
+          processed: boolean | null
+          resource_content: string | null
+          resource_id: number
+          resource_type: string
+          server: string | null
+          title: string | null
+          updated_at: string | null
+          url: string | null
+          url_check_count: number | null
+          url_checked_at: string | null
+          url_error: string | null
+          url_status: string | null
+          url_status_code: number | null
+        }
+        Insert: {
+          articol_id?: number | null
+          content_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          erp_product_code?: string | null
+          language?: string | null
+          meta_json?: Json | null
+          processed?: boolean | null
+          resource_content?: string | null
+          resource_id?: number
+          resource_type: string
+          server?: string | null
+          title?: string | null
+          updated_at?: string | null
+          url?: string | null
+          url_check_count?: number | null
+          url_checked_at?: string | null
+          url_error?: string | null
+          url_status?: string | null
+          url_status_code?: number | null
+        }
+        Update: {
+          articol_id?: number | null
+          content_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          erp_product_code?: string | null
+          language?: string | null
+          meta_json?: Json | null
+          processed?: boolean | null
+          resource_content?: string | null
+          resource_id?: number
+          resource_type?: string
+          server?: string | null
+          title?: string | null
+          updated_at?: string | null
+          url?: string | null
+          url_check_count?: number | null
+          url_checked_at?: string | null
+          url_error?: string | null
+          url_status?: string | null
+          url_status_code?: number | null
+        }
+        Relationships: []
+      }
       tip_produs: {
         Row: {
           countproduse: number | null
