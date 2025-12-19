@@ -26,11 +26,13 @@ Deno.serve(async (req) => {
     const localSupabase = createClient(localUrl, localServiceKey);
     const remoteSupabase = createClient(remoteUrl, remoteServiceKey);
 
-    // Process in chunks to avoid memory/time limits.
-    // Call this function repeatedly with the returned `next_offset` until `done=true`.
+    // Parameters:
+    // - mode: "sync" (insert only), "delete" (delete only), "full" (both)
+    // - offset, pageSize, maxRecords: for chunked processing
     let offset = 0;
     let pageSize = 25;
     let maxRecords = 250;
+    let mode = "sync"; // "sync" | "delete" | "full"
 
     try {
       const body = await req.json();
@@ -38,6 +40,7 @@ Deno.serve(async (req) => {
         if (body.offset !== undefined) offset = Number(body.offset);
         if (body.pageSize !== undefined) pageSize = Number(body.pageSize);
         if (body.maxRecords !== undefined) maxRecords = Number(body.maxRecords);
+        if (body.mode !== undefined) mode = String(body.mode);
       }
     } catch {
       // No JSON body provided; use defaults
@@ -48,8 +51,9 @@ Deno.serve(async (req) => {
     if (pageSize > 100) pageSize = 100;
     if (!Number.isFinite(maxRecords) || maxRecords < 1) maxRecords = 250;
     if (maxRecords > 2000) maxRecords = 2000;
+    if (!["sync", "delete", "full"].includes(mode)) mode = "sync";
 
-    console.log(`Run options: offset=${offset}, pageSize=${pageSize}, maxRecords=${maxRecords}`);
+    console.log(`Run options: mode=${mode}, offset=${offset}, pageSize=${pageSize}, maxRecords=${maxRecords}`);
 
     const localSelect = [
       "resource_id",
@@ -78,126 +82,229 @@ Deno.serve(async (req) => {
 
     let inserted = 0;
     let alreadyExists = 0;
+    let deleted = 0;
     let errors = 0;
     const errorDetails: string[] = [];
 
     let checked = 0;
-    let noMoreLocal = false;
+    let noMore = false;
 
-    while (checked < maxRecords && !noMoreLocal) {
-      const from = offset + checked;
-      const to = from + pageSize - 1;
+    // MODE: SYNC (insert new records from local to remote)
+    if (mode === "sync" || mode === "full") {
+      while (checked < maxRecords && !noMore) {
+        const from = offset + checked;
+        const to = from + pageSize - 1;
 
-      const localResp = await localSupabase
-        .from("products_resources")
-        .select(localSelect)
-        .not("articol_id", "is", null)
-        .not("url", "is", null)
-        .order("resource_id", { ascending: true })
-        .range(from, to);
+        const localResp = await localSupabase
+          .from("products_resources")
+          .select(localSelect)
+          .not("articol_id", "is", null)
+          .not("url", "is", null)
+          .order("resource_id", { ascending: true })
+          .range(from, to);
 
-      if (localResp.error) {
-        throw new Error(`Failed to fetch local resources: ${localResp.error.message}`);
-      }
+        if (localResp.error) {
+          throw new Error(`Failed to fetch local resources: ${localResp.error.message}`);
+        }
 
-      const pageData = (localResp.data as any[]) ?? [];
-      if (pageData.length === 0) {
-        noMoreLocal = true;
-        break;
-      }
+        const pageData = (localResp.data as any[]) ?? [];
+        if (pageData.length === 0) {
+          noMore = true;
+          break;
+        }
 
-      console.log(`Fetched ${pageData.length} local records (range ${from}-${to})`);
+        console.log(`[SYNC] Fetched ${pageData.length} local records (range ${from}-${to})`);
 
-      for (const row of pageData) {
-        const localResource = row as any;
+        for (const row of pageData) {
+          const localResource = row as any;
 
-        try {
-          const remoteResp = await remoteSupabase
-            .from("products_resources")
-            .select("resource_id")
-            .eq("articol_id", localResource.articol_id)
-            .eq("resource_type", localResource.resource_type)
-            .eq("url", localResource.url)
-            .limit(1);
+          try {
+            const remoteResp = await remoteSupabase
+              .from("products_resources")
+              .select("resource_id")
+              .eq("articol_id", localResource.articol_id)
+              .eq("resource_type", localResource.resource_type)
+              .eq("url", localResource.url)
+              .limit(1);
 
-          if (remoteResp.error) {
-            console.error(`Error checking remote for ${localResource.resource_id}:`, remoteResp.error);
+            if (remoteResp.error) {
+              console.error(`Error checking remote for ${localResource.resource_id}:`, remoteResp.error);
+              errors++;
+              if (errorDetails.length < 25) {
+                errorDetails.push(`Find error for ${localResource.resource_id}: ${remoteResp.error.message}`);
+              }
+              continue;
+            }
+
+            const remoteMatches = (remoteResp.data as any[]) ?? [];
+            if (remoteMatches.length > 0) {
+              alreadyExists++;
+              continue;
+            }
+
+            const { error: insertError } = await remoteSupabase.from("products_resources").insert({
+              resource_id: localResource.resource_id,
+              articol_id: localResource.articol_id,
+              erp_product_code: localResource.erp_product_code,
+              resource_type: localResource.resource_type,
+              resource_content: localResource.resource_content,
+              url: localResource.url,
+              server: localResource.server,
+              language: localResource.language,
+              title: localResource.title,
+              description: localResource.description,
+              content_text: localResource.content_text,
+              meta_json: localResource.meta_json,
+              resource_snapshot: localResource.resource_snapshot,
+              snapshot_at: localResource.snapshot_at,
+              url_status: localResource.url_status,
+              url_status_code: localResource.url_status_code,
+              url_error: localResource.url_error,
+              url_checked_at: localResource.url_checked_at,
+              url_check_count: localResource.url_check_count,
+              processed: localResource.processed,
+              created_at: localResource.created_at,
+              updated_at: localResource.updated_at,
+            });
+
+            if (insertError) {
+              console.error(`Error inserting resource ${localResource.resource_id}:`, insertError);
+              errors++;
+              if (errorDetails.length < 25) {
+                errorDetails.push(`Insert error for ${localResource.resource_id}: ${insertError.message}`);
+              }
+              continue;
+            }
+
+            inserted++;
+          } catch (err) {
+            console.error(`Unexpected error for resource ${localResource.resource_id}:`, err);
             errors++;
             if (errorDetails.length < 25) {
-              errorDetails.push(`Find error for ${localResource.resource_id}: ${remoteResp.error.message}`);
+              errorDetails.push(`Unexpected error for ${localResource.resource_id}: ${err}`);
             }
-            continue;
-          }
-
-          const remoteMatches = (remoteResp.data as any[]) ?? [];
-          if (remoteMatches.length > 0) {
-            alreadyExists++;
-            continue;
-          }
-
-          const { error: insertError } = await remoteSupabase.from("products_resources").insert({
-            resource_id: localResource.resource_id,
-            articol_id: localResource.articol_id,
-            erp_product_code: localResource.erp_product_code,
-            resource_type: localResource.resource_type,
-            resource_content: localResource.resource_content,
-            url: localResource.url,
-            server: localResource.server,
-            language: localResource.language,
-            title: localResource.title,
-            description: localResource.description,
-            content_text: localResource.content_text,
-            meta_json: localResource.meta_json,
-            resource_snapshot: localResource.resource_snapshot,
-            snapshot_at: localResource.snapshot_at,
-            url_status: localResource.url_status,
-            url_status_code: localResource.url_status_code,
-            url_error: localResource.url_error,
-            url_checked_at: localResource.url_checked_at,
-            url_check_count: localResource.url_check_count,
-            processed: localResource.processed,
-            created_at: localResource.created_at,
-            updated_at: localResource.updated_at,
-          });
-
-          if (insertError) {
-            console.error(`Error inserting resource ${localResource.resource_id}:`, insertError);
-            errors++;
-            if (errorDetails.length < 25) {
-              errorDetails.push(`Insert error for ${localResource.resource_id}: ${insertError.message}`);
-            }
-            continue;
-          }
-
-          inserted++;
-        } catch (err) {
-          console.error(`Unexpected error for resource ${localResource.resource_id}:`, err);
-          errors++;
-          if (errorDetails.length < 25) {
-            errorDetails.push(`Unexpected error for ${localResource.resource_id}: ${err}`);
           }
         }
+
+        checked += pageData.length;
+        console.log(
+          `[SYNC] Progress: checked=${checked}/${maxRecords}, inserted=${inserted}, exists=${alreadyExists}, errors=${errors}`,
+        );
+
+        if (pageData.length < pageSize) {
+          noMore = true;
+        }
+      }
+    }
+
+    // MODE: DELETE (remove records from remote that don't exist locally)
+    if (mode === "delete" || mode === "full") {
+      // Reset for delete pass if doing full mode
+      if (mode === "full") {
+        checked = 0;
+        noMore = false;
       }
 
-      checked += pageData.length;
-      console.log(
-        `Progress this run: checked=${checked}/${maxRecords}, inserted=${inserted}, exists=${alreadyExists}, errors=${errors}`,
-      );
+      while (checked < maxRecords && !noMore) {
+        const from = offset + checked;
+        const to = from + pageSize - 1;
 
-      if (pageData.length < pageSize) {
-        noMoreLocal = true;
+        // Fetch remote records
+        const remoteResp = await remoteSupabase
+          .from("products_resources")
+          .select("resource_id, articol_id, resource_type, url")
+          .not("articol_id", "is", null)
+          .not("url", "is", null)
+          .order("resource_id", { ascending: true })
+          .range(from, to);
+
+        if (remoteResp.error) {
+          throw new Error(`Failed to fetch remote resources: ${remoteResp.error.message}`);
+        }
+
+        const pageData = (remoteResp.data as any[]) ?? [];
+        if (pageData.length === 0) {
+          noMore = true;
+          break;
+        }
+
+        console.log(`[DELETE] Fetched ${pageData.length} remote records (range ${from}-${to})`);
+
+        for (const remoteResource of pageData) {
+          try {
+            // Check if this record exists locally
+            const localResp = await localSupabase
+              .from("products_resources")
+              .select("resource_id")
+              .eq("articol_id", remoteResource.articol_id)
+              .eq("resource_type", remoteResource.resource_type)
+              .eq("url", remoteResource.url)
+              .limit(1);
+
+            if (localResp.error) {
+              console.error(`Error checking local for ${remoteResource.resource_id}:`, localResp.error);
+              errors++;
+              if (errorDetails.length < 25) {
+                errorDetails.push(`Local find error for ${remoteResource.resource_id}: ${localResp.error.message}`);
+              }
+              continue;
+            }
+
+            const localMatches = (localResp.data as any[]) ?? [];
+            if (localMatches.length > 0) {
+              // Exists locally, keep it
+              alreadyExists++;
+              continue;
+            }
+
+            // Does NOT exist locally - delete from remote
+            const { error: deleteError } = await remoteSupabase
+              .from("products_resources")
+              .delete()
+              .eq("resource_id", remoteResource.resource_id);
+
+            if (deleteError) {
+              console.error(`Error deleting resource ${remoteResource.resource_id}:`, deleteError);
+              errors++;
+              if (errorDetails.length < 25) {
+                errorDetails.push(`Delete error for ${remoteResource.resource_id}: ${deleteError.message}`);
+              }
+              continue;
+            }
+
+            deleted++;
+            console.log(`[DELETE] Removed remote resource_id=${remoteResource.resource_id} (not found locally)`);
+          } catch (err) {
+            console.error(`Unexpected error for resource ${remoteResource.resource_id}:`, err);
+            errors++;
+            if (errorDetails.length < 25) {
+              errorDetails.push(`Unexpected error for ${remoteResource.resource_id}: ${err}`);
+            }
+          }
+        }
+
+        checked += pageData.length;
+        console.log(
+          `[DELETE] Progress: checked=${checked}/${maxRecords}, deleted=${deleted}, kept=${alreadyExists}, errors=${errors}`,
+        );
+
+        if (pageData.length < pageSize) {
+          noMore = true;
+        }
       }
     }
 
     const nextOffset = offset + checked;
     const summary = {
       success: true,
+      mode,
       offset,
       checked,
       next_offset: nextOffset,
-      done: noMoreLocal,
+      done: noMore,
       inserted,
       already_exists: alreadyExists,
+      deleted,
       errors,
       error_details: errorDetails,
     };
