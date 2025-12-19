@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.sync-resource-to-remote]
 verify_jwt = false
+
+[functions.sync-product-to-remote]
+verify_jwt = false
