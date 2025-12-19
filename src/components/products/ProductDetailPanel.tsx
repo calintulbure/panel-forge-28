@@ -172,7 +172,8 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
           .from("products_resources")
           .update({
             url: value,
-            server: urlObj.hostname,
+            server: urlObj.hostname.replace(/^www\./, ''),
+            resource_content: "webpage",
             updated_at: new Date().toISOString(),
           })
           .eq("resource_id", existing.resource_id);
@@ -186,9 +187,10 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
             articol_id: currentProduct.articol_id,
             erp_product_code: product.erp_product_code,
             resource_type: "html",
+            resource_content: "webpage",
             language: site,
             url: value,
-            server: urlObj.hostname,
+            server: urlObj.hostname.replace(/^www\./, ''),
           });
 
         if (insertError) throw insertError;

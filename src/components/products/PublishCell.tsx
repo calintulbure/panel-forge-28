@@ -96,6 +96,9 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
 
         setIsRefreshing(true);
 
+        // Get base domain without www.
+        const serverDomain = urlObj.hostname.replace(/^www\./, '');
+
         // Get articol_id from products table
         const { data: productData, error: productError } = await supabase
           .from("products")
@@ -120,7 +123,8 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
             .from("products_resources")
             .update({
               url,
-              server: urlObj.hostname,
+              server: serverDomain,
+              resource_content: "webpage",
               updated_at: new Date().toISOString(),
             })
             .eq("resource_id", existing.resource_id);
@@ -134,9 +138,10 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
               articol_id: productData.articol_id,
               erp_product_code: productCode,
               resource_type: "html",
+              resource_content: "webpage",
               language: site,
               url,
-              server: urlObj.hostname,
+              server: serverDomain,
             });
 
           if (insertError) throw insertError;
