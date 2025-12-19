@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       server: payload.record?.server,
     });
 
-    // Skip if already processed or if it's a DELETE
+    // Skip DELETE operations for now
     if (payload.type === "DELETE") {
       console.log("Delete operation - skipping sync");
       return new Response(
@@ -71,83 +71,124 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Determine which webhook to call based on server
-    const RUN_MODE = Deno.env.get("RUN_MODE") ?? "DEVELOPMENT";
-    const isProduction = RUN_MODE === "PRODUCTION";
-    const site = record.server === "yli.ro" ? "ro" : "hu";
+    // Get remote database credentials
+    const remoteUrl = Deno.env.get("SRC_SUPABASE_URL");
+    const remoteServiceKey = Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY");
 
-    const webhookSecretName = site === "ro"
-      ? (isProduction ? "N8N_WEBHOOK_URL_RO_PRODUCTION" : "N8N_WEBHOOK_URL_RO")
-      : (isProduction ? "N8N_WEBHOOK_URL_HU_PRODUCTION" : "N8N_WEBHOOK_URL_HU");
-
-    const webhookUrl = Deno.env.get(webhookSecretName);
-    
-    if (!webhookUrl) {
-      console.warn(`No webhook URL configured for ${webhookSecretName}`);
+    if (!remoteUrl || !remoteServiceKey) {
+      console.error("Missing remote database credentials (SRC_SUPABASE_URL or SRC_SUPABASE_SERVICE_ROLE_KEY)");
       return new Response(
-        JSON.stringify({ success: true, message: "No webhook configured - sync skipped" }),
+        JSON.stringify({ success: false, message: "Remote database not configured" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Call the n8n webhook asynchronously
-    console.log(`Calling ${site.toUpperCase()} webhook for resource sync...`);
+    // Create clients for local and remote databases
+    const localSupabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
-    const syncPayload = {
-      action: "resource_sync",
-      resource_id: record.resource_id,
-      articol_id: record.articol_id,
-      erp_product_code: record.erp_product_code,
-      url: record.url,
-      server: record.server,
-      language: record.language,
-      timestamp: new Date().toISOString(),
-    };
+    const remoteSupabase = createClient(remoteUrl, remoteServiceKey);
 
-    // Use EdgeRuntime.waitUntil for background processing
-    const syncPromise = fetch(webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(syncPayload),
-    }).then(async (response) => {
-      if (!response.ok) {
-        console.error(`Webhook failed with status ${response.status}`);
-      } else {
-        console.log(`Webhook succeeded for resource ${record.resource_id}`);
-        
-        // Mark as processed
-        const supabase = createClient(
-          Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-        );
-        
-        await supabase
-          .from("products_resources")
-          .update({ processed: true })
-          .eq("resource_id", record.resource_id);
-      }
-    }).catch((error) => {
-      console.error("Webhook error:", error);
+    // Fetch the full resource record from local database
+    const { data: fullResource, error: fetchError } = await localSupabase
+      .from("products_resources")
+      .select("*")
+      .eq("resource_id", record.resource_id)
+      .single();
+
+    if (fetchError || !fullResource) {
+      console.error("Failed to fetch full resource:", fetchError);
+      throw new Error(`Failed to fetch resource ${record.resource_id}`);
+    }
+
+    console.log(`Syncing resource ${record.resource_id} to remote database...`, {
+      erp_product_code: fullResource.erp_product_code,
+      url: fullResource.url,
+      server: fullResource.server,
     });
 
-    // Run sync in background - don't wait for completion
-    // deno-lint-ignore no-explicit-any
-    const runtime = (globalThis as any).EdgeRuntime;
-    if (runtime?.waitUntil) {
-      runtime.waitUntil(syncPromise);
+    // Upsert to remote database
+    // We'll match on erp_product_code + language + resource_type for upsert
+    const upsertData = {
+      articol_id: fullResource.articol_id,
+      erp_product_code: fullResource.erp_product_code,
+      resource_type: fullResource.resource_type,
+      resource_content: fullResource.resource_content,
+      url: fullResource.url,
+      server: fullResource.server,
+      language: fullResource.language,
+      title: fullResource.title,
+      description: fullResource.description,
+      content_text: fullResource.content_text,
+      meta_json: fullResource.meta_json,
+      resource_snapshot: fullResource.resource_snapshot,
+      snapshot_at: fullResource.snapshot_at,
+      url_status: fullResource.url_status,
+      url_status_code: fullResource.url_status_code,
+      url_error: fullResource.url_error,
+      url_checked_at: fullResource.url_checked_at,
+      url_check_count: fullResource.url_check_count,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Try to find existing record in remote by erp_product_code + language + resource_type
+    const { data: existingRemote } = await remoteSupabase
+      .from("products_resources")
+      .select("resource_id")
+      .eq("erp_product_code", fullResource.erp_product_code)
+      .eq("language", fullResource.language)
+      .eq("resource_type", fullResource.resource_type)
+      .maybeSingle();
+
+    let syncResult;
+    if (existingRemote) {
+      // Update existing record
+      console.log(`Updating existing remote resource ${existingRemote.resource_id}`);
+      const { error: updateError } = await remoteSupabase
+        .from("products_resources")
+        .update(upsertData)
+        .eq("resource_id", existingRemote.resource_id);
+
+      if (updateError) {
+        console.error("Remote update failed:", updateError);
+        throw new Error(`Remote update failed: ${updateError.message}`);
+      }
+      syncResult = { action: "updated", remote_resource_id: existingRemote.resource_id };
     } else {
-      // Fallback: start the promise but don't wait
-      syncPromise.catch(console.error);
+      // Insert new record
+      console.log("Inserting new remote resource");
+      const { data: insertedData, error: insertError } = await remoteSupabase
+        .from("products_resources")
+        .insert({
+          ...upsertData,
+          created_at: new Date().toISOString(),
+        })
+        .select("resource_id")
+        .single();
+
+      if (insertError) {
+        console.error("Remote insert failed:", insertError);
+        throw new Error(`Remote insert failed: ${insertError.message}`);
+      }
+      syncResult = { action: "inserted", remote_resource_id: insertedData?.resource_id };
     }
+
+    // Mark local record as processed
+    await localSupabase
+      .from("products_resources")
+      .update({ processed: true })
+      .eq("resource_id", record.resource_id);
+
+    console.log(`Sync completed successfully:`, syncResult);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Sync initiated",
-        resource_id: record.resource_id 
+        message: "Sync completed",
+        ...syncResult,
+        local_resource_id: record.resource_id,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
