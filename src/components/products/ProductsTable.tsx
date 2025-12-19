@@ -268,7 +268,7 @@ export function ProductsTable({
                   <TableCell onClick={e => e.stopPropagation()} className="text-center">
                     <ProductTypeSelector value={product.tip_produs_id_sub || null} onChange={(typeId, typeName) => handleProductTypeChange(product.erp_product_code, typeId, typeName)} />
                   </TableCell>
-                  <TableCell onClick={() => setSelectedProduct(product)}>
+                  <TableCell onClick={() => setSelectedProduct(product)} className="text-center">
                     <Badge variant={getStockBadgeVariant(product.stare_stoc)}>
                       {product.stare_stoc || "Unknown"}
                     </Badge>
