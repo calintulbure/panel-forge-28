@@ -237,9 +237,9 @@ export function ProductsTable({
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1">
-                        {product.senior_erp_link ? <a href={product.senior_erp_link} onClick={e => e.stopPropagation()} className="font-bold hover:underline truncate text-xl">
+                        {product.senior_erp_link ? <a href={product.senior_erp_link} onClick={e => e.stopPropagation()} className="font-bold hover:underline text-xl whitespace-nowrap">
                             {product.erp_product_code}
-                          </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
+                          </a> : <div className="font-bold text-base whitespace-nowrap">{product.erp_product_code}</div>}
                         <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => {
                     e.stopPropagation();
                     navigator.clipboard.writeText(product.erp_product_code);
@@ -308,9 +308,9 @@ export function ProductsTable({
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline truncate" onClick={e => e.stopPropagation()}>
+                    {product.senior_erp_link ? <a href={product.senior_erp_link} className="font-bold text-base hover:underline whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         {product.erp_product_code}
-                      </a> : <div className="font-bold text-base truncate">{product.erp_product_code}</div>}
+                      </a> : <div className="font-bold text-base whitespace-nowrap">{product.erp_product_code}</div>}
                     <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={e => {
                 e.stopPropagation();
                 navigator.clipboard.writeText(product.erp_product_code);
