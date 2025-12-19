@@ -26,71 +26,114 @@ Deno.serve(async (req) => {
     const localSupabase = createClient(localUrl, localServiceKey);
     const remoteSupabase = createClient(remoteUrl, remoteServiceKey);
 
-    // Fetch all local resources with pagination
-    const pageSize = 1000;
-    let allLocalResources: any[] = [];
-    let page = 0;
-    let hasMore = true;
+    // Process in chunks to avoid memory/time limits.
+    // Call this function repeatedly with the returned `next_offset` until `done=true`.
+    let offset = 0;
+    let pageSize = 25;
+    let maxRecords = 250;
 
-    while (hasMore) {
-      const { data: pageData, error: localError } = await localSupabase
-        .from("products_resources")
-        .select("*")
-        .not("articol_id", "is", null)
-        .not("url", "is", null)
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      if (localError) {
-        throw new Error(`Failed to fetch local resources: ${localError.message}`);
+    try {
+      const body = await req.json();
+      if (body && typeof body === "object") {
+        if (body.offset !== undefined) offset = Number(body.offset);
+        if (body.pageSize !== undefined) pageSize = Number(body.pageSize);
+        if (body.maxRecords !== undefined) maxRecords = Number(body.maxRecords);
       }
-
-      if (pageData && pageData.length > 0) {
-        allLocalResources = allLocalResources.concat(pageData);
-        console.log(`Fetched page ${page + 1}: ${pageData.length} records (total: ${allLocalResources.length})`);
-        hasMore = pageData.length === pageSize;
-        page++;
-      } else {
-        hasMore = false;
-      }
+    } catch {
+      // No JSON body provided; use defaults
     }
 
-    console.log(`Found ${allLocalResources.length} total local resources`);
+    if (!Number.isFinite(offset) || offset < 0) offset = 0;
+    if (!Number.isFinite(pageSize) || pageSize < 1) pageSize = 25;
+    if (pageSize > 100) pageSize = 100;
+    if (!Number.isFinite(maxRecords) || maxRecords < 1) maxRecords = 250;
+    if (maxRecords > 2000) maxRecords = 2000;
+
+    console.log(`Run options: offset=${offset}, pageSize=${pageSize}, maxRecords=${maxRecords}`);
+
+    const localSelect = [
+      "resource_id",
+      "articol_id",
+      "erp_product_code",
+      "resource_type",
+      "resource_content",
+      "url",
+      "server",
+      "language",
+      "title",
+      "description",
+      "content_text",
+      "meta_json",
+      "resource_snapshot",
+      "snapshot_at",
+      "url_status",
+      "url_status_code",
+      "url_error",
+      "url_checked_at",
+      "url_check_count",
+      "processed",
+      "created_at",
+      "updated_at",
+    ].join(",");
 
     let inserted = 0;
     let alreadyExists = 0;
     let errors = 0;
     const errorDetails: string[] = [];
 
-    // Process sequentially in small batches to avoid resource limits
-    const batchSize = 10;
-    for (let i = 0; i < allLocalResources.length; i += batchSize) {
-      const batch = allLocalResources.slice(i, i + batchSize);
-      
-      // Process each item in the batch sequentially
-      for (const localResource of batch) {
+    let checked = 0;
+    let noMoreLocal = false;
+
+    while (checked < maxRecords && !noMoreLocal) {
+      const from = offset + checked;
+      const to = from + pageSize - 1;
+
+      const localResp = await localSupabase
+        .from("products_resources")
+        .select(localSelect)
+        .not("articol_id", "is", null)
+        .not("url", "is", null)
+        .range(from, to);
+
+      if (localResp.error) {
+        throw new Error(`Failed to fetch local resources: ${localResp.error.message}`);
+      }
+
+      const pageData = (localResp.data as any[]) ?? [];
+      if (pageData.length === 0) {
+        noMoreLocal = true;
+        break;
+      }
+
+      console.log(`Fetched ${pageData.length} local records (range ${from}-${to})`);
+
+      for (const row of pageData) {
+        const localResource = row as any;
+
         try {
-          // Check if record exists on remote
-          const { data: remoteRecord, error: findError } = await remoteSupabase
+          const remoteResp = await remoteSupabase
             .from("products_resources")
             .select("resource_id")
             .eq("articol_id", localResource.articol_id)
             .eq("resource_type", localResource.resource_type)
             .eq("url", localResource.url)
-            .maybeSingle();
+            .limit(1);
 
-          if (findError) {
-            console.error(`Error checking remote for ${localResource.resource_id}:`, findError);
+          if (remoteResp.error) {
+            console.error(`Error checking remote for ${localResource.resource_id}:`, remoteResp.error);
             errors++;
-            errorDetails.push(`Find error for ${localResource.resource_id}: ${findError.message}`);
+            if (errorDetails.length < 25) {
+              errorDetails.push(`Find error for ${localResource.resource_id}: ${remoteResp.error.message}`);
+            }
             continue;
           }
 
-          if (remoteRecord) {
+          const remoteMatches = (remoteResp.data as any[]) ?? [];
+          if (remoteMatches.length > 0) {
             alreadyExists++;
             continue;
           }
 
-          // Insert new record to remote
           const { error: insertError } = await remoteSupabase
             .from("products_resources")
             .insert({
@@ -121,29 +164,43 @@ Deno.serve(async (req) => {
           if (insertError) {
             console.error(`Error inserting resource ${localResource.resource_id}:`, insertError);
             errors++;
-            errorDetails.push(`Insert error for ${localResource.resource_id}: ${insertError.message}`);
+            if (errorDetails.length < 25) {
+              errorDetails.push(`Insert error for ${localResource.resource_id}: ${insertError.message}`);
+            }
             continue;
           }
 
-          console.log(`Inserted resource ${localResource.resource_id}`);
           inserted++;
         } catch (err) {
           console.error(`Unexpected error for resource ${localResource.resource_id}:`, err);
           errors++;
-          errorDetails.push(`Unexpected error for ${localResource.resource_id}: ${err}`);
+          if (errorDetails.length < 25) {
+            errorDetails.push(`Unexpected error for ${localResource.resource_id}: ${err}`);
+          }
         }
       }
-      
-      console.log(`Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(allLocalResources.length / batchSize)} (inserted: ${inserted}, exists: ${alreadyExists}, errors: ${errors})`);
+
+      checked += pageData.length;
+      console.log(
+        `Progress this run: checked=${checked}/${maxRecords}, inserted=${inserted}, exists=${alreadyExists}, errors=${errors}`,
+      );
+
+      if (pageData.length < pageSize) {
+        noMoreLocal = true;
+      }
     }
 
+    const nextOffset = offset + checked;
     const summary = {
       success: true,
-      total_local_resources: allLocalResources.length,
+      offset,
+      checked,
+      next_offset: nextOffset,
+      done: noMoreLocal,
       inserted,
       already_exists: alreadyExists,
       errors,
-      error_details: errorDetails.slice(0, 20),
+      error_details: errorDetails,
     };
 
     console.log("Sync completed:", summary);
