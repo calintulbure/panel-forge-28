@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useProductTypes, ProductType } from "@/hooks/useProductTypes";
+import { useProductResources } from "@/hooks/useProductResources";
 
 export default function Products() {
   const { userRole } = useAuth();
@@ -63,6 +64,9 @@ export default function Products() {
 
   // Fetch product types for the filter
   const { types: productTypes, fetchTypes } = useProductTypes();
+  
+  // Fetch product resources (URLs and snapshots from products_resources table)
+  const { resources, fetchResourcesForProducts } = useProductResources();
   
   useEffect(() => {
     fetchTypes();
@@ -338,6 +342,18 @@ export default function Products() {
     },
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
+
+  // Fetch resources when products change
+  useEffect(() => {
+    if (products && products.length > 0) {
+      const articolIds = products
+        .map(p => p.articol_id)
+        .filter((id): id is number => id !== null);
+      if (articolIds.length > 0) {
+        fetchResourcesForProducts(articolIds);
+      }
+    }
+  }, [products, fetchResourcesForProducts]);
 
   const categories = useMemo(() => {
     return filterOptions || { 
@@ -686,7 +702,19 @@ export default function Products() {
 
       <ProductsTable 
         products={products || []} 
-        onRefresh={refetch}
+        resources={resources}
+        onRefresh={() => {
+          refetch();
+          // Also refetch resources
+          if (products && products.length > 0) {
+            const articolIds = products
+              .map(p => p.articol_id)
+              .filter((id): id is number => id !== null);
+            if (articolIds.length > 0) {
+              fetchResourcesForProducts(articolIds);
+            }
+          }
+        }}
         onUpdateProduct={(updatedProduct) => {
           // Update only the specific product in the cache
           if (products) {
