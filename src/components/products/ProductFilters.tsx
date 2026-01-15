@@ -10,7 +10,6 @@ import {
 import { ChevronDown, Filter, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Select,
   SelectContent,
@@ -45,8 +44,8 @@ interface ProductFiltersProps {
   setYliRoProdIdFilter: (value: string) => void;
   yliHuProdIdFilter: string;
   setYliHuProdIdFilter: (value: string) => void;
-  tipProdusFilter: string;
-  setTipProdusFilter: (value: string) => void;
+  tipProdusFilter: string[];
+  setTipProdusFilter: (value: string[]) => void;
   productTypes: ProductType[];
   showTipProdusNullOption?: boolean;
   categories: {
@@ -165,9 +164,11 @@ export function ProductFilters({
     if (yliHuSkuFilter !== 'all') filters.push(`HU SKU: ${yliHuSkuFilter}`);
     if (yliRoProdIdFilter !== 'all') filters.push(`YLIRO PROD ID: ${yliRoProdIdFilter}`);
     if (yliHuProdIdFilter !== 'all') filters.push(`YLIHU PROD ID: ${yliHuProdIdFilter}`);
-    if (tipProdusFilter !== 'all') {
-      const typeName = tipProdusFilter === 'null' ? 'null' : productTypes.find(t => t.tipprodus_id.toString() === tipProdusFilter)?.tipprodus_descriere || tipProdusFilter;
-      filters.push(`Tip Produs: ${typeName}`);
+    if (tipProdusFilter.length > 0) {
+      const display = tipProdusFilter.length === 1 
+        ? (tipProdusFilter[0] === 'null' ? 'null' : productTypes.find(t => t.tipprodus_id.toString() === tipProdusFilter[0])?.tipprodus_descriere || tipProdusFilter[0])
+        : `${productTypes.find(t => t.tipprodus_id.toString() === tipProdusFilter[0])?.tipprodus_descriere || tipProdusFilter[0]} +${tipProdusFilter.length - 1}`;
+      filters.push(`Tip Produs: ${display}`);
     }
     return filters;
   };
@@ -382,9 +383,8 @@ export function ProductFilters({
 
                 <div className="space-y-0.5 md:space-y-1">
                   <Label htmlFor="tipProdusFilter" className="text-xs">Tip Produs</Label>
-                  <SearchableSelect
+                  <MultiSelect
                     options={[
-                      { value: 'all', label: 'All' },
                       ...(showTipProdusNullOption ? [{ value: 'null', label: 'null (not assigned)' }] : []),
                       ...productTypes.map(type => ({
                         value: type.tipprodus_id.toString(),
@@ -392,7 +392,7 @@ export function ProductFilters({
                       }))
                     ]}
                     value={tipProdusFilter}
-                    onChange={(val) => setTipProdusFilter(val || 'all')}
+                    onChange={setTipProdusFilter}
                     placeholder="All"
                   />
                 </div>

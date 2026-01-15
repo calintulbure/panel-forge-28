@@ -55,8 +55,8 @@ export default function Products() {
   const [yliHuProdIdFilter, setYliHuProdIdFilter] = useState(
     searchParams.get("huProdId") || "all"
   );
-  const [tipProdusFilter, setTipProdusFilter] = useState(
-    searchParams.get("tipProdus") || "all"
+  const [tipProdusFilter, setTipProdusFilter] = useState<string[]>(
+    searchParams.get("tipProdus")?.split(",").filter(Boolean) || []
   );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,7 +88,7 @@ export default function Products() {
     if (yliHuSkuFilter !== "all") params.set("huSku", yliHuSkuFilter);
     if (yliRoProdIdFilter !== "all") params.set("roProdId", yliRoProdIdFilter);
     if (yliHuProdIdFilter !== "all") params.set("huProdId", yliHuProdIdFilter);
-    if (tipProdusFilter !== "all") params.set("tipProdus", tipProdusFilter);
+    if (tipProdusFilter.length > 0) params.set("tipProdus", tipProdusFilter.join(","));
     
     setSearchParams(params, { replace: true });
   }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter]);
@@ -246,11 +246,17 @@ export default function Products() {
           query = query.gt("site_hu_product_id", 0);
         }
       }
-      if (tipProdusFilter !== "all") {
-        if (tipProdusFilter === "null") {
+      if (tipProdusFilter.length > 0) {
+        const hasNull = tipProdusFilter.includes("null");
+        const numericIds = tipProdusFilter.filter(id => id !== "null").map(id => parseInt(id));
+        
+        if (hasNull && numericIds.length > 0) {
+          // Both null and numeric values selected
+          query = query.or(`tip_produs_id_sub.is.null,tip_produs_id_sub.in.(${numericIds.join(",")})`);
+        } else if (hasNull) {
           query = query.is("tip_produs_id_sub", null);
         } else {
-          query = query.eq("tip_produs_id_sub", parseInt(tipProdusFilter));
+          query = query.in("tip_produs_id_sub", numericIds);
         }
       }
 
@@ -328,11 +334,16 @@ export default function Products() {
           query = query.gt("site_hu_product_id", 0);
         }
       }
-      if (tipProdusFilter !== "all") {
-        if (tipProdusFilter === "null") {
+      if (tipProdusFilter.length > 0) {
+        const hasNull = tipProdusFilter.includes("null");
+        const numericIds = tipProdusFilter.filter(id => id !== "null").map(id => parseInt(id));
+        
+        if (hasNull && numericIds.length > 0) {
+          query = query.or(`tip_produs_id_sub.is.null,tip_produs_id_sub.in.(${numericIds.join(",")})`);
+        } else if (hasNull) {
           query = query.is("tip_produs_id_sub", null);
         } else {
-          query = query.eq("tip_produs_id_sub", parseInt(tipProdusFilter));
+          query = query.in("tip_produs_id_sub", numericIds);
         }
       }
 
@@ -562,15 +573,16 @@ export default function Products() {
 
   // Reset tipProdusFilter when category filters change
   useEffect(() => {
-    if (tipProdusFilter !== "all") {
-      // Check if current tipProdusFilter is still valid for filtered products
+    if (tipProdusFilter.length > 0) {
+      // Check if current tipProdusFilter selections are still valid for filtered products
       if (availableTipProdusIds) {
-        const isValidSelection = 
-          (tipProdusFilter === "null" && availableTipProdusIds.hasNull) ||
-          (tipProdusFilter !== "null" && availableTipProdusIds.ids.includes(parseInt(tipProdusFilter)));
+        const validSelections = tipProdusFilter.filter(val => 
+          (val === "null" && availableTipProdusIds.hasNull) ||
+          (val !== "null" && availableTipProdusIds.ids.includes(parseInt(val)))
+        );
         
-        if (!isValidSelection) {
-          setTipProdusFilter("all");
+        if (validSelections.length !== tipProdusFilter.length) {
+          setTipProdusFilter(validSelections);
         }
       }
     }
@@ -605,7 +617,7 @@ export default function Products() {
     setYliHuSkuFilter("all");
     setYliRoProdIdFilter("all");
     setYliHuProdIdFilter("all");
-    setTipProdusFilter("all");
+    setTipProdusFilter([]);
     setSearchParams(new URLSearchParams(), { replace: true });
   };
 
