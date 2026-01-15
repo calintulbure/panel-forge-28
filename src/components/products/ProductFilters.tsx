@@ -10,6 +10,7 @@ import {
 import { ChevronDown, Filter, X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Select,
   SelectContent,
@@ -381,22 +382,19 @@ export function ProductFilters({
 
                 <div className="space-y-0.5 md:space-y-1">
                   <Label htmlFor="tipProdusFilter" className="text-xs">Tip Produs</Label>
-                  <Select value={tipProdusFilter} onValueChange={setTipProdusFilter}>
-                    <SelectTrigger id="tipProdusFilter" className="h-9 text-sm">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {showTipProdusNullOption && (
-                        <SelectItem value="null">null (not assigned)</SelectItem>
-                      )}
-                      {productTypes.map(type => (
-                        <SelectItem key={type.tipprodus_id} value={type.tipprodus_id.toString()}>
-                          {type.tipprodus_descriere}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={[
+                      { value: 'all', label: 'All' },
+                      ...(showTipProdusNullOption ? [{ value: 'null', label: 'null (not assigned)' }] : []),
+                      ...productTypes.map(type => ({
+                        value: type.tipprodus_id.toString(),
+                        label: type.tipprodus_descriere
+                      }))
+                    ]}
+                    value={tipProdusFilter}
+                    onChange={(val) => setTipProdusFilter(val || 'all')}
+                    placeholder="All"
+                  />
                 </div>
               </div>
             </CardContent>
