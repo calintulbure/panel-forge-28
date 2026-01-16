@@ -157,33 +157,11 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
     try {
       const urlObj = new URL(value);
       
-      // Check if resource already exists for this product and language
-      const { data: existing } = await supabase
-        .from("products_resources")
-        .select("resource_id")
-        .eq("erp_product_code", product.erp_product_code)
-        .eq("language", site)
-        .eq("resource_type", "html")
-        .maybeSingle();
-
-      if (existing) {
-        // Update existing resource
-        const { error: updateError } = await supabase
-          .from("products_resources")
-          .update({
-            url: value,
-            server: urlObj.hostname.replace(/^www\./, ''),
-            resource_content: "webpage",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("resource_id", existing.resource_id);
-
-        if (updateError) throw updateError;
-      } else {
-        // Insert new resource
-        const { error: insertError } = await supabase
-          .from("products_resources")
-          .insert({
+      // Upsert directly to remote via edge function
+      const { data: response, error } = await supabase.functions.invoke("remote-resources", {
+        body: {
+          action: "upsert",
+          record: {
             articol_id: currentProduct.articol_id,
             erp_product_code: product.erp_product_code,
             resource_type: "html",
@@ -191,12 +169,19 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
             language: site,
             url: value,
             server: urlObj.hostname.replace(/^www\./, ''),
-          });
+          },
+          match_on: {
+            erp_product_code: product.erp_product_code,
+            language: site,
+            resource_type: "html",
+          }
+        }
+      });
 
-        if (insertError) throw insertError;
-      }
+      if (error) throw error;
+      if (!response?.success) throw new Error(response?.error || "Failed to save URL");
 
-      toast.success("URL saved successfully");
+      toast.success("URL saved to remote successfully");
       
       // Automatically trigger snapshot refresh after URL is saved
       await handleRefreshSnapshot(site);
@@ -242,15 +227,20 @@ export function ProductDetailPanel({ product, open, onClose, onUpdate, isAdmin }
     
     setLoading(true);
     try {
-      // Delete resource from products_resources
-      const { error: deleteError } = await supabase
-        .from("products_resources")
-        .delete()
-        .eq("erp_product_code", product.erp_product_code)
-        .eq("language", clearSite)
-        .eq("resource_type", "html");
+      // Delete resource from remote via edge function
+      const { data: response, error: deleteError } = await supabase.functions.invoke("remote-resources", {
+        body: {
+          action: "delete",
+          filters: {
+            erp_product_code: product.erp_product_code,
+            language: clearSite,
+            resource_type: "html",
+          }
+        }
+      });
 
       if (deleteError) throw deleteError;
+      if (!response?.success) throw new Error(response?.error || "Failed to delete");
       
       // Also update the products table to clear related fields and validation
       const updateData = clearSite === "ro" ? {

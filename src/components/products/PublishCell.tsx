@@ -108,34 +108,11 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
 
         if (productError) throw productError;
 
-        // Check if resource already exists for this product and language
-        const { data: existing } = await supabase
-          .from("products_resources")
-          .select("resource_id")
-          .eq("erp_product_code", productCode)
-          .eq("language", site)
-          .eq("resource_type", "html")
-          .maybeSingle();
-
-        if (existing) {
-          // Update existing resource - reset processed to trigger sync
-          const { error: updateError } = await supabase
-            .from("products_resources")
-            .update({
-              url,
-              server: serverDomain,
-              resource_content: "webpage",
-              processed: false,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("resource_id", existing.resource_id);
-
-          if (updateError) throw updateError;
-        } else {
-          // Insert new resource
-          const { error: insertError } = await supabase
-            .from("products_resources")
-            .insert({
+        // Upsert directly to remote via edge function
+        const { data: response, error: upsertError } = await supabase.functions.invoke("remote-resources", {
+          body: {
+            action: "upsert",
+            record: {
               articol_id: productData.articol_id,
               erp_product_code: productCode,
               resource_type: "html",
@@ -143,10 +120,18 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
               language: site,
               url,
               server: serverDomain,
-            });
+              processed: false,
+            },
+            match_on: {
+              erp_product_code: productCode,
+              language: site,
+              resource_type: "html",
+            }
+          }
+        });
 
-          if (insertError) throw insertError;
-        }
+        if (upsertError) throw upsertError;
+        if (!response?.success) throw new Error(response?.error || "Failed to save resource");
 
         // Trigger snapshot capture
         const { error: snapshotError } = await supabase.functions.invoke("trigger-snapshot", {
@@ -157,7 +142,7 @@ export function PublishCell({ productCode, productDescription, snapshotBase64, s
 
         toast({
           title: "URL updated",
-          description: `${site.toUpperCase()} URL saved and snapshot capture triggered`,
+          description: `${site.toUpperCase()} URL saved to remote and snapshot capture triggered`,
         });
 
         setTimeout(() => {

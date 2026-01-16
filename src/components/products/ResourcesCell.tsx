@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { FileText, Globe, Upload, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ResourcesListDialog } from "./ResourcesListDialog";
 import {
@@ -20,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { countRemoteResources, insertRemoteResource } from "@/hooks/useRemoteResources";
 
 const RESOURCE_CONTENT_TYPES = [
   { value: "datasheet", label: "Datasheet" },
@@ -52,7 +52,7 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
   const dragLeaveTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  // Fetch resource count
+  // Fetch resource count from remote
   useEffect(() => {
     const fetchResourceCount = async () => {
       if (!articolId) {
@@ -60,13 +60,9 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
         return;
       }
 
-      const { count, error } = await supabase
-        .from("products_resources")
-        .select("*", { count: "exact", head: true })
-        .eq("articol_id", articolId);
-
-      if (!error && count !== null) {
-        setResourceCount(count);
+      const result = await countRemoteResources(articolId);
+      if (result.success && result.count !== undefined) {
+        setResourceCount(result.count);
       }
     };
 
@@ -115,42 +111,33 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
           language = "hu";
         }
 
-        // Check if resource already exists
-        const { data: existing } = await supabase
-          .from("products_resources")
-          .select("resource_id")
-          .eq("articol_id", articolId)
-          .eq("url", url)
-          .maybeSingle();
+        // Insert directly to remote
+        const result = await insertRemoteResource({
+          articol_id: articolId,
+          erp_product_code: productCode,
+          resource_type: "html",
+          resource_content: "webpage",
+          url: url,
+          server: server,
+          language: language,
+          processed: false,
+        });
 
-        if (existing) {
-          toast({
-            title: "Already exists",
-            description: "This webpage is already added",
-          });
-          setIsLoading(false);
-          return;
+        if (!result.success) {
+          if (result.error?.includes("already exists")) {
+            toast({
+              title: "Already exists",
+              description: "This webpage is already added",
+            });
+            setIsLoading(false);
+            return;
+          }
+          throw new Error(result.error);
         }
-
-        // Insert new resource
-        const { error } = await supabase
-          .from("products_resources")
-          .insert({
-            articol_id: articolId,
-            erp_product_code: productCode,
-            resource_type: "html",
-            resource_content: "webpage",
-            url: url,
-            server: server,
-            language: language,
-            processed: false,
-          });
-
-        if (error) throw error;
 
         toast({
           title: "Webpage added",
-          description: "Resource has been saved",
+          description: "Resource has been saved to remote",
         });
 
         setResourceCount((prev) => prev + 1);
@@ -220,41 +207,33 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
     try {
       const urlObj = new URL(pendingFileUrl);
 
-      // Check if resource already exists
-      const { data: existing } = await supabase
-        .from("products_resources")
-        .select("resource_id")
-        .eq("articol_id", articolId)
-        .eq("url", pendingFileUrl)
-        .maybeSingle();
+      // Insert directly to remote
+      const result = await insertRemoteResource({
+        articol_id: articolId,
+        erp_product_code: productCode,
+        resource_type: "file_url",
+        resource_content: selectedContentType,
+        url: pendingFileUrl,
+        server: urlObj.hostname,
+        processed: false,
+      });
 
-      if (existing) {
-        toast({
-          title: "Already exists",
-          description: "This file URL is already added",
-        });
-        setPendingFileUrl(null);
-        setIsLoading(false);
-        return;
+      if (!result.success) {
+        if (result.error?.includes("already exists")) {
+          toast({
+            title: "Already exists",
+            description: "This file URL is already added",
+          });
+          setPendingFileUrl(null);
+          setIsLoading(false);
+          return;
+        }
+        throw new Error(result.error);
       }
-
-      const { error } = await supabase
-        .from("products_resources")
-        .insert({
-          articol_id: articolId,
-          erp_product_code: productCode,
-          resource_type: "file_url",
-          resource_content: selectedContentType,
-          url: pendingFileUrl,
-          server: urlObj.hostname,
-          processed: false,
-        });
-
-      if (error) throw error;
 
       toast({
         title: "File URL added",
-        description: "Resource has been saved",
+        description: "Resource has been saved to remote",
       });
 
       setResourceCount((prev) => prev + 1);
