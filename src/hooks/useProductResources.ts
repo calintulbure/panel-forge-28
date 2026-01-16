@@ -24,37 +24,52 @@ export function useProductResources() {
 
     setLoading(true);
     try {
-      // Fetch from remote via edge function
-      const { data: response, error } = await supabase.functions.invoke("remote-resources", {
-        body: {
-          action: "get",
-          filters: {
-            resource_type: "html",
-            resource_content: "webpage",
-            server: ["yli.ro", "yli.hu"]
-          }
-        }
-      });
-
-      if (error) throw error;
-      if (!response?.success) throw new Error(response?.error || "Failed to fetch resources");
-
-      const data = response.data || [];
+      // Fetch resources for each articol_id in parallel (batched)
       const resourcesMap: ProductResourcesMap = {};
       
-      data.forEach((resource: any) => {
-        if (!resource.articol_id || !articolIds.includes(resource.articol_id)) return;
+      // Batch requests to avoid too many parallel calls
+      const batchSize = 10;
+      for (let i = 0; i < articolIds.length; i += batchSize) {
+        const batch = articolIds.slice(i, i + batchSize);
         
-        if (!resourcesMap[resource.articol_id]) {
-          resourcesMap[resource.articol_id] = {};
-        }
-        
-        if (resource.server === "yli.ro") {
-          resourcesMap[resource.articol_id].ro = resource as ProductResource;
-        } else if (resource.server === "yli.hu") {
-          resourcesMap[resource.articol_id].hu = resource as ProductResource;
-        }
-      });
+        const promises = batch.map(async (articolId) => {
+          const { data: response, error } = await supabase.functions.invoke("remote-resources", {
+            body: {
+              action: "list",
+              articol_id: articolId,
+              filters: {
+                resource_type: "html",
+                resource_content: "webpage",
+                server: ["yli.ro", "yli.hu"]
+              }
+            }
+          });
+
+          if (error) {
+            console.error(`Error fetching resources for articol_id ${articolId}:`, error);
+            return;
+          }
+          if (!response?.success) {
+            console.error(`Failed to fetch resources for articol_id ${articolId}:`, response?.error);
+            return;
+          }
+
+          const data = response.data || [];
+          data.forEach((resource: any) => {
+            if (!resourcesMap[articolId]) {
+              resourcesMap[articolId] = {};
+            }
+            
+            if (resource.server === "yli.ro") {
+              resourcesMap[articolId].ro = resource as ProductResource;
+            } else if (resource.server === "yli.hu") {
+              resourcesMap[articolId].hu = resource as ProductResource;
+            }
+          });
+        });
+
+        await Promise.all(promises);
+      }
 
       setResources(resourcesMap);
     } catch (error) {
