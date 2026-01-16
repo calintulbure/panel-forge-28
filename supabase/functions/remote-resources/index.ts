@@ -30,6 +30,41 @@ interface ResourceRecord {
   updated_at?: string | null;
 }
 
+// Helper function to update resource_count in local products table
+async function updateLocalResourceCount(
+  localSupabase: any,
+  remoteSupabase: any,
+  articolId: number
+): Promise<void> {
+  try {
+    // Count resources on remote
+    const { count, error: countError } = await remoteSupabase
+      .from("products_resources")
+      .select("*", { count: "exact", head: true })
+      .eq("articol_id", articolId);
+
+    if (countError) {
+      console.error("[updateLocalResourceCount] Count error:", countError);
+      return;
+    }
+
+    // Update local products table
+    const { error: updateError } = await localSupabase
+      .from("products")
+      .update({ resource_count: count || 0 })
+      .eq("articol_id", articolId);
+
+    if (updateError) {
+      console.error("[updateLocalResourceCount] Update error:", updateError);
+      return;
+    }
+
+    console.log(`[updateLocalResourceCount] Updated articol_id=${articolId} to count=${count}`);
+  } catch (error) {
+    console.error("[updateLocalResourceCount] Error:", error);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -47,12 +82,18 @@ Deno.serve(async (req) => {
 
     const remoteUrl = Deno.env.get("SRC_SUPABASE_URL");
     const remoteServiceKey = Deno.env.get("SRC_SUPABASE_SERVICE_ROLE_KEY");
+    const localUrl = Deno.env.get("SUPABASE_URL");
+    const localServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!remoteUrl || !remoteServiceKey) {
       throw new Error("Missing remote database credentials");
     }
+    if (!localUrl || !localServiceKey) {
+      throw new Error("Missing local database credentials");
+    }
 
     const remoteSupabase = createClient(remoteUrl, remoteServiceKey);
+    const localSupabase = createClient(localUrl, localServiceKey);
 
     const body = await req.json();
     const { action } = body;
@@ -218,6 +259,11 @@ Deno.serve(async (req) => {
           });
         }
 
+        // Update local resource_count
+        if (record.articol_id) {
+          await updateLocalResourceCount(localSupabase, remoteSupabase, record.articol_id);
+        }
+
         console.log(`[insert] Inserted resource_id=${data.resource_id}`);
         return new Response(JSON.stringify({ success: true, data }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -340,6 +386,11 @@ Deno.serve(async (req) => {
             });
           }
 
+          // Update local resource_count
+          if (record.articol_id) {
+            await updateLocalResourceCount(localSupabase, remoteSupabase, record.articol_id);
+          }
+
           console.log(`[upsert] Inserted resource_id=${data.resource_id}`);
           return new Response(JSON.stringify({ success: true, data, action: "inserted" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -348,10 +399,22 @@ Deno.serve(async (req) => {
       }
 
       case "delete": {
-        const { resource_id, filters } = body as { 
+        const { resource_id, filters, articol_id } = body as { 
           resource_id?: number;
+          articol_id?: number;
           filters?: { erp_product_code?: string; language?: string; resource_type?: string };
         };
+
+        // Get articol_id before delete if not provided
+        let targetArticolId = articol_id;
+        if (!targetArticolId && resource_id) {
+          const { data: resourceData } = await remoteSupabase
+            .from("products_resources")
+            .select("articol_id")
+            .eq("resource_id", resource_id)
+            .single();
+          targetArticolId = resourceData?.articol_id;
+        }
 
         let query = remoteSupabase.from("products_resources").delete();
 
@@ -378,8 +441,36 @@ Deno.serve(async (req) => {
           });
         }
 
+        // Update local resource_count
+        if (targetArticolId) {
+          await updateLocalResourceCount(localSupabase, remoteSupabase, targetArticolId);
+        }
+
         console.log(`[delete] Deleted resource`);
         return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "sync_counts": {
+        // Sync all resource counts for products
+        const { articol_ids } = body as { articol_ids?: number[] };
+
+        if (!articol_ids || articol_ids.length === 0) {
+          return new Response(JSON.stringify({ success: false, error: "No articol_ids provided" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        let updated = 0;
+        for (const articolId of articol_ids) {
+          await updateLocalResourceCount(localSupabase, remoteSupabase, articolId);
+          updated++;
+        }
+
+        console.log(`[sync_counts] Synced ${updated} products`);
+        return new Response(JSON.stringify({ success: true, updated }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
