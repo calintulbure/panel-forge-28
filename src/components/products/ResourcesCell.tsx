@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { FileText, Globe, Upload, Link } from "lucide-react";
+import { Globe, Upload, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ResourcesListDialog } from "./ResourcesListDialog";
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { countRemoteResources, insertRemoteResource } from "@/hooks/useRemoteResources";
+import { insertRemoteResource } from "@/hooks/useRemoteResources";
 
 const RESOURCE_CONTENT_TYPES = [
   { value: "datasheet", label: "Datasheet" },
@@ -37,11 +37,12 @@ const RESOURCE_CONTENT_TYPES = [
 interface ResourcesCellProps {
   productCode: string;
   articolId: number | null;
+  resourceCount?: number; // Use cached count from products table
   onUpdate: () => void;
 }
 
-export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCellProps) {
-  const [resourceCount, setResourceCount] = useState<number>(0);
+export function ResourcesCell({ productCode, articolId, resourceCount: initialCount, onUpdate }: ResourcesCellProps) {
+  const [resourceCount, setResourceCount] = useState<number>(initialCount ?? 0);
   const [isDragOver, setIsDragOver] = useState<"webpage" | "file-url" | "file" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,22 +53,12 @@ export function ResourcesCell({ productCode, articolId, onUpdate }: ResourcesCel
   const dragLeaveTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  // Fetch resource count from remote
+  // Sync with prop when it changes
   useEffect(() => {
-    const fetchResourceCount = async () => {
-      if (!articolId) {
-        setResourceCount(0);
-        return;
-      }
-
-      const result = await countRemoteResources(articolId);
-      if (result.success && result.count !== undefined) {
-        setResourceCount(result.count);
-      }
-    };
-
-    fetchResourceCount();
-  }, [articolId]);
+    if (initialCount !== undefined) {
+      setResourceCount(initialCount);
+    }
+  }, [initialCount]);
 
   const processWebpageUrl = useCallback(
     async (url: string) => {

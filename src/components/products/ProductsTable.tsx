@@ -3,7 +3,7 @@ import { ArrowUpDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Trash2, CheckCircle2, XCircle, Copy } from "lucide-react";
+import { Trash2, CheckCircle2, XCircle, Copy } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { PublishCell } from "./PublishCell";
 import { ResourcesCell } from "./ResourcesCell";
@@ -40,6 +40,7 @@ interface Product {
   ro_stoc_detailed: string | null;
   tip_produs_id_sub: number | null;
   tip_produs_id_main: number | null;
+  resource_count?: number | null;
 }
 
 interface ProductsTableProps {
@@ -318,6 +319,7 @@ export function ProductsTable({
                     <ResourcesCell
                       productCode={product.erp_product_code}
                       articolId={product.articol_id}
+                      resourceCount={product.resource_count ?? undefined}
                       onUpdate={onRefresh}
                     />
                   </TableCell>
