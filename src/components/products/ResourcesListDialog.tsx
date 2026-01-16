@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Trash2, Globe, FileText, Image, File, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,20 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface Resource {
-  resource_id: number;
-  resource_type: string;
-  resource_content: string | null;
-  url: string | null;
-  server: string | null;
-  language: string | null;
-  title: string | null;
-  description: string | null;
-  url_status: string | null;
-  processed: boolean | null;
-  created_at: string | null;
-}
+import { listRemoteResources, deleteRemoteResource, RemoteResource } from "@/hooks/useRemoteResources";
 
 interface ResourcesListDialogProps {
   open: boolean;
@@ -46,10 +32,10 @@ export function ResourcesListDialog({
   productCode,
   onResourceDeleted,
 }: ResourcesListDialogProps) {
-  const [resources, setResources] = useState<Resource[]>([]);
+  const [resources, setResources] = useState<RemoteResource[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null);
+  const [resourceToDelete, setResourceToDelete] = useState<RemoteResource | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,21 +46,18 @@ export function ResourcesListDialog({
 
   const fetchResources = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("products_resources")
-      .select("resource_id, resource_type, resource_content, url, server, language, title, description, url_status, processed, created_at")
-      .eq("articol_id", articolId)
-      .order("created_at", { ascending: false });
+    const result = await listRemoteResources(articolId);
 
-    if (error) {
-      console.error("Error fetching resources:", error);
+    if (!result.success) {
+      console.error("Error fetching resources:", result.error);
       toast({
         title: "Error",
-        description: "Failed to load resources",
+        description: "Failed to load resources from remote",
         variant: "destructive",
       });
+      setResources([]);
     } else {
-      setResources(data || []);
+      setResources(result.data || []);
     }
     setIsLoading(false);
   };
@@ -82,22 +65,19 @@ export function ResourcesListDialog({
   const handleDelete = async () => {
     if (!resourceToDelete) return;
 
-    const { error } = await supabase
-      .from("products_resources")
-      .delete()
-      .eq("resource_id", resourceToDelete.resource_id);
+    const result = await deleteRemoteResource(resourceToDelete.resource_id);
 
-    if (error) {
-      console.error("Error deleting resource:", error);
+    if (!result.success) {
+      console.error("Error deleting resource:", result.error);
       toast({
         title: "Error",
-        description: "Failed to delete resource",
+        description: "Failed to delete resource from remote",
         variant: "destructive",
       });
     } else {
       toast({
         title: "Deleted",
-        description: "Resource has been deleted",
+        description: "Resource has been deleted from remote",
       });
       setResources((prev) => prev.filter((r) => r.resource_id !== resourceToDelete.resource_id));
       onResourceDeleted();
@@ -133,14 +113,14 @@ export function ResourcesListDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Resources for {productCode}</DialogTitle>
+            <DialogTitle>Resources for {productCode} (Remote)</DialogTitle>
           </DialogHeader>
 
           <ScrollArea className="max-h-[60vh]">
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="text-center py-8 text-muted-foreground">Loading from remote...</div>
             ) : resources.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No resources found</div>
+              <div className="text-center py-8 text-muted-foreground">No resources found on remote</div>
             ) : (
               <div className="space-y-2">
                 {resources.map((resource) => (
@@ -167,7 +147,7 @@ export function ResourcesListDialog({
                             {resource.language.toUpperCase()}
                           </Badge>
                         )}
-                        {getStatusBadge(resource.url_status)}
+                        {getStatusBadge(resource.url_status || null)}
                         {resource.processed === true ? (
                           <Badge variant="default" className="text-xs bg-green-600">
                             Processed
@@ -237,7 +217,7 @@ export function ResourcesListDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Resource?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this resource. This action cannot be undone.
+              This will permanently delete this resource from the remote database. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -24,20 +24,26 @@ export function useProductResources() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("products_resources")
-        .select("articol_id, url, resource_snapshot, server")
-        .in("articol_id", articolIds)
-        .eq("resource_type", "html")
-        .eq("resource_content", "webpage")
-        .in("server", ["yli.ro", "yli.hu"]);
+      // Fetch from remote via edge function
+      const { data: response, error } = await supabase.functions.invoke("remote-resources", {
+        body: {
+          action: "get",
+          filters: {
+            resource_type: "html",
+            resource_content: "webpage",
+            server: ["yli.ro", "yli.hu"]
+          }
+        }
+      });
 
       if (error) throw error;
+      if (!response?.success) throw new Error(response?.error || "Failed to fetch resources");
 
+      const data = response.data || [];
       const resourcesMap: ProductResourcesMap = {};
       
-      data?.forEach((resource) => {
-        if (!resource.articol_id) return;
+      data.forEach((resource: any) => {
+        if (!resource.articol_id || !articolIds.includes(resource.articol_id)) return;
         
         if (!resourcesMap[resource.articol_id]) {
           resourcesMap[resource.articol_id] = {};
@@ -60,19 +66,26 @@ export function useProductResources() {
 
   const fetchResourceForProduct = useCallback(async (articolId: number) => {
     try {
-      const { data, error } = await supabase
-        .from("products_resources")
-        .select("articol_id, url, resource_snapshot, server")
-        .eq("articol_id", articolId)
-        .eq("resource_type", "html")
-        .eq("resource_content", "webpage")
-        .in("server", ["yli.ro", "yli.hu"]);
+      // Fetch from remote via edge function
+      const { data: response, error } = await supabase.functions.invoke("remote-resources", {
+        body: {
+          action: "get",
+          articol_id: articolId,
+          filters: {
+            resource_type: "html",
+            resource_content: "webpage",
+            server: ["yli.ro", "yli.hu"]
+          }
+        }
+      });
 
       if (error) throw error;
+      if (!response?.success) throw new Error(response?.error || "Failed to fetch resources");
 
+      const data = response.data || [];
       const result: { ro?: ProductResource; hu?: ProductResource } = {};
       
-      data?.forEach((resource) => {
+      data.forEach((resource: any) => {
         if (resource.server === "yli.ro") {
           result.ro = resource as ProductResource;
         } else if (resource.server === "yli.hu") {
