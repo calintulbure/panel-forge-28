@@ -6,19 +6,25 @@ import { ProductFilters } from "@/components/products/ProductFilters";
 import { ProductImport } from "@/components/products/ProductImport";
 import { ProductAddForm } from "@/components/products/ProductAddForm";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useProductTypes, ProductType } from "@/hooks/useProductTypes";
 import { useProductResources } from "@/hooks/useProductResources";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Products() {
   const { userRole } = useAuth();
   const isAdmin = userRole === "admin";
   const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
+  
+  // Selection state
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   
   // Initialize filters from URL or defaults
   const [search, setSearch] = useState(searchParams.get("search") || "");
@@ -318,11 +324,15 @@ export default function Products() {
       if (resourcesFilter.length > 0) {
         const hasNone = resourcesFilter.includes('none');
         const hasAny = resourcesFilter.includes('any');
+        const hasUnprocessed = resourcesFilter.includes('unprocessed');
         
-        if (hasNone && !hasAny && resourceArticolIds === null) {
+        if (hasUnprocessed && resourcesFilter.length === 1) {
+          // Only 'unprocessed' selected - has unprocessed resources
+          query = query.gt("resource_unprocessed_count", 0);
+        } else if (hasNone && !hasAny && !hasUnprocessed && resourceArticolIds === null) {
           // Only 'none' selected - no resources
           query = query.or("resource_count.is.null,resource_count.eq.0");
-        } else if (hasAny && !hasNone && resourceArticolIds === null) {
+        } else if (hasAny && !hasNone && !hasUnprocessed && resourceArticolIds === null) {
           // Only 'any' selected - has resources
           query = query.gt("resource_count", 0);
         } else if (resourceArticolIds !== null) {
@@ -338,10 +348,20 @@ export default function Products() {
             } else if (hasAny) {
               // Include products with any resources AND matching specific types
               query = query.in("articol_id", resourceArticolIds);
+            } else if (hasUnprocessed) {
+              // Include products with unprocessed AND matching specific types
+              query = query.in("articol_id", resourceArticolIds).gt("resource_unprocessed_count", 0);
             } else {
               query = query.in("articol_id", resourceArticolIds);
             }
           }
+        } else if (hasUnprocessed && (hasAny || hasNone)) {
+          // Combination of unprocessed with any/none
+          const conditions: string[] = [];
+          if (hasUnprocessed) conditions.push("resource_unprocessed_count.gt.0");
+          if (hasAny) conditions.push("resource_count.gt.0");
+          if (hasNone) conditions.push("resource_count.is.null,resource_count.eq.0");
+          query = query.or(conditions.join(","));
         }
       }
 
@@ -466,10 +486,13 @@ export default function Products() {
       if (resourcesFilter.length > 0) {
         const hasNone = resourcesFilter.includes('none');
         const hasAny = resourcesFilter.includes('any');
+        const hasUnprocessed = resourcesFilter.includes('unprocessed');
         
-        if (hasNone && !hasAny && resourceArticolIds === null) {
+        if (hasUnprocessed && resourcesFilter.length === 1) {
+          query = query.gt("resource_unprocessed_count", 0);
+        } else if (hasNone && !hasAny && !hasUnprocessed && resourceArticolIds === null) {
           query = query.or("resource_count.is.null,resource_count.eq.0");
-        } else if (hasAny && !hasNone && resourceArticolIds === null) {
+        } else if (hasAny && !hasNone && !hasUnprocessed && resourceArticolIds === null) {
           query = query.gt("resource_count", 0);
         } else if (resourceArticolIds !== null) {
           if (resourceArticolIds.length === 0) {
@@ -477,10 +500,18 @@ export default function Products() {
           } else {
             if (hasNone) {
               query = query.or(`resource_count.is.null,resource_count.eq.0,articol_id.in.(${resourceArticolIds.join(",")})`);
+            } else if (hasUnprocessed) {
+              query = query.in("articol_id", resourceArticolIds).gt("resource_unprocessed_count", 0);
             } else {
               query = query.in("articol_id", resourceArticolIds);
             }
           }
+        } else if (hasUnprocessed && (hasAny || hasNone)) {
+          const conditions: string[] = [];
+          if (hasUnprocessed) conditions.push("resource_unprocessed_count.gt.0");
+          if (hasAny) conditions.push("resource_count.gt.0");
+          if (hasNone) conditions.push("resource_count.is.null,resource_count.eq.0");
+          query = query.or(conditions.join(","));
         }
       }
 
@@ -815,27 +846,64 @@ export default function Products() {
         onRefresh={() => refetch()}
       />
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3">
-        {isAdmin && (
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            {/* <ProductImport onImportComplete={refetch} /> */}
-            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="h-11 md:h-9 w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Product</DialogTitle>
-                </DialogHeader>
-                <ProductAddForm onSuccess={() => { setAddDialogOpen(false); refetch(); }} />
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+          {selectedProducts.size > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-11 md:h-9">
+                  Actions ({selectedProducts.size})
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => {
+                  toast({
+                    title: "Processing all resources",
+                    description: `${selectedProducts.size} products queued for resource processing`,
+                  });
+                  // TODO: Implement actual processing logic
+                }}>
+                  Process All Resources
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  toast({
+                    title: "Processing unprocessed resources",
+                    description: `${selectedProducts.size} products queued for unprocessed resource processing`,
+                  });
+                  // TODO: Implement actual processing logic
+                }}>
+                  Process Unprocessed Only
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {selectedProducts.size > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setSelectedProducts(new Set())} className="h-11 md:h-9">
+              Clear Selection
+            </Button>
+          )}
+        </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+          {isAdmin && (
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {/* <ProductImport onImportComplete={refetch} /> */}
+              <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="h-11 md:h-9 w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Add New Product</DialogTitle>
+                  </DialogHeader>
+                  <ProductAddForm onSuccess={() => { setAddDialogOpen(false); refetch(); }} />
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
             Showing {startIndex + 1}-{endIndex} of {filteredCount} products
           </p>
@@ -855,6 +923,8 @@ export default function Products() {
       <ProductsTable 
         products={products || []} 
         resources={resources}
+        selectedProducts={selectedProducts}
+        onSelectionChange={setSelectedProducts}
         onRefresh={() => {
           refetch();
           // Also refetch resources

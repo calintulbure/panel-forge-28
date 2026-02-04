@@ -22,6 +22,7 @@ import { ProductType } from "@/hooks/useProductTypes";
 export const RESOURCES_FILTER_OPTIONS = [
   { value: 'none', label: 'None' },
   { value: 'any', label: 'Any' },
+  { value: 'unprocessed', label: 'Unprocessed' },
   { value: 'ro_webpage', label: 'RO Webpage' },
   { value: 'hu_webpage', label: 'HU Webpage' },
   { value: 'webpage', label: 'Webpage' },

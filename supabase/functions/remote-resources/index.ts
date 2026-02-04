@@ -30,38 +30,53 @@ interface ResourceRecord {
   updated_at?: string | null;
 }
 
-// Helper function to update resource_count in local products table
-async function updateLocalResourceCount(
+// Helper function to update resource_count and resource_unprocessed_count in local products table
+async function updateLocalResourceCounts(
   localSupabase: any,
   remoteSupabase: any,
   articolId: number
 ): Promise<void> {
   try {
-    // Count resources on remote
-    const { count, error: countError } = await remoteSupabase
+    // Count total resources on remote
+    const { count: totalCount, error: countError } = await remoteSupabase
       .from("products_resources")
       .select("*", { count: "exact", head: true })
       .eq("articol_id", articolId);
 
     if (countError) {
-      console.error("[updateLocalResourceCount] Count error:", countError);
+      console.error("[updateLocalResourceCounts] Count error:", countError);
+      return;
+    }
+
+    // Count unprocessed resources (processed is null, false, or not 'Processed')
+    const { count: unprocessedCount, error: unprocessedError } = await remoteSupabase
+      .from("products_resources")
+      .select("*", { count: "exact", head: true })
+      .eq("articol_id", articolId)
+      .or("processed.is.null,processed.eq.false");
+
+    if (unprocessedError) {
+      console.error("[updateLocalResourceCounts] Unprocessed count error:", unprocessedError);
       return;
     }
 
     // Update local products table
     const { error: updateError } = await localSupabase
       .from("products")
-      .update({ resource_count: count || 0 })
+      .update({ 
+        resource_count: totalCount || 0,
+        resource_unprocessed_count: unprocessedCount || 0
+      })
       .eq("articol_id", articolId);
 
     if (updateError) {
-      console.error("[updateLocalResourceCount] Update error:", updateError);
+      console.error("[updateLocalResourceCounts] Update error:", updateError);
       return;
     }
 
-    console.log(`[updateLocalResourceCount] Updated articol_id=${articolId} to count=${count}`);
+    console.log(`[updateLocalResourceCounts] Updated articol_id=${articolId} to count=${totalCount}, unprocessed=${unprocessedCount}`);
   } catch (error) {
-    console.error("[updateLocalResourceCount] Error:", error);
+    console.error("[updateLocalResourceCounts] Error:", error);
   }
 }
 
@@ -259,9 +274,9 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Update local resource_count
+        // Update local resource counts
         if (record.articol_id) {
-          await updateLocalResourceCount(localSupabase, remoteSupabase, record.articol_id);
+          await updateLocalResourceCounts(localSupabase, remoteSupabase, record.articol_id);
         }
 
         console.log(`[insert] Inserted resource_id=${data.resource_id}`);
@@ -386,9 +401,9 @@ Deno.serve(async (req) => {
             });
           }
 
-          // Update local resource_count
+          // Update local resource counts
           if (record.articol_id) {
-            await updateLocalResourceCount(localSupabase, remoteSupabase, record.articol_id);
+            await updateLocalResourceCounts(localSupabase, remoteSupabase, record.articol_id);
           }
 
           console.log(`[upsert] Inserted resource_id=${data.resource_id}`);
@@ -441,9 +456,9 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Update local resource_count
+        // Update local resource counts
         if (targetArticolId) {
-          await updateLocalResourceCount(localSupabase, remoteSupabase, targetArticolId);
+          await updateLocalResourceCounts(localSupabase, remoteSupabase, targetArticolId);
         }
 
         console.log(`[delete] Deleted resource`);
@@ -465,7 +480,7 @@ Deno.serve(async (req) => {
 
         let updated = 0;
         for (const articolId of articol_ids) {
-          await updateLocalResourceCount(localSupabase, remoteSupabase, articolId);
+          await updateLocalResourceCounts(localSupabase, remoteSupabase, articolId);
           updated++;
         }
 
@@ -476,20 +491,20 @@ Deno.serve(async (req) => {
       }
 
       case "sync_all_counts": {
-        // Sync ALL resource counts from remote to local using efficient batch updates
+        // Sync ALL resource counts (total and unprocessed) from remote to local
         console.log(`[sync_all_counts] Starting bulk sync`);
 
         try {
           // Paginate through all resources to avoid 1000 row limit
           const pageSize = 1000;
-          let allResources: { articol_id: number }[] = [];
+          let allResources: { articol_id: number; processed: boolean | null }[] = [];
           let page = 0;
           let hasMore = true;
 
           while (hasMore) {
             const { data: pageData, error: pageError } = await remoteSupabase
               .from("products_resources")
-              .select("articol_id")
+              .select("articol_id, processed")
               .not("articol_id", "is", null)
               .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -511,11 +526,18 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Count resources per articol_id
-          const countsMap: Record<number, number> = {};
+          // Count total and unprocessed resources per articol_id
+          const countsMap: Record<number, { total: number; unprocessed: number }> = {};
           for (const r of allResources) {
             if (r.articol_id) {
-              countsMap[r.articol_id] = (countsMap[r.articol_id] || 0) + 1;
+              if (!countsMap[r.articol_id]) {
+                countsMap[r.articol_id] = { total: 0, unprocessed: 0 };
+              }
+              countsMap[r.articol_id].total++;
+              // Count as unprocessed if processed is null or false
+              if (r.processed === null || r.processed === false) {
+                countsMap[r.articol_id].unprocessed++;
+              }
             }
           }
 
@@ -535,7 +557,10 @@ Deno.serve(async (req) => {
               batch.map(articolId => 
                 localSupabase
                   .from("products")
-                  .update({ resource_count: countsMap[articolId] })
+                  .update({ 
+                    resource_count: countsMap[articolId].total,
+                    resource_unprocessed_count: countsMap[articolId].unprocessed
+                  })
                   .eq("articol_id", articolId)
               )
             );
@@ -551,10 +576,10 @@ Deno.serve(async (req) => {
             console.log(`[sync_all_counts] Batch ${Math.floor(i / batchSize) + 1}: ${batch.length} processed`);
           }
 
-          // Reset resource_count to 0 for products without resources
+          // Reset counts to 0 for products without resources
           const { error: zeroError } = await localSupabase
             .from("products")
-            .update({ resource_count: 0 })
+            .update({ resource_count: 0, resource_unprocessed_count: 0 })
             .or(articolIds.length > 0 
               ? `articol_id.not.in.(${articolIds.join(",")})` 
               : "articol_id.not.is.null"
