@@ -3,22 +3,10 @@ import { Globe, Upload, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ResourcesListDialog } from "./ResourcesListDialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { insertRemoteResource } from "@/hooks/useRemoteResources";
 
 const RESOURCE_CONTENT_TYPES = [
@@ -42,7 +30,13 @@ interface ResourcesCellProps {
   onUpdate: () => void;
 }
 
-export function ResourcesCell({ productCode, articolId, resourceCount: initialCount, resourceUnprocessedCount, onUpdate }: ResourcesCellProps) {
+export function ResourcesCell({
+  productCode,
+  articolId,
+  resourceCount: initialCount,
+  resourceUnprocessedCount,
+  onUpdate,
+}: ResourcesCellProps) {
   const [resourceCount, setResourceCount] = useState<number>(initialCount ?? 0);
   const [unprocessedCount, setUnprocessedCount] = useState<number>(resourceUnprocessedCount ?? 0);
   const [isDragOver, setIsDragOver] = useState<"webpage" | "file-url" | "file" | null>(null);
@@ -101,7 +95,7 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
         const urlObj = new URL(url);
         let server = urlObj.hostname;
         let language = null;
-        
+
         if (urlObj.hostname.includes("yli.ro")) {
           server = "yli.ro";
           language = "ro";
@@ -153,7 +147,7 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
         setIsLoading(false);
       }
     },
-    [articolId, productCode, onUpdate, toast]
+    [articolId, productCode, onUpdate, toast],
   );
 
   const processFileUrl = useCallback(
@@ -196,7 +190,7 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
       setSelectedContentType(guessedType);
       setPendingFileUrl(url);
     },
-    [articolId, toast]
+    [articolId, toast],
   );
 
   const confirmFileUrl = async () => {
@@ -231,17 +225,17 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
         throw new Error(result.error);
       }
 
-        toast({
-          title: "File URL added",
-          description: "Resource has been saved to remote",
-        });
+      toast({
+        title: "File URL added",
+        description: "Resource has been saved to remote",
+      });
 
-        setResourceCount((prev) => prev + 1);
-        setUnprocessedCount((prev) => prev + 1);
-        setPendingFileUrl(null);
-        onUpdate();
-      } catch (error) {
-        console.error("Error adding file URL:", error);
+      setResourceCount((prev) => prev + 1);
+      setUnprocessedCount((prev) => prev + 1);
+      setPendingFileUrl(null);
+      onUpdate();
+    } catch (error) {
+      console.error("Error adding file URL:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to add file URL",
@@ -268,7 +262,7 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
         description: "File upload will be implemented later",
       });
     },
-    [articolId, toast]
+    [articolId, toast],
   );
 
   const handleDragOver = (e: React.DragEvent, zone: "webpage" | "file-url" | "file") => {
@@ -337,7 +331,7 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
   };
 
   return (
-    <div 
+    <div
       className="relative min-h-[120px] p-2 rounded border transition-colors"
       onDragEnter={handleContainerDragEnter}
       onDragLeave={handleContainerDragLeave}
@@ -346,14 +340,14 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
       <div className="flex flex-col items-center gap-2">
         {/* Resource count - hidden when dragging, clickable to open list */}
         {!isDragging && (
-          <div 
+          <div
             className="cursor-pointer hover:bg-muted/50 rounded p-2 transition-colors"
             onClick={() => articolId && setShowResourcesList(true)}
           >
             <div className="font-bold text-xl text-foreground text-center">{resourceCount}</div>
             <div className="text-xs text-muted-foreground text-center">resources</div>
             {unprocessedCount > 0 && (
-              <div className="text-xs text-muted-foreground text-center">({unprocessedCount} unprocessed)</div>
+              <div className="text-xs text-muted-foreground text-center">({unprocessedCount} for process)</div>
             )}
           </div>
         )}
@@ -365,7 +359,9 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
             <div
               className={cn(
                 "flex items-center gap-1 p-2 rounded border border-dashed text-xs cursor-pointer transition-colors",
-                isDragOver === "webpage" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                isDragOver === "webpage"
+                  ? "border-primary bg-primary/10"
+                  : "border-muted-foreground/30 hover:border-muted-foreground/50",
               )}
               onDragOver={(e) => handleDragOver(e, "webpage")}
               onDragLeave={handleDragLeave}
@@ -379,7 +375,9 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
             <div
               className={cn(
                 "flex items-center gap-1 p-2 rounded border border-dashed text-xs cursor-pointer transition-colors",
-                isDragOver === "file-url" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                isDragOver === "file-url"
+                  ? "border-primary bg-primary/10"
+                  : "border-muted-foreground/30 hover:border-muted-foreground/50",
               )}
               onDragOver={(e) => handleDragOver(e, "file-url")}
               onDragLeave={handleDragLeave}
@@ -393,7 +391,9 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
             <div
               className={cn(
                 "flex items-center gap-1 p-2 rounded border border-dashed text-xs cursor-pointer transition-colors",
-                isDragOver === "file" ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-muted-foreground/50"
+                isDragOver === "file"
+                  ? "border-primary bg-primary/10"
+                  : "border-muted-foreground/30 hover:border-muted-foreground/50",
               )}
               onDragOver={(e) => handleDragOver(e, "file")}
               onDragLeave={handleDragLeave}
@@ -434,9 +434,7 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
             <DialogTitle>Select Resource Type</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="text-sm text-muted-foreground truncate">
-              {pendingFileUrl}
-            </div>
+            <div className="text-sm text-muted-foreground truncate">{pendingFileUrl}</div>
             <div className="space-y-2">
               <Label>Content Type</Label>
               <Select value={selectedContentType} onValueChange={setSelectedContentType}>
