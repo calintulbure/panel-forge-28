@@ -453,7 +453,7 @@ Deno.serve(async (req) => {
       }
 
       case "sync_counts": {
-        // Sync all resource counts for products
+        // Sync resource counts for specific products
         const { articol_ids } = body as { articol_ids?: number[] };
 
         if (!articol_ids || articol_ids.length === 0) {
@@ -473,6 +473,115 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: true, updated }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+
+      case "sync_all_counts": {
+        // Sync ALL resource counts from remote to local using efficient batch updates
+        console.log(`[sync_all_counts] Starting bulk sync`);
+
+        try {
+          // Paginate through all resources to avoid 1000 row limit
+          const pageSize = 1000;
+          let allResources: { articol_id: number }[] = [];
+          let page = 0;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data: pageData, error: pageError } = await remoteSupabase
+              .from("products_resources")
+              .select("articol_id")
+              .not("articol_id", "is", null)
+              .range(page * pageSize, (page + 1) * pageSize - 1);
+
+            if (pageError) {
+              console.error("[sync_all_counts] Page error:", pageError);
+              return new Response(JSON.stringify({ success: false, error: pageError.message }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+
+            if (pageData && pageData.length > 0) {
+              allResources = allResources.concat(pageData);
+              console.log(`[sync_all_counts] Fetched page ${page + 1}: ${pageData.length} records (total: ${allResources.length})`);
+              hasMore = pageData.length === pageSize;
+              page++;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          // Count resources per articol_id
+          const countsMap: Record<number, number> = {};
+          for (const r of allResources) {
+            if (r.articol_id) {
+              countsMap[r.articol_id] = (countsMap[r.articol_id] || 0) + 1;
+            }
+          }
+
+          const articolIds = Object.keys(countsMap).map(Number);
+          console.log(`[sync_all_counts] Found ${articolIds.length} products with resources, total ${allResources.length} resource records`);
+
+          // Update products with resources in parallel batches
+          let updated = 0;
+          let errors = 0;
+          const batchSize = 100;
+          
+          for (let i = 0; i < articolIds.length; i += batchSize) {
+            const batch = articolIds.slice(i, i + batchSize);
+            
+            // Execute batch updates in parallel
+            const results = await Promise.allSettled(
+              batch.map(articolId => 
+                localSupabase
+                  .from("products")
+                  .update({ resource_count: countsMap[articolId] })
+                  .eq("articol_id", articolId)
+              )
+            );
+
+            results.forEach((result) => {
+              if (result.status === "fulfilled" && !result.value.error) {
+                updated++;
+              } else {
+                errors++;
+              }
+            });
+
+            console.log(`[sync_all_counts] Batch ${Math.floor(i / batchSize) + 1}: ${batch.length} processed`);
+          }
+
+          // Reset resource_count to 0 for products without resources
+          const { error: zeroError } = await localSupabase
+            .from("products")
+            .update({ resource_count: 0 })
+            .or(articolIds.length > 0 
+              ? `articol_id.not.in.(${articolIds.join(",")})` 
+              : "articol_id.not.is.null"
+            )
+            .gt("resource_count", 0);
+
+          if (zeroError) {
+            console.error("[sync_all_counts] Zero update error:", zeroError);
+          }
+
+          console.log(`[sync_all_counts] Completed: ${updated} updated, ${errors} errors`);
+          return new Response(JSON.stringify({ 
+            success: true, 
+            updated, 
+            errors,
+            total_resources: allResources.length,
+            products_with_resources: articolIds.length 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (err) {
+          console.error("[sync_all_counts] Unexpected error:", err);
+          return new Response(JSON.stringify({ success: false, error: String(err) }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
 
       default:
