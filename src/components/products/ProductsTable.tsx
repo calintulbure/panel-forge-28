@@ -3,6 +3,7 @@ import { ArrowUpDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, CheckCircle2, XCircle, Copy } from "lucide-react";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { PublishCell } from "./PublishCell";
@@ -41,6 +42,7 @@ interface Product {
   tip_produs_id_sub: number | null;
   tip_produs_id_main: number | null;
   resource_count?: number | null;
+  resource_unprocessed_count?: number | null;
 }
 
 interface ProductsTableProps {
@@ -49,13 +51,17 @@ interface ProductsTableProps {
   onRefresh: () => void;
   onUpdateProduct?: (updatedProduct: Product) => void;
   isAdmin: boolean;
+  selectedProducts?: Set<string>;
+  onSelectionChange?: (selectedCodes: Set<string>) => void;
 }
 export function ProductsTable({
   products,
   resources = {},
   onRefresh,
   onUpdateProduct,
-  isAdmin
+  isAdmin,
+  selectedProducts = new Set(),
+  onSelectionChange
 }: ProductsTableProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -80,6 +86,31 @@ export function ProductsTable({
   useEffect(() => {
     fetchTypes();
   }, [fetchTypes]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (!onSelectionChange) return;
+    if (checked) {
+      const allCodes = new Set(products.map(p => p.erp_product_code));
+      onSelectionChange(allCodes);
+    } else {
+      onSelectionChange(new Set());
+    }
+  };
+
+  const handleSelectProduct = (productCode: string, checked: boolean) => {
+    if (!onSelectionChange) return;
+    const newSelection = new Set(selectedProducts);
+    if (checked) {
+      newSelection.add(productCode);
+    } else {
+      newSelection.delete(productCode);
+    }
+    onSelectionChange(newSelection);
+  };
+
+  const isAllSelected = products.length > 0 && selectedProducts.size === products.length;
+  const isSomeSelected = selectedProducts.size > 0 && selectedProducts.size < products.length;
+
   const handleProductTypeChange = async (productCode: string, typeId: number | null, typeName: string | null) => {
     const result = await updateProductType(productCode, typeId);
     if (result) {
@@ -188,6 +219,20 @@ export function ProductsTable({
         <Table className="w-full table-fixed">
           <TableHeader className="bg-background border-b">
             <TableRow>
+              {onSelectionChange && (
+                <TableHead className="w-[50px]">
+                  <Checkbox
+                    checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) {
+                        (el as any).indeterminate = isSomeSelected;
+                      }
+                    }}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-[180px]">
                 <div className="flex flex-col gap-0.5">
                   <Button variant="ghost" onClick={() => handleSort('erp_product_code')} className="h-7 px-2 text-xs">
@@ -238,10 +283,19 @@ export function ProductsTable({
           </TableHeader>
           <TableBody>
             {sortedProducts.length === 0 ? <TableRow>
-                <TableCell colSpan={isAdmin ? 10 : 9} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? (onSelectionChange ? 11 : 10) : (onSelectionChange ? 10 : 9)} className="h-24 text-center">
                   No products found.
                 </TableCell>
-              </TableRow> : sortedProducts.map(product => <TableRow key={product.erp_product_code} className="cursor-pointer hover:bg-muted/50 group">
+              </TableRow> : sortedProducts.map(product => <TableRow key={product.erp_product_code} className={`cursor-pointer hover:bg-muted/50 group ${selectedProducts.has(product.erp_product_code) ? 'bg-muted/30' : ''}`}>
+                  {onSelectionChange && (
+                    <TableCell onClick={e => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedProducts.has(product.erp_product_code)}
+                        onCheckedChange={(checked) => handleSelectProduct(product.erp_product_code, !!checked)}
+                        aria-label={`Select ${product.erp_product_code}`}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell onClick={() => setSelectedProduct(product)}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1">
@@ -320,6 +374,7 @@ export function ProductsTable({
                       productCode={product.erp_product_code}
                       articolId={product.articol_id}
                       resourceCount={product.resource_count ?? undefined}
+                      resourceUnprocessedCount={product.resource_unprocessed_count ?? undefined}
                       onUpdate={onRefresh}
                     />
                   </TableCell>

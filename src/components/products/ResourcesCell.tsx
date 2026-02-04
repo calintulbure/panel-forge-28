@@ -38,11 +38,13 @@ interface ResourcesCellProps {
   productCode: string;
   articolId: number | null;
   resourceCount?: number; // Use cached count from products table
+  resourceUnprocessedCount?: number; // Count of unprocessed resources
   onUpdate: () => void;
 }
 
-export function ResourcesCell({ productCode, articolId, resourceCount: initialCount, onUpdate }: ResourcesCellProps) {
+export function ResourcesCell({ productCode, articolId, resourceCount: initialCount, resourceUnprocessedCount, onUpdate }: ResourcesCellProps) {
   const [resourceCount, setResourceCount] = useState<number>(initialCount ?? 0);
+  const [unprocessedCount, setUnprocessedCount] = useState<number>(resourceUnprocessedCount ?? 0);
   const [isDragOver, setIsDragOver] = useState<"webpage" | "file-url" | "file" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,12 +55,18 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
   const dragLeaveTimeout = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
-  // Sync with prop when it changes
+  // Sync with props when they change
   useEffect(() => {
     if (initialCount !== undefined) {
       setResourceCount(initialCount);
     }
   }, [initialCount]);
+
+  useEffect(() => {
+    if (resourceUnprocessedCount !== undefined) {
+      setUnprocessedCount(resourceUnprocessedCount);
+    }
+  }, [resourceUnprocessedCount]);
 
   const processWebpageUrl = useCallback(
     async (url: string) => {
@@ -132,6 +140,7 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
         });
 
         setResourceCount((prev) => prev + 1);
+        setUnprocessedCount((prev) => prev + 1);
         onUpdate();
       } catch (error) {
         console.error("Error adding webpage:", error);
@@ -222,16 +231,17 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
         throw new Error(result.error);
       }
 
-      toast({
-        title: "File URL added",
-        description: "Resource has been saved to remote",
-      });
+        toast({
+          title: "File URL added",
+          description: "Resource has been saved to remote",
+        });
 
-      setResourceCount((prev) => prev + 1);
-      setPendingFileUrl(null);
-      onUpdate();
-    } catch (error) {
-      console.error("Error adding file URL:", error);
+        setResourceCount((prev) => prev + 1);
+        setUnprocessedCount((prev) => prev + 1);
+        setPendingFileUrl(null);
+        onUpdate();
+      } catch (error) {
+        console.error("Error adding file URL:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to add file URL",
@@ -342,6 +352,9 @@ export function ResourcesCell({ productCode, articolId, resourceCount: initialCo
           >
             <div className="font-bold text-xl text-foreground text-center">{resourceCount}</div>
             <div className="text-xs text-muted-foreground text-center">resources</div>
+            {unprocessedCount > 0 && (
+              <div className="text-xs text-muted-foreground text-center">({unprocessedCount} unprocessed)</div>
+            )}
           </div>
         )}
 

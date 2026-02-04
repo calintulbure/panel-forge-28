@@ -107,6 +107,7 @@ export type Database = {
           hu_stock_detailed: string | null
           producator: string | null
           resource_count: number | null
+          resource_unprocessed_count: number | null
           ro_stoc_detailed: string | null
           ro_stock: number | null
           senior_erp_link: string | null
@@ -144,6 +145,7 @@ export type Database = {
           hu_stock_detailed?: string | null
           producator?: string | null
           resource_count?: number | null
+          resource_unprocessed_count?: number | null
           ro_stoc_detailed?: string | null
           ro_stock?: number | null
           senior_erp_link?: string | null
@@ -181,6 +183,7 @@ export type Database = {
           hu_stock_detailed?: string | null
           producator?: string | null
           resource_count?: number | null
+          resource_unprocessed_count?: number | null
           ro_stoc_detailed?: string | null
           ro_stock?: number | null
           senior_erp_link?: string | null
