@@ -58,6 +58,9 @@ export default function Products() {
   const [tipProdusFilter, setTipProdusFilter] = useState<string[]>(
     searchParams.get("tipProdus")?.split(",").filter(Boolean) || []
   );
+  const [resourcesFilter, setResourcesFilter] = useState<string[]>(
+    searchParams.get("resources")?.split(",").filter(Boolean) || []
+  );
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
@@ -89,9 +92,10 @@ export default function Products() {
     if (yliRoProdIdFilter !== "all") params.set("roProdId", yliRoProdIdFilter);
     if (yliHuProdIdFilter !== "all") params.set("huProdId", yliHuProdIdFilter);
     if (tipProdusFilter.length > 0) params.set("tipProdus", tipProdusFilter.join(","));
+    if (resourcesFilter.length > 0) params.set("resources", resourcesFilter.join(","));
     
     setSearchParams(params, { replace: true });
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter]);
+  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter, resourcesFilter]);
 
   // Fetch filter options (categories and statuses)
   const { data: filterOptions } = useQuery({
@@ -185,8 +189,58 @@ export default function Products() {
 
   // Fetch total count with filters
   const { data: totalCount } = useQuery({
-    queryKey: ["products-count", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter],
+    queryKey: ["products-count", search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter, resourcesFilter],
     queryFn: async () => {
+      // If resources filter includes specific types, first get matching articol_ids
+      let resourceArticolIds: number[] | null = null;
+      if (resourcesFilter.length > 0 && !resourcesFilter.every(f => f === 'none' || f === 'any')) {
+        const specificFilters = resourcesFilter.filter(f => f !== 'none' && f !== 'any');
+        if (specificFilters.length > 0) {
+          const conditions: string[] = [];
+          specificFilters.forEach(filter => {
+            if (filter === 'ro_webpage') {
+              conditions.push("(resource_type.eq.html,resource_content.eq.webpage,server.eq.yli.ro)");
+            } else if (filter === 'hu_webpage') {
+              conditions.push("(resource_type.eq.html,resource_content.eq.webpage,server.eq.yli.hu)");
+            } else if (filter === 'webpage') {
+              conditions.push("(resource_type.eq.html,resource_content.eq.webpage)");
+            } else if (filter === 'file_url') {
+              conditions.push("(resource_type.eq.file_url)");
+            } else if (filter === 'file') {
+              conditions.push("(resource_type.eq.file)");
+            }
+          });
+
+          // Query products_resources to get matching articol_ids
+          let resourceQuery = supabase.from("products_resources").select("articol_id");
+          
+          // Build OR conditions for each filter type
+          const orConditions: string[] = [];
+          specificFilters.forEach(filter => {
+            if (filter === 'ro_webpage') {
+              orConditions.push("and(resource_type.eq.html,resource_content.eq.webpage,server.eq.yli.ro)");
+            } else if (filter === 'hu_webpage') {
+              orConditions.push("and(resource_type.eq.html,resource_content.eq.webpage,server.eq.yli.hu)");
+            } else if (filter === 'webpage') {
+              orConditions.push("and(resource_type.eq.html,resource_content.eq.webpage)");
+            } else if (filter === 'file_url') {
+              orConditions.push("resource_type.eq.file_url");
+            } else if (filter === 'file') {
+              orConditions.push("resource_type.eq.file");
+            }
+          });
+
+          if (orConditions.length > 0) {
+            resourceQuery = resourceQuery.or(orConditions.join(","));
+          }
+
+          const { data: resourceData, error: resourceError } = await resourceQuery;
+          if (resourceError) throw resourceError;
+          
+          resourceArticolIds = [...new Set(resourceData?.map(r => r.articol_id).filter((id): id is number => id !== null) || [])];
+        }
+      }
+
       let query = supabase
         .from("products")
         .select("*", { count: "exact", head: true });
@@ -259,6 +313,37 @@ export default function Products() {
           query = query.in("tip_produs_id_sub", numericIds);
         }
       }
+      
+      // Apply resources filter
+      if (resourcesFilter.length > 0) {
+        const hasNone = resourcesFilter.includes('none');
+        const hasAny = resourcesFilter.includes('any');
+        
+        if (hasNone && !hasAny && resourceArticolIds === null) {
+          // Only 'none' selected - no resources
+          query = query.or("resource_count.is.null,resource_count.eq.0");
+        } else if (hasAny && !hasNone && resourceArticolIds === null) {
+          // Only 'any' selected - has resources
+          query = query.gt("resource_count", 0);
+        } else if (resourceArticolIds !== null) {
+          // Specific resource types selected
+          if (resourceArticolIds.length === 0) {
+            // No matching resources found, return empty result
+            query = query.eq("articol_id", -1); // Impossible condition
+          } else {
+            // Filter by matching articol_ids
+            if (hasNone) {
+              // Include products with no resources OR matching specific types
+              query = query.or(`resource_count.is.null,resource_count.eq.0,articol_id.in.(${resourceArticolIds.join(",")})`);
+            } else if (hasAny) {
+              // Include products with any resources AND matching specific types
+              query = query.in("articol_id", resourceArticolIds);
+            } else {
+              query = query.in("articol_id", resourceArticolIds);
+            }
+          }
+        }
+      }
 
       const { count, error } = await query;
       if (error) throw error;
@@ -268,10 +353,40 @@ export default function Products() {
 
   // Fetch paginated products with filters
   const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter],
+    queryKey: ["products", currentPage, itemsPerPage, search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter, resourcesFilter],
     queryFn: async () => {
       const from = (currentPage - 1) * itemsPerPage;
       const to = from + itemsPerPage - 1;
+
+      // If resources filter includes specific types, first get matching articol_ids
+      let resourceArticolIds: number[] | null = null;
+      if (resourcesFilter.length > 0 && !resourcesFilter.every(f => f === 'none' || f === 'any')) {
+        const specificFilters = resourcesFilter.filter(f => f !== 'none' && f !== 'any');
+        if (specificFilters.length > 0) {
+          // Build OR conditions for each filter type
+          const orConditions: string[] = [];
+          specificFilters.forEach(filter => {
+            if (filter === 'ro_webpage') {
+              orConditions.push("and(resource_type.eq.html,resource_content.eq.webpage,server.eq.yli.ro)");
+            } else if (filter === 'hu_webpage') {
+              orConditions.push("and(resource_type.eq.html,resource_content.eq.webpage,server.eq.yli.hu)");
+            } else if (filter === 'webpage') {
+              orConditions.push("and(resource_type.eq.html,resource_content.eq.webpage)");
+            } else if (filter === 'file_url') {
+              orConditions.push("resource_type.eq.file_url");
+            } else if (filter === 'file') {
+              orConditions.push("resource_type.eq.file");
+            }
+          });
+
+          if (orConditions.length > 0) {
+            let resourceQuery = supabase.from("products_resources").select("articol_id").or(orConditions.join(","));
+            const { data: resourceData, error: resourceError } = await resourceQuery;
+            if (resourceError) throw resourceError;
+            resourceArticolIds = [...new Set(resourceData?.map(r => r.articol_id).filter((id): id is number => id !== null) || [])];
+          }
+        }
+      }
 
       let query = supabase
         .from("products")
@@ -344,6 +459,28 @@ export default function Products() {
           query = query.is("tip_produs_id_sub", null);
         } else {
           query = query.in("tip_produs_id_sub", numericIds);
+        }
+      }
+      
+      // Apply resources filter
+      if (resourcesFilter.length > 0) {
+        const hasNone = resourcesFilter.includes('none');
+        const hasAny = resourcesFilter.includes('any');
+        
+        if (hasNone && !hasAny && resourceArticolIds === null) {
+          query = query.or("resource_count.is.null,resource_count.eq.0");
+        } else if (hasAny && !hasNone && resourceArticolIds === null) {
+          query = query.gt("resource_count", 0);
+        } else if (resourceArticolIds !== null) {
+          if (resourceArticolIds.length === 0) {
+            query = query.eq("articol_id", -1);
+          } else {
+            if (hasNone) {
+              query = query.or(`resource_count.is.null,resource_count.eq.0,articol_id.in.(${resourceArticolIds.join(",")})`);
+            } else {
+              query = query.in("articol_id", resourceArticolIds);
+            }
+          }
         }
       }
 
@@ -597,7 +734,7 @@ export default function Products() {
   // Reset to page 1 when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter]);
+  }, [search, category1, category2, category3, offerStatus, offerStatusSecondary, stockStatus, validationFilter, yliRoSkuFilter, yliHuSkuFilter, yliRoProdIdFilter, yliHuProdIdFilter, tipProdusFilter, resourcesFilter]);
 
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(Number(value));
@@ -618,6 +755,7 @@ export default function Products() {
     setYliRoProdIdFilter("all");
     setYliHuProdIdFilter("all");
     setTipProdusFilter([]);
+    setResourcesFilter([]);
     setSearchParams(new URLSearchParams(), { replace: true });
   };
 
@@ -665,6 +803,8 @@ export default function Products() {
         setYliHuProdIdFilter={setYliHuProdIdFilter}
         tipProdusFilter={tipProdusFilter}
         setTipProdusFilter={setTipProdusFilter}
+        resourcesFilter={resourcesFilter}
+        setResourcesFilter={setResourcesFilter}
         productTypes={availableTipProdus}
         showTipProdusNullOption={showTipProdusNullOption}
         categories={categories}

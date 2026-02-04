@@ -19,6 +19,16 @@ import {
 } from "@/components/ui/select";
 import { ProductType } from "@/hooks/useProductTypes";
 
+export const RESOURCES_FILTER_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'any', label: 'Any' },
+  { value: 'ro_webpage', label: 'RO Webpage' },
+  { value: 'hu_webpage', label: 'HU Webpage' },
+  { value: 'webpage', label: 'Webpage' },
+  { value: 'file_url', label: 'File URL' },
+  { value: 'file', label: 'File' },
+];
+
 interface ProductFiltersProps {
   search: string;
   setSearch: (value: string) => void;
@@ -46,6 +56,8 @@ interface ProductFiltersProps {
   setYliHuProdIdFilter: (value: string) => void;
   tipProdusFilter: string[];
   setTipProdusFilter: (value: string[]) => void;
+  resourcesFilter: string[];
+  setResourcesFilter: (value: string[]) => void;
   productTypes: ProductType[];
   showTipProdusNullOption?: boolean;
   categories: {
@@ -90,6 +102,8 @@ export function ProductFilters({
   setYliHuProdIdFilter,
   tipProdusFilter,
   setTipProdusFilter,
+  resourcesFilter,
+  setResourcesFilter,
   productTypes,
   showTipProdusNullOption = true,
   categories,
@@ -169,6 +183,12 @@ export function ProductFilters({
         ? (tipProdusFilter[0] === 'null' ? 'null' : productTypes.find(t => t.tipprodus_id.toString() === tipProdusFilter[0])?.tipprodus_descriere || tipProdusFilter[0])
         : `${productTypes.find(t => t.tipprodus_id.toString() === tipProdusFilter[0])?.tipprodus_descriere || tipProdusFilter[0]} +${tipProdusFilter.length - 1}`;
       filters.push(`Tip Produs: ${display}`);
+    }
+    if (resourcesFilter.length > 0) {
+      const display = resourcesFilter.length === 1 
+        ? RESOURCES_FILTER_OPTIONS.find(o => o.value === resourcesFilter[0])?.label || resourcesFilter[0]
+        : `${RESOURCES_FILTER_OPTIONS.find(o => o.value === resourcesFilter[0])?.label || resourcesFilter[0]} +${resourcesFilter.length - 1}`;
+      filters.push(`Resources: ${display}`);
     }
     return filters;
   };
@@ -393,6 +413,16 @@ export function ProductFilters({
                     ]}
                     value={tipProdusFilter}
                     onChange={setTipProdusFilter}
+                    placeholder="All"
+                  />
+                </div>
+
+                <div className="space-y-0.5 md:space-y-1">
+                  <Label htmlFor="resourcesFilter" className="text-xs">Resources</Label>
+                  <MultiSelect
+                    options={RESOURCES_FILTER_OPTIONS}
+                    value={resourcesFilter}
+                    onChange={setResourcesFilter}
                     placeholder="All"
                   />
                 </div>
