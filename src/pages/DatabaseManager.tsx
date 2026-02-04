@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Database, Table as TableIcon, Upload, Plus, Trash2, Edit, Play, Download, Search, Info } from "lucide-react";
+import { Database, Table as TableIcon, Upload, Plus, Trash2, Edit, Play, Download, Search, Info, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -342,6 +342,35 @@ export default function DatabaseManager() {
     }
   };
 
+  const handleSyncResourceCounts = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('remote-resources', {
+        body: { action: 'sync_all_counts' }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sync Complete",
+        description: `Updated ${data?.updated || 0} products, reset ${data?.reset || 0} to zero`,
+      });
+
+      if (selectedTable === 'products') {
+        loadTableData();
+      }
+    } catch (error) {
+      console.error("Sync error:", error);
+      toast({
+        title: "Sync failed",
+        description: error instanceof Error ? error.message : "Failed to sync resource counts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleExportData = () => {
     if (!tableData.length) {
       toast({
@@ -432,6 +461,10 @@ export default function DatabaseManager() {
                 <Button onClick={handleSyncProductUrls} disabled={isLoading} variant="outline">
                   <Database className="h-4 w-4 mr-2" />
                   Sync Product URLs
+                </Button>
+                <Button onClick={handleSyncResourceCounts} disabled={isLoading} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync Resource Counts
                 </Button>
                 <Button onClick={handleExportData} disabled={!selectedTable || !tableData.length} variant="outline">
                   <Download className="h-4 w-4 mr-2" />
