@@ -16,12 +16,14 @@ import { useSearchParams } from "react-router-dom";
 import { useProductTypes, ProductType } from "@/hooks/useProductTypes";
 import { useProductResources } from "@/hooks/useProductResources";
 import { useToast } from "@/hooks/use-toast";
+import { useEnqueueItems } from "@/hooks/useProcessingQueue";
 
 export default function Products() {
   const { userRole } = useAuth();
   const isAdmin = userRole === "admin";
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const enqueueItems = useEnqueueItems();
   
   // Selection state
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
@@ -851,27 +853,71 @@ export default function Products() {
           {selectedProducts.size > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-11 md:h-9">
-                  Actions ({selectedProducts.size})
-                  <ChevronDown className="ml-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="h-11 md:h-9" disabled={enqueueItems.isPending}>
+                  {enqueueItems.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enqueueing...
+                    </>
+                  ) : (
+                    <>
+                      Actions ({selectedProducts.size})
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => {
-                  toast({
-                    title: "Processing all resources",
-                    description: `${selectedProducts.size} products queued for resource processing`,
-                  });
-                  // TODO: Implement actual processing logic
+                <DropdownMenuItem onClick={async () => {
+                  // Get selected product data
+                  const selectedProductData = products?.filter(p => 
+                    selectedProducts.has(p.erp_product_code)
+                  ) || [];
+                  
+                  // Create queue records for all resources of selected products
+                  const queueRecords = selectedProductData.map(product => ({
+                    entity_type: 'resource' as const,
+                    entity_id: product.articol_id,
+                    erp_product_code: product.erp_product_code,
+                    articol_id: product.articol_id,
+                    status: 'pending' as const,
+                    metadata: { mode: 'all_resources' }
+                  }));
+                  
+                  if (queueRecords.length > 0) {
+                    await enqueueItems.mutateAsync(queueRecords);
+                    setSelectedProducts(new Set());
+                  }
                 }}>
                   Process All Resources
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  toast({
-                    title: "Processing unprocessed resources",
-                    description: `${selectedProducts.size} products queued for unprocessed resource processing`,
-                  });
-                  // TODO: Implement actual processing logic
+                <DropdownMenuItem onClick={async () => {
+                  // Get selected products that have unprocessed resources
+                  const selectedProductData = products?.filter(p => 
+                    selectedProducts.has(p.erp_product_code) && 
+                    (p.resource_unprocessed_count ?? 0) > 0
+                  ) || [];
+                  
+                  // Create queue records only for products with unprocessed resources
+                  const queueRecords = selectedProductData.map(product => ({
+                    entity_type: 'resource' as const,
+                    entity_id: product.articol_id,
+                    erp_product_code: product.erp_product_code,
+                    articol_id: product.articol_id,
+                    status: 'pending' as const,
+                    metadata: { mode: 'unprocessed_only' }
+                  }));
+                  
+                  if (queueRecords.length > 0) {
+                    await enqueueItems.mutateAsync(queueRecords);
+                    setSelectedProducts(new Set());
+                  } else {
+                    toast({
+                      title: "No unprocessed resources",
+                      description: "Selected products have no unprocessed resources to queue",
+                      variant: "destructive",
+                    });
+                  }
                 }}>
                   Process Unprocessed Only
                 </DropdownMenuItem>
