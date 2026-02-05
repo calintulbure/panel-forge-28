@@ -16,6 +16,7 @@ import UserManagement from "./pages/UserManagement";
 import DatabaseManager from "./pages/DatabaseManager";
 import ProductTypes from "./pages/ProductTypes";
 import ResetPassword from "./pages/ResetPassword";
+import ProcessingQueue from "./pages/ProcessingQueue";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,22 @@ const App = () => (
                       <AppSidebar />
                       <main className="flex-1">
                         <ProductTypes />
+                      </main>
+                    </div>
+                    <ChatWidget />
+                  </SidebarProvider>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/processing-queue"
+              element={
+                <ProtectedRoute>
+                  <SidebarProvider defaultOpen={false}>
+                    <div className="flex min-h-screen w-full">
+                      <AppSidebar />
+                      <main className="flex-1">
+                        <ProcessingQueue />
                       </main>
                     </div>
                     <ChatWidget />

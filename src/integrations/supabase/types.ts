@@ -93,6 +93,60 @@ export type Database = {
         }
         Relationships: []
       }
+      processing_queue: {
+        Row: {
+          articol_id: number | null
+          completed_at: string | null
+          created_at: string
+          entity_id: number
+          entity_type: string
+          erp_product_code: string | null
+          error_message: string | null
+          metadata: Json | null
+          n8n_workflow_id: string | null
+          priority: number | null
+          processing_log: string | null
+          queue_id: number
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          articol_id?: number | null
+          completed_at?: string | null
+          created_at?: string
+          entity_id: number
+          entity_type: string
+          erp_product_code?: string | null
+          error_message?: string | null
+          metadata?: Json | null
+          n8n_workflow_id?: string | null
+          priority?: number | null
+          processing_log?: string | null
+          queue_id?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          articol_id?: number | null
+          completed_at?: string | null
+          created_at?: string
+          entity_id?: number
+          entity_type?: string
+          erp_product_code?: string | null
+          error_message?: string | null
+          metadata?: Json | null
+          n8n_workflow_id?: string | null
+          priority?: number | null
+          processing_log?: string | null
+          queue_id?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           articol_id: number
