@@ -420,15 +420,18 @@ Deno.serve(async (req) => {
           filters?: { erp_product_code?: string; language?: string; resource_type?: string };
         };
 
-        // Get articol_id before delete if not provided
+        // Get resource details before delete to check if we need to clear product fields
         let targetArticolId = articol_id;
-        if (!targetArticolId && resource_id) {
+        let resourceToDelete: { articol_id?: number; server?: string; resource_content?: string; url?: string } | null = null;
+        
+        if (resource_id) {
           const { data: resourceData } = await remoteSupabase
             .from("products_resources")
-            .select("articol_id")
+            .select("articol_id, server, resource_content, url")
             .eq("resource_id", resource_id)
             .single();
-          targetArticolId = resourceData?.articol_id;
+          resourceToDelete = resourceData;
+          targetArticolId = resourceData?.articol_id || articol_id;
         }
 
         // Delete from REMOTE
@@ -477,9 +480,67 @@ Deno.serve(async (req) => {
 
         if (localError) {
           console.error("[delete] Local error (non-fatal):", localError);
-          // Don't fail the request - remote delete succeeded
         } else {
           console.log(`[delete] Deleted from local products_resources`);
+        }
+
+        // Clear related product fields if deleting a webpage resource
+        if (resourceToDelete && resourceToDelete.resource_content === "webpage" && resourceToDelete.articol_id) {
+          const { server, url, articol_id: resArticolId } = resourceToDelete;
+          
+          if (server === "yli.ro") {
+            // Get current product to check if URL matches
+            const { data: product } = await localSupabase
+              .from("products")
+              .select("site_ro_url")
+              .eq("articol_id", resArticolId)
+              .single();
+            
+            if (product && product.site_ro_url === url) {
+              const { error: updateError } = await localSupabase
+                .from("products")
+                .update({
+                  site_ro_url: null,
+                  site_ro_product_id: null,
+                  site_ro_snapshot_base64: null,
+                  yliro_sku: null,
+                  yliro_descriere: null,
+                })
+                .eq("articol_id", resArticolId);
+              
+              if (updateError) {
+                console.error("[delete] Error clearing RO product fields:", updateError);
+              } else {
+                console.log(`[delete] Cleared site_ro fields for articol_id=${resArticolId}`);
+              }
+            }
+          } else if (server === "yli.hu") {
+            // Get current product to check if URL matches
+            const { data: product } = await localSupabase
+              .from("products")
+              .select("site_hu_url")
+              .eq("articol_id", resArticolId)
+              .single();
+            
+            if (product && product.site_hu_url === url) {
+              const { error: updateError } = await localSupabase
+                .from("products")
+                .update({
+                  site_hu_url: null,
+                  site_hu_product_id: null,
+                  site_hu_snapshot_base64: null,
+                  ylihu_sku: null,
+                  ylihu_descriere: null,
+                })
+                .eq("articol_id", resArticolId);
+              
+              if (updateError) {
+                console.error("[delete] Error clearing HU product fields:", updateError);
+              } else {
+                console.log(`[delete] Cleared site_hu fields for articol_id=${resArticolId}`);
+              }
+            }
+          }
         }
 
         // Update local resource counts
