@@ -80,6 +80,97 @@ async function updateLocalResourceCounts(
   }
 }
 
+// Helper function to sync a resource record from remote to local with the same resource_id
+async function syncResourceToLocal(
+  localSupabase: any,
+  remoteRecord: ResourceRecord
+): Promise<void> {
+  try {
+    if (!remoteRecord.resource_id) {
+      console.error("[syncResourceToLocal] No resource_id in remote record");
+      return;
+    }
+
+    // Check if already exists on local
+    const { data: existing } = await localSupabase
+      .from("products_resources")
+      .select("resource_id")
+      .eq("resource_id", remoteRecord.resource_id)
+      .maybeSingle();
+
+    if (existing) {
+      // Update existing local record
+      const { error: updateError } = await localSupabase
+        .from("products_resources")
+        .update({
+          articol_id: remoteRecord.articol_id,
+          erp_product_code: remoteRecord.erp_product_code,
+          resource_type: remoteRecord.resource_type,
+          resource_content: remoteRecord.resource_content,
+          url: remoteRecord.url,
+          server: remoteRecord.server,
+          language: remoteRecord.language,
+          title: remoteRecord.title,
+          description: remoteRecord.description,
+          content_text: remoteRecord.content_text,
+          meta_json: remoteRecord.meta_json,
+          resource_snapshot: remoteRecord.resource_snapshot,
+          snapshot_at: remoteRecord.snapshot_at,
+          url_status: remoteRecord.url_status,
+          url_status_code: remoteRecord.url_status_code,
+          url_error: remoteRecord.url_error,
+          url_checked_at: remoteRecord.url_checked_at,
+          url_check_count: remoteRecord.url_check_count,
+          processed: remoteRecord.processed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("resource_id", remoteRecord.resource_id);
+
+      if (updateError) {
+        console.error("[syncResourceToLocal] Update error:", updateError);
+        return;
+      }
+      console.log(`[syncResourceToLocal] Updated local resource_id=${remoteRecord.resource_id}`);
+    } else {
+      // Insert with explicit resource_id from remote
+      const { error: insertError } = await localSupabase
+        .from("products_resources")
+        .insert({
+          resource_id: remoteRecord.resource_id,
+          articol_id: remoteRecord.articol_id,
+          erp_product_code: remoteRecord.erp_product_code,
+          resource_type: remoteRecord.resource_type,
+          resource_content: remoteRecord.resource_content,
+          url: remoteRecord.url,
+          server: remoteRecord.server,
+          language: remoteRecord.language,
+          title: remoteRecord.title,
+          description: remoteRecord.description,
+          content_text: remoteRecord.content_text,
+          meta_json: remoteRecord.meta_json,
+          resource_snapshot: remoteRecord.resource_snapshot,
+          snapshot_at: remoteRecord.snapshot_at,
+          url_status: remoteRecord.url_status,
+          url_status_code: remoteRecord.url_status_code,
+          url_error: remoteRecord.url_error,
+          url_checked_at: remoteRecord.url_checked_at,
+          url_check_count: remoteRecord.url_check_count,
+          processed: remoteRecord.processed,
+          created_at: remoteRecord.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error("[syncResourceToLocal] Insert error:", insertError);
+        return;
+      }
+      console.log(`[syncResourceToLocal] Inserted local resource_id=${remoteRecord.resource_id}`);
+    }
+  } catch (error) {
+    console.error("[syncResourceToLocal] Error:", error);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -274,6 +365,9 @@ Deno.serve(async (req) => {
           });
         }
 
+        // Sync to local with same resource_id
+        await syncResourceToLocal(localSupabase, data);
+
         // Update local resource counts
         if (record.articol_id) {
           await updateLocalResourceCounts(localSupabase, remoteSupabase, record.articol_id);
@@ -325,6 +419,11 @@ Deno.serve(async (req) => {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
+        }
+
+        // Sync update to local
+        if (data) {
+          await syncResourceToLocal(localSupabase, data);
         }
 
         console.log(`[update] Updated resource_id=${data?.resource_id}`);
@@ -381,6 +480,9 @@ Deno.serve(async (req) => {
             });
           }
 
+          // Sync update to local
+          await syncResourceToLocal(localSupabase, data);
+
           console.log(`[upsert] Updated resource_id=${data.resource_id}`);
           return new Response(JSON.stringify({ success: true, data, action: "updated" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -400,6 +502,9 @@ Deno.serve(async (req) => {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
+
+          // Sync to local with same resource_id
+          await syncResourceToLocal(localSupabase, data);
 
           // Update local resource counts
           if (record.articol_id) {
