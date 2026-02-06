@@ -35,3 +35,12 @@ verify_jwt = false
 
 [functions.processing-queue]
 verify_jwt = false
+
+[functions.trigger-snapshot]
+verify_jwt = false
+
+[functions.trigger-snapshot-new]
+verify_jwt = false
+
+[functions.remote-resources]
+verify_jwt = false
