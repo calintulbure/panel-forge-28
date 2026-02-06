@@ -431,29 +431,55 @@ Deno.serve(async (req) => {
           targetArticolId = resourceData?.articol_id;
         }
 
-        let query = remoteSupabase.from("products_resources").delete();
+        // Delete from REMOTE
+        let remoteQuery = remoteSupabase.from("products_resources").delete();
 
         if (resource_id) {
-          query = query.eq("resource_id", resource_id);
+          remoteQuery = remoteQuery.eq("resource_id", resource_id);
         }
         if (filters?.erp_product_code) {
-          query = query.eq("erp_product_code", filters.erp_product_code);
+          remoteQuery = remoteQuery.eq("erp_product_code", filters.erp_product_code);
         }
         if (filters?.language) {
-          query = query.eq("language", filters.language);
+          remoteQuery = remoteQuery.eq("language", filters.language);
         }
         if (filters?.resource_type) {
-          query = query.eq("resource_type", filters.resource_type);
+          remoteQuery = remoteQuery.eq("resource_type", filters.resource_type);
         }
 
-        const { error } = await query;
+        const { error: remoteError } = await remoteQuery;
 
-        if (error) {
-          console.error("[delete] Error:", error);
-          return new Response(JSON.stringify({ success: false, error: error.message }), {
+        if (remoteError) {
+          console.error("[delete] Remote error:", remoteError);
+          return new Response(JSON.stringify({ success: false, error: remoteError.message }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
+        }
+
+        // Delete from LOCAL to keep tables in sync
+        let localQuery = localSupabase.from("products_resources").delete();
+
+        if (resource_id) {
+          localQuery = localQuery.eq("resource_id", resource_id);
+        }
+        if (filters?.erp_product_code) {
+          localQuery = localQuery.eq("erp_product_code", filters.erp_product_code);
+        }
+        if (filters?.language) {
+          localQuery = localQuery.eq("language", filters.language);
+        }
+        if (filters?.resource_type) {
+          localQuery = localQuery.eq("resource_type", filters.resource_type);
+        }
+
+        const { error: localError } = await localQuery;
+
+        if (localError) {
+          console.error("[delete] Local error (non-fatal):", localError);
+          // Don't fail the request - remote delete succeeded
+        } else {
+          console.log(`[delete] Deleted from local products_resources`);
         }
 
         // Update local resource counts
