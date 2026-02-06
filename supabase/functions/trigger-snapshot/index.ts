@@ -176,36 +176,20 @@ Deno.serve(async (req) => {
       throw new Error(`Product update failed: ${productUpdateError.message}`);
     }
 
-    // Check if resource already exists for this product and language
-    const { data: existingResource } = await supabase
-      .from("products_resources")
-      .select("resource_id")
-      .eq("erp_product_code", productCode)
-      .eq("language", site)
-      .eq("resource_type", "html")
-      .maybeSingle();
-
-    if (existingResource) {
-      // Update existing resource with snapshot
-      const { error: resourceUpdateError } = await supabase
-        .from("products_resources")
-        .update({
-          resource_snapshot: n8nData.imageBase64,
-          snapshot_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("resource_id", existingResource.resource_id);
-
-      if (resourceUpdateError) {
-        console.error("Failed to update resource:", resourceUpdateError);
-        throw new Error(`Resource update failed: ${resourceUpdateError.message}`);
-      }
-    } else {
-      // Insert new resource with snapshot
-      const serverDomain = new URL(siteUrl).hostname.replace(/^www\./, '');
-      const { error: resourceInsertError } = await supabase
-        .from("products_resources")
-        .insert({
+    // Update resource snapshot via remote-resources edge function (writes to REMOTE, which syncs back to local)
+    // This ensures consistent resource_id generation from the remote database
+    const serverDomain = new URL(siteUrl).hostname.replace(/^www\./, '');
+    const localUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    
+    const remoteResourcesResponse = await fetch(`${localUrl}/functions/v1/remote-resources`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({
+        action: "upsert",
+        record: {
           articol_id: productData.articol_id,
           erp_product_code: productCode,
           resource_type: "html",
@@ -215,15 +199,28 @@ Deno.serve(async (req) => {
           server: serverDomain,
           resource_snapshot: n8nData.imageBase64,
           snapshot_at: new Date().toISOString(),
-        });
+          processed: false,
+        },
+        match_on: {
+          erp_product_code: productCode,
+          language: site,
+          resource_type: "html",
+        }
+      }),
+    });
 
-      if (resourceInsertError) {
-        console.error("Failed to insert resource:", resourceInsertError);
-        throw new Error(`Resource insert failed: ${resourceInsertError.message}`);
-      }
+    if (!remoteResourcesResponse.ok) {
+      const errorText = await remoteResourcesResponse.text();
+      console.error("Failed to update remote resource:", errorText);
+      throw new Error(`Remote resource update failed: ${errorText}`);
     }
 
-    console.log(`Successfully updated ${site.toUpperCase()} snapshot in products_resources and product fields:`, Object.keys(productUpdateFields));
+    const resourceResult = await remoteResourcesResponse.json();
+    if (!resourceResult.success) {
+      throw new Error(`Remote resource update failed: ${resourceResult.error}`);
+    }
+
+    console.log(`Successfully updated ${site.toUpperCase()} snapshot via remote-resources (${resourceResult.action}) and product fields:`, Object.keys(productUpdateFields));
 
     // Prepare response fields
     const responseFields =
@@ -236,7 +233,8 @@ Deno.serve(async (req) => {
         success: true,
         site,
         updatedFields: responseFields,
-        storedIn: "products_resources",
+        storedIn: "remote_products_resources",
+        resource_id: resourceResult.data?.resource_id,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
