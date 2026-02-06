@@ -35,6 +35,20 @@ Deno.serve(async (req) => {
         });
       }
 
+      // First check if the record exists on remote - if not, skip (already deleted, likely from remote-initiated delete)
+      const { data: existing } = await remoteSupabase
+        .from("products_resources")
+        .select("resource_id")
+        .eq("resource_id", resourceId)
+        .limit(1);
+
+      if (!existing || existing.length === 0) {
+        console.log(`[DELETE] resource_id=${resourceId} not found on remote, already deleted - skipping to prevent sync loop`);
+        return new Response(JSON.stringify({ success: true, action: "skipped", reason: "already deleted on remote" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       console.log(`[DELETE] Deleting resource_id=${resourceId} from remote`);
       const { error } = await remoteSupabase
         .from("products_resources")
