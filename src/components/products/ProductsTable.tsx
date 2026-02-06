@@ -349,8 +349,14 @@ export function ProductsTable({
                     <PublishCell 
                       productCode={product.erp_product_code} 
                       productDescription={product.erp_product_description} 
-                      snapshotBase64={product.site_ro_snapshot_base64} 
-                      siteUrl={product.site_ro_url} 
+                      snapshotBase64={
+                        (product.articol_id && resources[product.articol_id]?.ro?.resource_snapshot) || 
+                        product.site_ro_snapshot_base64
+                      } 
+                      siteUrl={
+                        (product.articol_id && resources[product.articol_id]?.ro?.url) || 
+                        product.site_ro_url
+                      } 
                       sku={product.yliro_sku} 
                       skuClassName="font-bold text-black dark:text-white" 
                       site="ro" 
@@ -361,8 +367,14 @@ export function ProductsTable({
                     <PublishCell 
                       productCode={product.erp_product_code} 
                       productDescription={product.erp_product_description} 
-                      snapshotBase64={product.site_hu_snapshot_base64} 
-                      siteUrl={product.site_hu_url} 
+                      snapshotBase64={
+                        (product.articol_id && resources[product.articol_id]?.hu?.resource_snapshot) || 
+                        product.site_hu_snapshot_base64
+                      } 
+                      siteUrl={
+                        (product.articol_id && resources[product.articol_id]?.hu?.url) || 
+                        product.site_hu_url
+                      } 
                       sku={product.ylihu_sku} 
                       skuClassName="font-bold text-black dark:text-white" 
                       site="hu" 
@@ -464,8 +476,14 @@ export function ProductsTable({
                   <PublishCell 
                     productCode={product.erp_product_code} 
                     productDescription={product.erp_product_description} 
-                    snapshotBase64={product.articol_id ? resources[product.articol_id]?.ro?.resource_snapshot || null : product.site_ro_snapshot_base64} 
-                    siteUrl={product.articol_id ? resources[product.articol_id]?.ro?.url || null : product.site_ro_url} 
+                    snapshotBase64={
+                      (product.articol_id && resources[product.articol_id]?.ro?.resource_snapshot) || 
+                      product.site_ro_snapshot_base64
+                    } 
+                    siteUrl={
+                      (product.articol_id && resources[product.articol_id]?.ro?.url) || 
+                      product.site_ro_url
+                    } 
                     sku={product.yliro_sku} 
                     site="ro" 
                     onUpdate={onRefresh} 
@@ -476,8 +494,14 @@ export function ProductsTable({
                   <PublishCell 
                     productCode={product.erp_product_code} 
                     productDescription={product.erp_product_description} 
-                    snapshotBase64={product.articol_id ? resources[product.articol_id]?.hu?.resource_snapshot || null : product.site_hu_snapshot_base64} 
-                    siteUrl={product.articol_id ? resources[product.articol_id]?.hu?.url || null : product.site_hu_url} 
+                    snapshotBase64={
+                      (product.articol_id && resources[product.articol_id]?.hu?.resource_snapshot) || 
+                      product.site_hu_snapshot_base64
+                    } 
+                    siteUrl={
+                      (product.articol_id && resources[product.articol_id]?.hu?.url) || 
+                      product.site_hu_url
+                    } 
                     sku={product.ylihu_sku} 
                     site="hu" 
                     onUpdate={onRefresh} 
